@@ -1,0 +1,6 @@
+#!/bin/bash
+cp files.in files$1.in
+mv tar.dat tar$1.dat
+mv tar.fits tar$1.fits
+mv tar.ps tar$1.ps
+mv fringing.ps fringing$1.ps

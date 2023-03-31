@@ -1,0 +1,130 @@
+########################
+### Paths to input files
+
+### NOTE: all .fits files must be oriented such that the dispersion direction is along the vertical axis. Run rotate_spectra.py first to do this! ###
+
+# This is a .txt file containing the names (on separate rows) of all science frames. This can be created on the command line through  $ ls *appropriate files* > science_list. For most users this will be defined as $ ls **/*1_gainscalestep.fits > science_list. However it can be a single reference frame from which the script will load all subsequent files in cwd OR outputted by sort_ACAM_files.py/sort_EFOSC_files.py
+science_list = science_list
+
+# The path to the master bias .fits file. If this is not given, a frame padded with zeroes is used. This should not be defined if you're using JWST data and have performed the super bias step in stage0.
+master_bias = 
+
+# The path to the master flat .fits file. If this is not given, a frame padded with ones is used.
+master_flat = 
+
+# The path to the gain file. This is only used for JWST analysis as the gain is recorded pixel-by-pixel. This should not be defined if you're using JWST data and have performed the gain scale step in stage0.
+gain_file = 
+
+# The path to the readnoise file. This is only used for JWST analysis as the readnoise is recorded pixel-by-pixel. This should not be defined if you're using JWST data and have performed the gain scale step in stage0.
+readnoise_file = 
+
+
+########################
+### Instrument
+
+# Choose one of "JWST", "ACAM", "EFOSC" or "Keck/NIRSPEC"
+instrument = JWST
+
+
+########################
+### Tracing of the stellar spectra
+
+# rotate frame? Note that this code needs the dispersion direction along the y axis (vertically). This is a boolean: 1/0. This should be set = 1 for JWST NIRSpec, NIRCam and NIRISS data.
+rotate_frame = 1
+
+# The integer value of the minimum row that you want to include. Can be found by looking at a DS9 image. NOTE: THIS CODE ASSUMES THAT SPECTRA ARE DISPERSED ALONG THE VERTICAL AXIS.
+row_min = 0
+
+# The integer value of the maximum row that you want to include. Can be found by looking at a DS9 image. NOTE: THIS CODE ASSUMES THAT SPECTRA ARE DISPERSED ALONG THE VERTICAL AXIS.
+row_max = 2048
+
+# approximate location of the centre of the star's trace in x-pixel coordinates (in the cross-dispersion axis, can be found via DS9). If more than one star is to be extracted, separate the guess locations with a comma ","
+trace_guess_locations = 16
+
+# the search width (in pixels) around 'trace_guess_locations' where the code will try to locate the star. For crowded fields, set this to a narrower value. For poor pointing (lost of drift) set this to a wider value.
+trace_search_width = 10
+
+# Default=5 (pixels). The width of the Gaussian that is used to fit the trace location along each row in the cross-dispersion axis. This value doesn't matter too much and so can be kept at the default value of 5.
+trace_gaussian_width = 5 
+
+# Default=4. Define the order of the polynomial used to fit the centroids of the Gaussians in the dispersion axis. i.e., what order polynomial best describes the curvature of the spectral trace? In most cases, the default of 4 is sufficient. If using a spline, this must be set to 0.
+trace_poly_order = 4 
+
+# Define the smoothing factor for the cubic spline if wanting to use a spline to perform tracing. 0.3 is a good default. If using a polynomial, this must be set to 0. In most cases, I do not use a spline for tracing.
+trace_spline_sf = 0 
+
+# Can co-add rows for faint objects, so that the trace is calculated as a function of "co_add_rows". Probably not necessary for JWST. If you do use it, keep an eye out for strange behaviour.
+co_add_rows = 0 
+
+# Oversampling factor - use this to interpolate each row in the cross-dispersion axis onto a new grid that has "oversampling_factor" times the original number of pixels. I've found this works well for PRISM data.
+oversampling_factor = 10
+
+# rectify_data - a boolean (1 or 0) that defines whether or not to use the fitted trace to shift/interpolate the spectrum so that it is perfectly straight in the vertical axis. This could be beneficial if you're worried that by e.g. the fact that a single row corresponds to > 1 wavelength due to curvature of the trace. Probably only important for high-resolution data.
+rectify_data = 0
+
+
+########################
+### Aperture and background parameters
+
+# The width of the aperture (in pixels) used to perform simple aperture photometry (should be an even number). Different apertures can be used for multiple stars by defining multiple values here, separated by commas. 
+aperture_width =  8
+
+# Set this equal to 1 if wanting to set aperture based on the mean FWHM of the surrounding 20 rows. In this case, aperture_width is a multiplication factor to the FWHM. NOTE: this is currently in Beta phase
+gaussian_defined_aperture = 0 
+
+# The offset in pixels between the edge of the extraction aperture and the region which is being used to estimate the background. The motivation being that you don't want to contaminate the background estimate with the wings of the stellar PSF. Different offsets can be used for each star by defining multiple values here, separated by commas.
+background_offset = 10
+
+# The width in pixels over which to estimate the background region. Can be set to "1" to use the entire CCD (excluding some instrument-specific hard-coded bad/buffer bixels at the edge of the CCD). Different widths can be used for each star by defining multiple values here, separated by commas.
+background_width = 10
+
+# The order of the polynomial used to fit and remove the background noise (sky for g-b data, 1/f for JWST). Set to '-1' to use the median of the background. Set to '0' to perform no background fitting. Set to '-2' to allow the BIC to select to the best order for each row automatically. NOTE: Not BIC background not fully tested.
+poly_bg_order = 1
+
+
+########################
+### Bad pixel masks, cosmic ray masks
+
+# the path to a pickled numpy array (of same shape as science frame) that flags bad pixels to be excluded in the extraction. Can be left blank. Most of the time the code handles outliers anyway.
+bad_pixel_mask = 
+
+# the path to a pickled numpy 3D array (of same shape as science frame * number of frames) that flags cosmic pixels to be excluded in the extraction. These may have previously been found via running lacosmic or locate_cosmics. Can be left blank. Most of the time the code handles outliers anyway. NOTE: this is not fully tested and the preferred method for JWST is to run locate_cosmics.py in advance and to save the output of locate_cosmics.py as new .fits files which have had the cosmic rays removed.
+cosmic_pixel_mask = 
+
+
+########################
+### Plotting and saving the output
+
+# This defines whether to plot running outputs. Set to 0 for no plots, or set to integer number for a delay of that many seconds before the next plot. Set to -1 to prevent plotting when fits are poor. Set to -2 to require you to manually close the plots (best option for testing).
+verbose = -2 
+
+# If you have already completed a reduction in the cwd and try again, the output will fail unless you define overwrite=1. If you aborted midway through a reduction. Setting overwrite=0 should pick up where you left off (although it may not with new edits).
+overwrite = 0 
+
+
+########################
+#### The below parameters are not relevant for JWST data and should be kept at these values (the code expects these parameters to be read-in but they are not subsequently used)
+# the number of windows used in the science frames. Keep at 1 for JWST data
+nwindows = 1 
+
+# Perform a non-linearity correction to ACAM data of the form: frame = ((-0.007/65000)*frame + 1)*frame # as from ACAM webpages
+ACAM_linearity_correction = 0 
+
+# currently only used for ACAM data, needs to be defined as 'fast' or 'slow'. This affects the gain and read noise.
+readout_speed = fast 
+
+# set this to extract single orders from Keck NIRSPEC data. Defined as "x_left_bottom,x_left_top,x_right_bottom,x_right_top"
+NIRSPEC_mask = 
+
+### Contaminant star masks
+
+# Define mask by positions relative to each extracted trace and at a certain width given by 'mask_width'. This is used for masking out contaminating stars, such as the test MIRI data.
+# The approximate pixel locations of contaminating stars *relative* to the stars defined by "trace_guess_locations". This can be left blank for no masks. e.g. to mask stars at 50 pixels to the left and 25 pixels to the right of star 1 and 40 and 10 pixels to the left of star 2: "masks = -50,25;-40,-10"
+masks =  
+
+# The number of pixels to be masked at the locations of the contaminating stars (essentially the FWHM of the contaminants' PSFs). This can be left blank. Must be even number.
+mask_width = 
+
+### Automated cosmic removal (note that locate_cosmics.py is preferable for JWST data)
+# Use LACosmic to try to auto-locate cosmic rays prior to flux extraction? This is not currently setup for JWST data and can lead to aggresive overclipping if not careful. Boolean (1=on, 0=off).
+use_lacosmic = 0

@@ -1,0 +1,56 @@
+This process is designed to help when operating within a system where Python is centrally controlled by some IT service.
+
+*** 1) (If it doesn't already exist) make ~/.bashrc file, like the below:
+
+# Python path
+# Add Adobe and git to path
+export PYTWO="[path-to-system-anaconda2-distribution]/anaconda2/bin" # where [path-to-system-anaconda2-distribution] will point to the sytem/globally managed anaconda2
+export PYTHREE="[path-to-system-anaconda3-distribution]/anaconda3/bin" # where [path-to-system-anaconda3-distribution] will point to the sytem/globally managed anaconda2
+
+export PATH="$PYTHREE:$PATH::[path-to-system-git]/git/bin/" # where [path-to-system-git] will point to the system/globally managed git
+
+export PYTHONPATH="$PATH:[path-to-local-python-code]:" # where [path-to-local-python-code] is wherever you are storing your personal python scripts
+
+
+*** 2) make ~/.condarc file, like the below. These versions are the ones which work with reduction_utils and fitting_utils. If some pacakges are failing to install at this stage,
+they can be removed from the .condarc file and conda/pip installed later on (see step 6).:
+
+# when creating new environments add these packages by default
+create_default_packages:
+  - python
+  - matplotlib=2.2.2
+  - astropy=3.0.2
+  - numpy=1.14.3
+  - jupyter
+  - pip=9
+  - scipy=1.1.0
+
+# Where to place environments on the system. This will create these repositories and we want them to be in our own local space.
+envs_dirs:
+  - [path-to-personal-storage]/.conda/envs/ # where [path-to-personal-storage] could be /data/james/
+  - [path-to-home-storage]/.conda/envs/ # where this is most likely /home/james/
+
+# Where to locate packages on the system, following the file structure as immediately above
+pkgs_dirs:
+  - [path-to-personal-storage]/.conda/pkgs/
+  - [path-to-home-storage]/.conda/pkgs/
+  - [path-to-system-anaconda3-distribution]/anaconda3/pkgs/ # this line is so we can load in packages which we may not have locally but the system versions are sufficient
+
+
+*** 3) Now, if we're not in a bash shell, we need to change to one by typing in the terminal: $ /bin/bash
+
+*** 4) Now we can create a new conda environment, which will allow us to self manage our python distribution. This will download the packages as 
+defined in our .condarc file and take a few minutes. To create new conda env, type $ conda create -n [name of environment] # where [name of environment] could be e.g. acam
+
+*** 5) now activate env, by typing $ source activate [name of environment]
+
+*** 6) Then when wanting to install new packages, can do 
+
+$ conda install
+
+or 
+
+$ pip install 
+
+in that order and it will install for that current environment. Then anytime you start a new terminal you will need to repeat steps 3 through 5 to get the python working in the correct way to run
+reduction_utils and fitting_utils. You should now be good to go.

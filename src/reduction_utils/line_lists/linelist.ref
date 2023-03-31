@@ -1,0 +1,175 @@
+From bunker@ast.cam.ac.uk Wed Jul  9 19:31:27 2003
+Date: Thu, 3 Jul 2003 15:41:18 +0100 (BST)
+From: Andrew Bunker <bunker@ast.cam.ac.uk>
+To: ers@cass133.ast.cam.ac.uk
+
+Line List                                                Luis Ho
+modified by A.B. 
+*Wavelengths are "air" values for lambda > 2000 Ang.
+
+Species Lambda
+------- ------
+Lyg          792.537
+N I          972.5
+H I          972.5
+C III        977.026
+Lyb         1025.72        
+O VI        1031.95
+O VI        1037.63
+Si IV       1122.5
+Fe III      1125.7
+P V         1128.0
+C III       1175.7
+Lya         1215.67
+O V]        1218
+N V         1238.82
+N V         1242.80
+Si II       1260.4
+O I         1303.5
+C II        1334.5
+C II        1335.7
+O I         1355.6
+O I         1358.5
+Si IV       1393.76
+Si IV       1402.77
+O IV]       1393.23
+O IV]       1399.78
+O IV]       1401.16
+O IV]       1404.81
+O IV]       1407.38
+N IV]       1488        
+C IV        1548.20
+C IV        1550.77
+Fe I        1610
+He II       1640        
+O III]      1661,1663,1667       
+N III]      1750        
+Si II       1808,1817
+Al III      1859
+Si III]     1892
+C III]      1909        
+N II        2141?
+Fe II       (2200-2800)        
+C II]       2326
+[Ne IV]     2438.6
+[Ne IV]     2441.3
+[O II]      2470.3
+[O II]      2470.4
+He II,[MgVII] 2512?
+He II       2734
+Mg II       2795.528
+Mg II       2802.705
+Mg I        2852.1262
+Fe I        2868
+O III       3047?
+O III       3123,3133
+He II       3204
+Na I        3302.37
+Na I        3302.98
+O III       3312
+[Ne III]    3342.9
+[Ne V]      3345.9
+[Ne V]      3425.8
+O III       3444        
+[O II]      3726.16
+[O II]      3728.91
+O III       3760
+[Fe VII]    3760.3
+H 10        3797.90
+H 9         3835.38
+[Ne III]    3868.74
+Hzeta       3889.05
+He I        3888.65
+Ca II K     3933.663
+Ca II H     3968.468
+[Ne III]    3967.51
+Hepsil      3970.07
+[S II]      4068.60
+[S II]      4076.35
+Hdelta      4101.73
+[Fe II]     4250,4281
+G band      4304
+Hgamma      4340.46
+[O III]     4363.21
+He I        4471.5
+N V         4619
+N III       4640
+C III       4650
+C IV        4658
+[Fe III]    4658.1
+He II       4685.7
+[Ar IV]     4711.33
+[Ar IV]     4740.20
+Hbeta       4861.32
+[O III]     4958.91
+[O III]     5006.84
+[Fe VII]    5158.3
+[Fe VIII]   5159.0?
+Mg Ib       5167.32
+Mg Ib       5172.68
+Mg Ib       5183.60
+[Fe VI]     5176.4?
+[Fe VI]     5177.0
+[Ar III]    5191.82
+[N I]       5198.5
+[N I]       5200.7
+Fe I E2     5270        
+[Fe VII]    5277.8
+[Fe XIV]    5303.0
+[Ca V]      5309.2
+[Fe VI]     5335.2
+Fe II       (4500-5400)                        
+[O I]       5577.35
+[Fe VII]    5720.9
+[N II]      5754.8
+C IV        5801.51
+C IV        5812.14
+He I        5875.7
+Na D2       5889.950
+Na D1       5895.924
+[Ca V]      6085.9
+[Fe VII]    6086.9        
+O2          6258,6280
+[O I]       6300.23
+[S III]     6312.1
+[O I]       6363.88
+[Fe X]      6374.5      
+Ca+Fe       6495
+[N II]      6548.1
+Halpha      6562.80
+[N II]      6583.6
+He I        6678.15
+TiO         6700
+Ca I        6718
+[S II]      6716.42
+[S II]      6730.78
+B Band      6868
+[Ar V]      7005.67
+He I        7065.3
+[Ar III]    7135.80
+[Fe II]     7155
+[Ca II]     7291.46
+[Ca II]     7323.88
+[O II]      7318.6
+[O II]      7319.4
+[O II]      7329.9
+[O II]      7330.7
+atm abs	    7605
+K I         7664.872
+K I         7698.977
+[Ar III]    7751.06
+[Fe XI]     7891.9
+O I         8446
+Ca II       8498.0
+Ca II       8542.1
+Ca II       8662.2
+P9          9229.02
+Pepsil      9545.98
+Pdelta      10049.4
+Pgamma      10938.1
+Pbeta       12818.1
+Palpha      18751.0
+[S III]     9069.4
+[S III]     9532.1
+He I        10830
+Bracket-gam 21655.0

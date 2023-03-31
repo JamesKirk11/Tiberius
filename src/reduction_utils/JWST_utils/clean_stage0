@@ -1,0 +1,9 @@
+rm **/*rampfitstep.fits
+rm **/*darkcurrentstep.fits
+rm **/*dqinitstep.fits
+rm **/*groupscalestep.fits
+rm **/*linearitystep.fits
+rm **/*refpixstep.fits
+rm **/*saturationstep.fits
+rm **/*superbiasstep.fits
+rm **/*0_gainscalestep.fits

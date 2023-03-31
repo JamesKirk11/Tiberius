@@ -1,0 +1,53 @@
+#!/bin/bash
+#conda activate JWST
+export CRDS_PATH=$HOME/crds_cache/jwst_pub
+export CRDS_SERVER_URL=https://jwst-crds-pub.stsci.edu
+echo ""
+echo "****running group scale****"
+echo ""
+strun group_scale $1_uncal.fits
+echo ""
+echo "****running dq_init****"
+echo ""
+strun dq_init $1_groupscalestep.fits
+echo ""
+echo "****running saturation****"
+echo ""
+strun saturation $1_dqinitstep.fits --override_saturation /Users/james/crds_cache/jwst_pub/references/jwst/miri/jwst_miri_saturation_0034.fits
+echo ""
+echo "****running reset****"
+echo ""
+strun reset $1_saturationstep.fits --override_reset /Users/james/crds_cache/jwst_pub/references/jwst/miri/jwst_miri_reset_0080.fits
+echo ""
+#echo "****running 1overf_subtraction.py****"
+#echo ""
+#python $HOME/python/reduction_utils/JWST_utils/1overf_subtraction.py $1_superbiasstep.fits #--pixel_mask /home/jkirk/ACAMdata/reduction_utils/JWST_utils/prism_bad_pixel_mask_JK.pickle
+#echo ""
+echo "****running linearity****"
+echo ""
+strun linearity $1_resetstep.fits --override_linearity /Users/james/crds_cache/jwst_pub/references/jwst/miri/jwst_miri_linearity_0032.fits
+echo ""
+echo "****running dark_current****"
+echo ""
+strun dark_current $1_linearitystep.fits --override_dark /Users/james/crds_cache/jwst_pub/references/jwst/miri/jwst_miri_dark_0096.fits
+echo ""
+echo "****running refpix****"
+echo ""
+strun refpix $1_darkcurrentstep.fits --odd_even_rows True 
+echo ""
+echo "****running ramp_fit****"
+echo ""
+strun ramp_fit $1_refpixstep.fits --override_readnoise /Users/james/crds_cache/jwst_pub/references/jwst/miri/jwst_miri_readnoise_0085.fits
+echo ""
+echo "****running gain_scale****"
+echo ""
+strun gain_scale $1_1_rampfitstep.fits
+echo ""
+echo "****running assign_wcs****"
+echo ""
+strun assign_wcs $1_1_gainscalestep.fits
+echo ""
+echo "****running extract_2d****"
+echo ""
+strun extract_2d $1_1_assignwcsstep.fits
+#conda deactivate

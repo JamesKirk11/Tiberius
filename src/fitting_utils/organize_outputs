@@ -1,0 +1,9 @@
+mkdir tables
+mkdir plots
+mkdir pickled_objects
+mv *.pickle pickled_objects/
+cp mcmc_input.dat pickled_objects/
+cp LD_coefficients.dat pickled_objects/
+mv *.dat tables/
+mv *.png plots/
+mv *.pdf plots/
