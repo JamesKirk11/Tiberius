@@ -5,11 +5,12 @@ import numpy as np
 import argparse
 import pickle
 import pandas
+from global_utils import parseInput
 
-try:
-    import fitting_utils.mcmc_utils as mc
-except:
-    from . import mcmc_utils as mc
+# try:
+#     import fitting_utils.mcmc_utils as mc
+# except:
+#     from . import mcmc_utils as mc
 
 parser = argparse.ArgumentParser(description='Generate .dat table of light curves and ancillary inputs from .pickle files defined in fitting_input.txt. ')
 parser.add_argument("output_file",help="name of files that we're wanting to save output (.csv and .pickle) to")
@@ -17,7 +18,7 @@ parser.add_argument("-off",help='mjd offset to be added to time array',type=int)
 args = parser.parse_args()
 
 
-input_dict = mc.parseInput('fitting_input.txt')
+input_dict = parseInput('fitting_input.txt')
 
 
 white_light_fit = bool(int(input_dict['white_light_fit']))

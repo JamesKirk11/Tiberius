@@ -8,6 +8,7 @@ import glob
 import os
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
+from global_utils import parseInput
 
 try:
     import fitting_utils.plotting_utils as pu
@@ -116,7 +117,7 @@ if args.rebin_data is not None:
 print("Plotting RMS vs bins...")
 residuals = []
 
-input_dict = mc.parseInput("fitting_input.txt")
+input_dict = parseInput("fitting_input.txt")
 
 for i,model in enumerate(m):
     # calculate transit model

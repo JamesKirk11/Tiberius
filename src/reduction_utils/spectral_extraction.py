@@ -14,6 +14,7 @@ import time
 import pickle
 import os
 from collections import Counter
+from global_utils import parseInput
 try:
     import astroscrappy
 except:
@@ -21,37 +22,6 @@ except:
 
 # Prevent matplotlib plotting frames upside down
 plt.rcParams['image.origin'] = 'lower'
-
-def parseInput(file):
-    """Parse the input of extraction_input.txt"""
-    try:
-        blob = np.loadtxt(file,dtype=str,delimiter='\n')
-    except:
-        blob = reader(file)
-
-    input_dict = {}
-    for line in blob:
-        k,v = line.split('=')
-        input_dict[k.strip()] = v.strip().replace("\n","")
-
-    for k,v in zip(input_dict.keys(),input_dict.values()):
-        if v == '':
-            input_dict[k] = None
-
-    return input_dict
-
-
-def reader(file):
-    with open(file) as f:
-        lines = f.readlines()
-    blob = []
-    for i in lines:
-        if i[0] == "#" or i[0] == "\n":
-            pass
-        else:
-            blob.append(i)
-    return np.array(blob)
-
 
 
 def gauss(x,amplitude,mean,std,offset):

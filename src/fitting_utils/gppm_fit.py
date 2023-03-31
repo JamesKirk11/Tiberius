@@ -7,6 +7,7 @@ import pickle
 from collections import OrderedDict
 import argparse
 from scipy.interpolate import UnivariateSpline as US
+from global_utils import parseInput
 
 try:
     import fitting_utils.mcmc_utils as mc
@@ -28,7 +29,7 @@ args = parser.parse_args()
 
 ### Load in parameter file
 
-input_dict = mc.parseInput('fitting_input.txt')
+input_dict = parseInput('fitting_input.txt')
 
 white_light_fit = bool(int(input_dict['white_light_fit']))
 

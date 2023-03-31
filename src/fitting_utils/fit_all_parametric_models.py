@@ -5,19 +5,20 @@ import numpy as np
 import pickle
 import argparse
 import matplotlib.pyplot as plt
+from global_utils import parseInput
 
 try:
     import fitting_utils.parametric_fitting_functions as pf
-    import fitting_utils.mcmc_utils as mc
+    # import fitting_utils.mcmc_utils as mc
 except:
     from . import parametric_fitting_functions as pf
-    from . import mcmc_utils as mc
+    # from . import mcmc_utils as mc
 
 parser = argparse.ArgumentParser(description='Run fits of all possible parametric models to a white light curve. This currently takes time, airmass, FWHM, x positions, y positions and sky background as possible to polynomials. It then fits all combinations of polynomials up to cubic and spits out the results. Note: a directory called white_light_parametric_model_fits must exist within cwd.')
 
 ### Load in parameter file
 
-input_dict = mc.parseInput('parametric_input.dat')
+input_dict = parseInput('parametric_input.dat')
 
 
 ### Load in various input arrays

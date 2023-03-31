@@ -13,43 +13,6 @@ try:
 except:
     from . import TransitModelGPPM as tmgp
 
-def parseInput(file):
-    """Function to parse the input parameters from an input file, e.g. fitting_input.txt.
-
-    Input: file to be read
-
-    Returns: dictionary of parameter names:parameter values
-
-    """
-    try:
-        blob = np.loadtxt(file,dtype=str,delimiter='\n')
-    except:
-        blob = reader(file)
-
-    input_dict = {}
-    for line in blob:
-        k,v = line.split('=')
-        input_dict[k.strip()] = v.strip().replace("\n","")
-
-    for k,v in zip(input_dict.keys(),input_dict.values()):
-        if v == '':
-            input_dict[k] = None
-
-    return input_dict
-
-
-def reader(file):
-    """A function that can also read in the inputs, if np.loadtxt doesn't work with the specified delimiter"""
-    with open(file) as f:
-        lines = f.readlines()
-    blob = []
-    for i in lines:
-        if i[0] == "#" or i[0] == "\n":
-            pass
-        else:
-            blob.append(i)
-    return np.array(blob)
-
 
 def parseParam(parString):
     """Function to convert input_dicts / parameters saved as 'mean +err -err' to floats with upper and lower errors. Currently used by plotting_utils.

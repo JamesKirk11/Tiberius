@@ -3,11 +3,12 @@
 
 import numpy as np
 import argparse
+from global_utils import parseInput
 
-try:
-    import fitting_utils.mcmc_utils as mc
-except:
-    from . import mcmc_utils as mc
+# try:
+#     import fitting_utils.mcmc_utils as mc
+# except:
+#     from . import mcmc_utils as mc
 
 parser = argparse.ArgumentParser(description='Generate latex table from .dat table of results. Note: not tested with updated classes.')
 parser.add_argument("tab_name",help="which table are we using?")
@@ -15,7 +16,7 @@ args = parser.parse_args()
 
 w,we,u1,u1e,u2,u2e = np.loadtxt('LD_coefficients.dat',unpack=True)
 
-input = mc.parseInput('fitting_input.txt')
+input = parseInput('fitting_input.txt')
 
 wl = bool(int(input['white_light_fit']))
 if wl:

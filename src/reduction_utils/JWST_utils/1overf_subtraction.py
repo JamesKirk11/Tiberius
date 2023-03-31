@@ -3,6 +3,8 @@ import numpy as np
 import argparse
 import pickle
 from pathlib import Path
+from global_utils import parseInput
+
 home = str(Path.home())
 
 parser = argparse.ArgumentParser(description="subtract 1/f noise at the group stage")
@@ -21,36 +23,6 @@ except:
 
 instrument = f[0].header["INSTRUME"].lower()
 super_bias = fits.open("%s/crds_cache/jwst_pub/references/jwst/%s/%s"%(home,instrument,bias_name))
-
-def parseInput(file):
-    """Parse the input of extraction_input_v2.dat"""
-    try:
-        blob = np.loadtxt(file,dtype=str,delimiter='\n')
-    except:
-        blob = reader(file)
-
-    input_dict = {}
-    for line in blob:
-        k,v = line.split('=')
-        input_dict[k.strip()] = v.strip().replace("\n","")
-
-    for k,v in zip(input_dict.keys(),input_dict.values()):
-        if v == '':
-            input_dict[k] = None
-
-    return input_dict
-
-def reader(file):
-    with open(file) as f:
-        lines = f.readlines()
-    blob = []
-    for i in lines:
-        if i[0] == "#" or i[0] == "\n":
-            pass
-        else:
-            blob.append(i)
-    return np.array(blob)
-
 
 extension = 1
 nints,ngroups,nrows,ncols = f[extension].data.shape

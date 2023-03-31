@@ -2,7 +2,7 @@
 #### Contact: jameskirk@live.co.uk
 
 import plotting_utils as pu
-import mcmc_utils as mc
+# import mcmc_utils as mc
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
@@ -10,6 +10,7 @@ import pickle
 from astropy import constants
 from matplotlib.ticker import AutoMinorLocator,ScalarFormatter
 import reduction_utils.wavelength_binning as wb
+from global_utils import parseInput
 
 parser = argparse.ArgumentParser(description='Convert ACCESS pipeline outputs to input pickle files needed by LRG-BEASTS fitting_utils')
 parser.add_argument('-d','--directory_list',help="the directories containing the transmission spectra to compare",nargs='+')
@@ -276,7 +277,7 @@ if args.H_rs is not None:
     H_Rs = args.H_rs # scale height divided by stellar radius
 else:
     if args.input is not None:
-        input_dict = mc.parseInput(args.input)
+        input_dict = parseInput(args.input)
         try:
             H = (constants.k_B.value*float(input_dict['Teq']))/(2.3*constants.m_p.value*10**float(input_dict['logg'])/100.)
         except:
