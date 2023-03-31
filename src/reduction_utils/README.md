@@ -6,7 +6,7 @@
 Contains information useful for arc calibration with ACAM
 
 - **conda_env_help.txt** \
-Contains information about setting up conda environments. This allows you to self-manage Python and self-install packages on a computing system that is centrally managed by IT services who won't allow you to download and install your own Python version. 
+Contains information about setting up conda environments. This allows you to self-manage Python and self-install packages on a computing system that is centrally managed by IT services who won't allow you to download and install your own Python version.
 
 - **cosmic_removal.py*** \
 Contains the functions for removal of cosmic rays. See example iPython notebook for how this implemented.
@@ -52,7 +52,7 @@ Plots an ACAM science image along with the traces and apertures used in the data
 - **quick_light_curve_check.py** \
 Plots pixel binned light curves as a quick qualitative check of the light curves before any post-extraction processing.
 
-- **rotate_spectra.py*** \ 
+- **rotate_spectra.py*** \
 This rotates all spectra from being dispersed along the x-direction to dispersed along the y-direction, as required by long_slit_science_extraction.py. This saves the rotated spectra to a new directory ("./spec_rot"). Note: this can also be performed on the fly by
 long_slit_science_extraction.py so is not entirely necessary.
 
@@ -88,9 +88,12 @@ Loads in system parameters from a file within the current directory (this needs 
 James Kirk
 Eva-Maria Ahrer
 
-## Citing the code
+### Reference / citing Tiberius:
 
-If you use this code, please cite the following papers (note that a dedicated paper describing this code is in my to-do list!):
+Please cite the following papers if you use this code: <br>
 
-https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3907K/abstract \
-https://ui.adsabs.harvard.edu/abs/2021AJ....162...34K/abstract
+https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3907K/abstract <br>
+
+https://ui.adsabs.harvard.edu/abs/2021AJ....162...34K/abstract <br>
+
+A dedicated Tiberius paper is in the pipeline.

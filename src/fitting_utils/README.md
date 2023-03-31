@@ -42,13 +42,15 @@
 
 James Kirk
 
-### Reference:
+### Reference / citing Tiberius:
 
 Please cite the following papers if you use this code: <br>
 
 https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3907K/abstract <br>
 
 https://ui.adsabs.harvard.edu/abs/2021AJ....162...34K/abstract <br>
+
+A dedicated Tiberius paper is in the pipeline.
 
 ### Dependencies:
 
