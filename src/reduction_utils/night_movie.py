@@ -1,5 +1,5 @@
 #### Author of this code: James Kirk
-#### Contact: jameskirk@live.co.uk 
+#### Contact: jameskirk@live.co.uk
 
 import matplotlib.animation as animation
 import numpy as np
@@ -17,8 +17,6 @@ parser.add_argument("science_list",help="Where is the location of the science fi
 parser.add_argument("-inst","--instrument",help="ACAM or EFOSC?")
 parser.add_argument('-nwin','--nwindows',help='How many windows were used? (For ACAM only)',type=int,default=1)
 parser.add_argument('-skip','--skip',help='Use to skip each N files, if dealing with many images',type=int)
-parser.add_argument('-vmin','--vmin',help='Set minimum value for scaling, default = 1e3',type=float,default=1e3)
-parser.add_argument('-vmax','--vmax',help='Set maximum value for scaling, default = 5e3',type=float,default=5e3)
 args = parser.parse_args()
 
 file_list = np.loadtxt(args.science_list,str)[::args.skip]
@@ -90,8 +88,10 @@ def init(i):
         im.set_data(frame[0].data)
     else:
         im.set_data(frame[1].data.T)
+
         if args.nwindows > 1:
-            im1 = ax1.imshow(frame[2].data.T,vmin=args.vmin,vmax=args.vmax)
+            vmin,vmax = np.nanpercentile(frame[2].data.T,[10,90])
+            im1 = ax1.imshow(frame[2].data.T,vmin=vmin,vmax=vmax)
 
     frame.close()
     ax2.plot(x[i],flux[i],'bo')

@@ -7,18 +7,12 @@ import pickle
 from collections import OrderedDict
 import argparse
 from scipy.interpolate import UnivariateSpline as US
-from global_utils import parseInput
 
-try:
-    import fitting_utils.mcmc_utils as mc
-    import fitting_utils.TransitModelGPPM as tmgp
-    import fitting_utils.parametric_fitting_functions as pf
-    import fitting_utils.plotting_utils as pu
-except:
-    from . import mcmc_utils as mc
-    from . import TransitModelGPPM as tmgp
-    from . import parametric_fitting_functions as pf
-    from . import plotting_utils as pu
+from global_utils import parseInput
+import mcmc_utils as mc
+import TransitModelGPPM as tmgp
+import parametric_fitting_functions as pf
+import plotting_utils as pu
 
 
 parser = argparse.ArgumentParser(description='Run fit to a single light curve that is either a wavelength-binned or white light curve. This makes use of the TransitModelGPPM class, which fits the red noise as a GP + parametric model.')

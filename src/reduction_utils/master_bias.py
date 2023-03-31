@@ -1,5 +1,5 @@
 #### Author of this code: James Kirk
-#### Contact: jameskirk@live.co.uk 
+#### Contact: jameskirk@live.co.uk
 
 import matplotlib.pyplot as plt
 from astropy.io import fits
@@ -8,7 +8,6 @@ import argparse
 
 # Prevent matplotlib plotting frames upside down
 plt.rcParams['image.origin'] = 'lower'
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument('biaslist', help="""Enter list of bias file names, created through ls > bias.lis in the command line""")

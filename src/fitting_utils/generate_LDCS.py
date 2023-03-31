@@ -9,10 +9,6 @@ from scipy.ndimage import median_filter as MF
 import matplotlib.pyplot as plt
 from global_utils import parseInput
 
-# try:
-#     from fitting_utils.mcmc_utils import parseInput
-# except:
-#     from mcmc_utils import parseInput
 
 parser = argparse.ArgumentParser(description='Generate the limb darkening coefficients for the star evaluated for the wavelength bins provided. This used Limb Darkening Toolkit. Note: The stellar effect temperature, stellar log(g), stellar [Fe/H] and associated errors must be in the fitting_input.txt file for this code to execute. Also, the arrays of wavelength bin centres and widths must be defined in fitting_input.txt. This code returns the quadratic limb darkening coefficients and errors evaluated for each wavelength bin in a file called LD_coefficients.dat.')
 parser.add_argument('-seq','--seq',help="""use this argument if wanting to calculate multiple limb darkening coefficients sequentially (necessary for incrementally increasing Na & K bins)""",action='store_true')

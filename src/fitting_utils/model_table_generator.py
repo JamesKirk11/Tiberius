@@ -5,11 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import argparse
-
-try:
-    from . import plotting_utils as pu
-except:
-    import fitting_utils.plotting_utils as pu
+import plotting_utils as pu
 
 parser = argparse.ArgumentParser(description='Generate .dat table of time, flux, err and transit and gp models and residuals')
 parser.add_argument("-pre",help="the prefix of the table name, to go before model_tab_wbXX.dat, can be left blank")
@@ -18,12 +14,6 @@ parser.add_argument("-dt_only",help='Use this if only wanting to save the detren
 args = parser.parse_args()
 
 x,y,e,e_r,m,m_in,w,we,completed_bins,nbins = pu.load_completed_bins(directory=".",start_bin=None,end_bin=None,mask=None,return_index_only=False)
-
-# Make all input arrays 2D to enable easy handling of WL fits to single light curve
-# ~ x = np.atleast_2d(x)
-# ~ y = np.atleast_2d(y)
-# ~ e = np.atleast_2d(e)
-# ~ e_r = np.atleast_2d(e_r)
 
 for i,n in enumerate(completed_bins):
 

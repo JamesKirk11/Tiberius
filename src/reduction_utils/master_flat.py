@@ -1,5 +1,5 @@
 #### Author of this code: James Kirk
-#### Contact: jameskirk@live.co.uk 
+#### Contact: jameskirk@live.co.uk
 
 import matplotlib.pyplot as plt
 from astropy.io import fits
@@ -22,9 +22,6 @@ parser.add_argument('-inst','--instrument',help="""Define the instrument used, e
 parser.add_argument('-c','--clobber',help="""Need this argument to save resulting fits file, default = False""",action='store_true')
 parser.add_argument('-s','--saturation_limit',help="""Use this to exclude frames with counts above a satruation threshold. Default is 55000""",type=int,default=55000)
 args = parser.parse_args()
-
-# ~ if args.verbose:
-    # ~ plt.ion()
 
 if args.instrument != 'EFOSC' and args.instrument != 'ACAM':
     raise NameError('Currently only set up to deal with ACAM or EFOSC data')
@@ -373,56 +370,56 @@ def gaussian_smooth(flat_data,name,nwindows,inst,clobber):
 
 def pixel_mask_tight(frame,save):
     """A tighter definition of a bad pixel mask using 5 median absolute devitations from the median, computed column by column (along dispersion direction)"""
- 
+
     medians = np.median(frame,axis=0)
     mads = mad(frame,axis=0,scale='normal')
     good_pixels = []
 
     for i,row in enumerate(frame):
         good_pixels.append(((row >= medians-5*mads) & (row <= medians+5*mads)))
-    
+
     good_pixels = np.array(good_pixels)
     bad_pixels = ~good_pixels
-    
+
     percentage_bad_pixels = 100*len(np.where(bad_pixels)[0])/(frame.shape[0]*frame.shape[1])
     print("Percentage of pixels deemed bad by medians and mads = %.2f%%"%percentage_bad_pixels)
-    
+
     plt.figure()
     plt.imshow(bad_pixels)
     plt.title("Bad pixel mask using medians and MADS")
     plt.show()
-    
+
     if save:
         pickle.dump(bad_pixels,open("bad_pixel_mask_tight.pickle","wb"))
         return
-    
+
     return bad_pixels
 
-    
+
 def pixel_mask_loose(frame,save):
     """A looser definition of the bad pixel mask using 5 standard deviations from the global mean"""
-    
+
     good_pixels = ((frame >= np.mean(frame)-5*np.std(frame)) & (frame <= np.mean(frame)+5*np.std(frame)))
     bad_pixels = ~good_pixels
 
     percentage_bad_pixels = 100*len(np.where(bad_pixels)[0])/(frame.shape[0]*frame.shape[1])
     print("Percentage of pixels deemed bad by means and stds = %.2f%%"%percentage_bad_pixels)
-    
+
     plt.figure()
     plt.imshow(bad_pixels)
     plt.title("Bad pixel mask using means and stds")
     plt.show()
-    
+
     if save:
         pickle.dump(bad_pixels,open("bad_pixel_mask_loose.pickle","wb"))
         return
-    
+
     return bad_pixels
-    
+
 
 def pixel_mask_medfilt(frame,save):
     """A function that uses median filters along the rows/cross-dispersion direction to locate outliers. Can be more effective."""
-    
+
     good_pixels = []
 
     cut_off = 5
@@ -433,24 +430,24 @@ def pixel_mask_medfilt(frame,save):
 
     good_pixels = np.array(good_pixels)
     bad_pixels = ~good_pixels
-    
+
     percentage_bad_pixels = 100*len(np.where(bad_pixels)[0])/(frame.shape[0]*frame.shape[1])
     print("Percentage of pixels deemed bad by median filter = %.2f%%"%percentage_bad_pixels)
-    
+
     plt.figure()
     plt.imshow(bad_pixels)
     plt.title("Bad pixel mask using median filter")
     plt.xlabel('X pixel')
     plt.ylabel('Y pixel')
     plt.show()
-    
+
     if save:
         pickle.dump(bad_pixels,open("bad_pixel_mask_medfilt.pickle","wb"))
         return
-    
+
     return bad_pixels
-    
-    
+
+
 if nwin == 1:
     f = combine_flats_1window(flats_files,master_bias_data,args.instrument,args.saturation_limit,args.verbose)
 else:
@@ -476,12 +473,12 @@ if nwin == 1:
     plt.ylabel('Y pixel')
 else:
     plt.subplot(121)
-    
+
     vmin,vmax = np.nanpercentile(f[0],[10,90])
     plt.imshow(f[0],vmin=vmin,vmax=vmax,cmap='hot')
     plt.xlabel('X pixel')
     plt.ylabel('Y pixel')
-    
+
     plt.subplot(122)
     vmin,vmax = np.nanpercentile(f[1],[10,90])
     plt.imshow(f[1],vmin=vmin,vmax=vmax,cmap='hot')
@@ -499,10 +496,9 @@ if nwin == 1:
 else:
     pmt = np.array([pixel_mask_tight(f[0],False),pixel_mask_tight(f[1],False)])
     pickle.dump(pmt,open("bad_pixel_mask_tight.pickle","wb"))
-    
+
     pml = np.array([pixel_mask_loose(f[0],False),pixel_mask_loose(f[1],False)])
     pickle.dump(pml,open("bad_pixel_mask_loose.pickle","wb"))
-    
+
     pmmf = np.array([pixel_mask_medfilt(f[0],False),pixel_mask_medfilt(f[1],False)])
     pickle.dump(pmmf,open("bad_pixel_mask_medfilt.pickle","wb"))
-    

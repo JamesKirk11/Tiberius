@@ -1,14 +1,14 @@
 #### Author of this code: James Kirk
 #### Contact: jameskirk@live.co.uk
 
-import plotting_utils as pu
-# import mcmc_utils as mc
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
 import pickle
 from astropy import constants
 from matplotlib.ticker import AutoMinorLocator,ScalarFormatter
+
+import plotting_utils as pu
 import reduction_utils.wavelength_binning as wb
 from global_utils import parseInput
 

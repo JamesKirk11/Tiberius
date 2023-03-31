@@ -1,6 +1,0 @@
-#!/bin/bash
-for i in `seq $1 $2`; do
-	python /Users/james/python/fitting_utils/gppm_fit.py $i
-done
-
-python /Users/james/python/fitting_utils/plot_output.py -s -st -cp

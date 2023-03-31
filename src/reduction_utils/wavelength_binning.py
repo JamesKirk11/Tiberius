@@ -6,11 +6,12 @@ import matplotlib.pyplot as plt
 import pickle
 from scipy import stats, signal
 import os
+from . import wavelength_calibration as wc
 
-try:
-    import reduction_utils.wavelength_calibration as wc
-except:
-    from . import wavelength_calibration as wc
+# try:
+#     import reduction_utils.wavelength_calibration as wc
+# except:
+#     from . import wavelength_calibration as wc
 
 ### define the alkali metal lines, air wavelengths
 sodium_d1 = 5890
