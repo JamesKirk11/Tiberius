@@ -12,6 +12,7 @@ setup(
     'emcee',
     'exotic-ld',
     'george',
+    'h5netcdf',
     'ipykernel',
     'ldtk',
     'jupyter',
@@ -21,6 +22,7 @@ setup(
     'peakutils',
     'photutils',
     'importlib-metadata; python_version >= "3.8"',
-    'scipy'
+    'scipy',
+    'xarray'
     ],
 )
