@@ -194,12 +194,13 @@ class TransitModelGPPM(object):
 
         self.batman_model = batman.TransitModel(self.batman_params, time_array, nthreads=1)    #initializes model
 
-    def calc(self,time):
+    def calc(self,time=None,sys_model_inputs=None):
 
         """Calculates and returns the evaluated Mandel & Agol transit model, using batman.
 
         Inputs:
-        time - the array of times at which to evaluate the model
+        time - the array of times at which to evaluate the model. Can be left blank if this has not changed from the initial init call.
+        sys_model_inputs - the array of inputs to give the polynomials if fitting with polys. Can be left blank if this has not changed from the initial init call or you're not using polynomials.
 
         Returns:
         transitShape - the modelled transit light curve"""
@@ -253,11 +254,14 @@ class TransitModelGPPM(object):
 
         self.batman_params.u = gamma                #limb darkening coefficients [u1, u2]
 
+        if time is not None:
+            if time != time_array: # optionally recalculating batman model if the time array has changed
+                self.batman_model = batman.TransitModel(self.batman_params, time, nthreads=1)
+
         transitShape = self.batman_model.light_curve(self.batman_params)
 
-
         if self.poly_used: # then we're using a polynomial to fit systematics
-            red_noise_poly_model = self.red_noise_poly(time)
+            red_noise_poly_model = self.red_noise_poly(time,sys_model_inputs)
             model = transitShape * red_noise_poly_model
 
         else: # we're using a normalization constant to offset the transit depth
@@ -266,12 +270,13 @@ class TransitModelGPPM(object):
         return model
 
 
-    def red_noise_poly(self,time,deconstruct_polys=False):
+    def red_noise_poly(self,time=None,sys_model_inputs=None,deconstruct_polys=False):
 
         """The function that calculates the time polynomial to fit the red noise. This uses the pf.systematics_model() function.
 
         Inputs:
-        time - the array of times at which to evaluate the polynomial
+        time - the array of times at which to evaluate the polynomial. Can be blank if these haven't changed from the initial init call.
+        sys_model_inputs - the array of inputs to feed into the polynomial. Can be blank if these haven't changed from the initial init call.
         deconstruct_polys - do you want to additionally return the polynomial components as individual arrays for plotting? True/False
 
         Returns:
@@ -285,16 +290,18 @@ class TransitModelGPPM(object):
         else:
             red_noise_pars = np.array([self.pars['c%d'%i].currVal for i in range(1,self.polynomial_orders.sum()+2)])
 
+        if sys_model_inputs is not None:
+            poly_inputs = sys_model_inputs
+        else:
+            poly_inputs = self.systematics_model_inputs
+
         # generate the model
         if deconstruct_polys:
-            red_noise_trend,poly_components = pf.systematics_model(red_noise_pars,self.systematics_model_inputs,self.polynomial_orders,False,deconstruct_polys)
+            red_noise_trend,poly_components = pf.systematics_model(red_noise_pars,poly_inputs,self.polynomial_orders,False,deconstruct_polys)
             return red_noise_trend,poly_components
         else:
-            red_noise_trend = pf.systematics_model(red_noise_pars,self.systematics_model_inputs,self.polynomial_orders,False,deconstruct_polys)
+            red_noise_trend = pf.systematics_model(red_noise_pars,poly_inputs,self.polynomial_orders,False,deconstruct_polys)
             return red_noise_trend
-
-
-
 
 
     def lnprior(self,sys_priors=None):
@@ -307,7 +314,6 @@ class TransitModelGPPM(object):
         Returns:
         the evaluated ln(prior) as a float
         """
-
 
         # define a variable to track the prior value
         retVal = 0
@@ -423,8 +429,6 @@ class TransitModelGPPM(object):
             if self.ld_law == "quadratic":
                 if u1 + u2 < 1 and u1 > 0 and u1 + 2*u2 > 0:
                     retVal += ld_prior_value
-                # ~ elif u1 < -2 or u1 > 2 or u2 < -2 or u2 > 2:
-                    # ~ return -np.inf
                 else:
                     return -np.inf
 
@@ -438,13 +442,14 @@ class TransitModelGPPM(object):
 
         return retVal
 
-    def construct_gp(self,split=False,compute=False,flux_err=None):
+    def construct_gp(self,split=False,compute=False,flux_err=None,sys_model_inputs=None):
         """The function that constructs the GP kernel and GP object.
 
         Inputs:
         split - True/False - determine whether to split the GP into its component kernels. Useful for plotting. Default=False
         compute - True/False - determine whether to compute the GP. Default=False
         flux_err - the errors on the flux data points, to be added in quadrature to the covariance matrix. Default=None
+        sys_model_inputs - the inputs to feed to the GP. Can be left blank if these haven't changed from the init call.
 
         Returns:
         gp - george.GP object
@@ -493,11 +498,16 @@ class TransitModelGPPM(object):
         else: # use george's HODLRSolver, which provides faster computation. My tests show this doesn't always seem to perform well for GPs with > 1 kernel.
             gp = george.GP(kernels.ConstantKernel(A2,ndim=self.gp_ndim,axes=np.arange(self.gp_ndim))*kernel,white_noise=WN,fit_white_noise=fit_WN,mean=0,fit_mean=False,solver=george.solvers.HODLRSolver)
 
+        if sys_model_inputs is None:
+            gp_model_inputs = self.systematics_model_inputs
+        else:
+            gp_model_inputs = sys_model_inputs
+
         if compute:
             if self.gp_ndim > 1:
-                gp.compute(self.systematics_model_inputs.T,yerr=flux_err)
+                gp.compute(self.gp_model_inputs.T,yerr=flux_err)
             else:
-                gp.compute(self.systematics_model_inputs[0],yerr=flux_err)
+                gp.compute(self.gp_model_inputs[0],yerr=flux_err)
 
         if split:
             return gp,gp_split
@@ -505,13 +515,14 @@ class TransitModelGPPM(object):
             return gp
 
 
-    def lnlike(self,time,flux,flux_err,typeII=False):
+    def lnlike(self,time,flux,flux_err,sys_model_inputs=None,typeII=False):
         """The log likelihood
 
         Inputs:
         time - the array of times at which to evaluate the model
         flux - the flux data points
         flux_err - the error in the flux data points
+        sys_model_inputs - the array of values/inputs to feed to the GP. Can be left blank if these have not changed since the initial init call.
         typeII - True/False - define whether we're using a typeII maximum likelihood estimation. Default=False
 
         Returns:
@@ -524,10 +535,15 @@ class TransitModelGPPM(object):
             else:
                 gp = self.construct_gp()
 
-            if self.gp_ndim > 1:
-                gp.compute(self.systematics_model_inputs.T,flux_err)
+            if sys_model_inputs is None:
+                gp_model_inputs = self.systematics_model_inputs
             else:
-                gp.compute(self.systematics_model_inputs[0],flux_err)
+                gp_model_inputs = sys_model_inputs
+
+            if self.gp_ndim > 1:
+                gp.compute(gp_model_inputs.T,flux_err)
+            else:
+                gp.compute(gp_model_inputs[0],flux_err)
         else:
             n = len(flux)
             return -0.5*(n*np.log(2*np.pi) + np.sum(np.log(flux_err**2)) + np.sum(((flux-self.calc(time))**2)/(2*flux_err**2)))
@@ -535,13 +551,14 @@ class TransitModelGPPM(object):
         return gp.lnlikelihood(flux-self.calc(time),quiet=True)
 
 
-    def lnprob(self,time,flux,flux_err,sys_priors=None,typeII=False):
+    def lnprob(self,time,flux,flux_err,sys_model_inputs=None,sys_priors=None,typeII=False):
         """A self evaluation of the log probability, given as the prior ln likelihood + the GP ln likelihood.
 
         Inputs:
         time - the array of times at which to evaluate the model
         flux - the flux data points
         flux_err - the error in the flux data points
+        sys_model_inputs - the array of values/inputs to feed to the GP. Can be left blank if these have not changed since the initial init call.
         sys_priors - define the priors on [k,aRs,inc] if using them and fitting a white light curve. Default=None (no prior)
         typeII - True/False - define whether we're using a typeII maximum likelihood estimation. Default=False
 
@@ -550,18 +567,19 @@ class TransitModelGPPM(object):
         """
         lnp = self.lnprior(sys_priors)
         if np.isfinite(lnp):
-            return lnp + self.lnlike(time,flux,flux_err,typeII)
+            return lnp + self.lnlike(time,flux,flux_err,sys_model_inputs,typeII)
         else:
             return lnp
 
 
-    def calc_gp_component(self,time,flux,flux_err,deconstruct_gp=False):
+    def calc_gp_component(self,time,flux,flux_err,sys_model_inputs=None,deconstruct_gp=False):
         """The function that generates the systematics (red) noise model using the GP.
 
         Inputs:
         time - the array of times at which to evaluate the model
         flux - the flux data points
         flux_err - the error in the flux data points
+        sys_model_inputs - the array of values/inputs to feed to the GP. Can be left blank if these have not changed since the initial init call.
         deconstruct_gp - True/False - use this if wanting to return the systematics model for each component (kernel) of the GP
 
         Returns:
@@ -572,14 +590,19 @@ class TransitModelGPPM(object):
 
         mean_function = self.calc(time)
 
+        if sys_model_inputs is None:
+            gp_model_inputs = self.systematics_model_inputs
+        else:
+            gp_model_inputs = sys_model_inputs
+
         if deconstruct_gp:
             gp,kernels = self.construct_gp(split=True,compute=True,flux_err=flux_err)
-            mu_components = [gp.predict(flux-mean_function,self.systematics_model_inputs.T, return_cov=False, kernel=k) for k in kernels]
+            mu_components = [gp.predict(flux-mean_function,gp_model_inputs.T, return_cov=False, kernel=k) for k in kernels]
 
         else:
             gp = self.construct_gp(compute=True,flux_err=flux_err)
 
-        predictions = gp.predict(flux-mean_function,self.systematics_model_inputs.T)
+        predictions = gp.predict(flux-mean_function,gp_model_inputs.T)
 
         mu = predictions[0]
         cov = predictions[1]
@@ -590,7 +613,7 @@ class TransitModelGPPM(object):
         else:
             return mu,std
 
-    def chisq(self,time,flux,flux_err):
+    def chisq(self,time,flux,flux_err,sys_model_inputs=None):
 
         """Evaluate the chi2 of the object.
 
@@ -598,97 +621,102 @@ class TransitModelGPPM(object):
         time - the array of times at which to evaluate the model
         flux - the flux data points
         flux_err - the error in the flux data points
+        sys_model_inputs - the array of values/inputs to feed to the polynomial/GP. Can be left blank if these have not changed since the initial init call or you're not using a polynomial.
 
         Returns:
         evaluated chi squared
         """
         if self.GP_used:
-            mu, std = self.calc_gp_component(time,flux,flux_err)
-            resids = (flux - self.calc(time) - mu)/flux_err
+            mu, std = self.calc_gp_component(time,flux,flux_err,sys_model_inputs)
+            resids = (flux - self.calc(time,sys_model_inputs) - mu)/flux_err
         else:
-            resids = (flux - self.calc(time))/flux_err
+            resids = (flux - self.calc(time,sys_model_inputs))/flux_err
 
         return np.sum(resids*resids)
 
-    def reducedChisq(self,time,flux,flux_err):
+    def reducedChisq(self,time,flux,flux_err,sys_model_inputs=None):
         """Evaluate the reduced chi2 of the object.
 
         Inputs:
         time - the array of times at which to evaluate the model
         flux - the flux data points
         flux_err - the error in the flux data points
+        sys_model_inputs - the array of values/inputs to feed to the polynomial/GP. Can be left blank if these have not changed since the initial init call or you're not using a polynomial.
 
         Returns:
         the evaluated reduced chi squared"""
-        return self.chisq(time,flux,flux_err) / (len(flux) - self.npars - 1)
+        return self.chisq(time,flux,flux_err,sys_model_inputs) / (len(flux) - self.npars - 1)
 
 
-    def rms(self,time,flux,flux_err=None):
+    def rms(self,time,flux,flux_err=None,sys_model_inputs=None):
         """Evaluate the RMS of the residuals
 
         Inputs:
         time - the array of times at which to evaluate the model
         flux - the flux data points
         flux_err - the error in the flux data points
+        sys_model_inputs - the array of values/inputs to feed to the polynomial/GP. Can be left blank if these have not changed since the initial init call or you're not using a polynomial.
 
         Returns:
         the evaluated RMS of the residuals"""
 
         if self.GP_used:
-            mu, std = self.calc_gp_component(time,flux,flux_err)
-            resids = (flux - self.calc(time) - mu)
+            mu, std = self.calc_gp_component(time,flux,flux_err,sys_model_inputs)
+            resids = (flux - self.calc(time,sys_model_inputs) - mu)
         else:
-            resids = (flux - self.calc(time))
+            resids = (flux - self.calc(time,sys_model_inputs))
 
         rms = np.sqrt(np.square(resids).mean())
 
         return rms
 
-    def BIC(self,time,flux,flux_err):
+    def BIC(self,time,flux,flux_err,sys_model_inputs=None):
         """Evaluate the Bayesian Information Criterion of the object.
 
         Inputs:
         time - the array of times at which to evaluate the model
         flux - the flux data points
         flux_err - the error in the flux data points
+        sys_model_inputs - the array of values/inputs to feed to the polynomial/GP. Can be left blank if these have not changed since the initial init call or you're not using a polynomial.
 
         Returns:
         the evaluated BIC"""
 
-        # ~ return self.chisq(time,flux,flux_err) + self.npars * np.log(len(flux))
-        return  self.npars * np.log(len(flux)) - 2 * self.lnlike(time,flux,flux_err)
+        return  self.npars * np.log(len(flux)) - 2 * self.lnlike(time,flux,flux_err,sys_model_inputs)
 
 
-    def AIC(self,time,flux,flux_err):
+    def AIC(self,time,flux,flux_err,sys_model_inputs=None):
         """Evaluate the Akaike Information Criterion of the object.
 
         Inputs:
         time - the array of times at which to evaluate the model
         flux - the flux data points
         flux_err - the error in the flux data points
+        sys_model_inputs - the array of values/inputs to feed to the polynomial/GP. Can be left blank if these have not changed since the initial init call or you're not using a polynomial.
 
         Returns:
         the evaluated AIC"""
 
-        return  2*self.npars - 2 * self.lnlike(time,flux,flux_err)
+        return  2*self.npars - 2 * self.lnlike(time,flux,flux_err,sys_model_inputs)
 
 
-    def red_noise_beta(self,time,flux,flux_err):
+    def red_noise_beta(self,time,flux,flux_err,sys_model_inputs=None):
         """Evaluate the red noise beta factor of the residuals
 
         Inputs:
         time - the array of times at which to evaluate the model
         flux - the flux data points
         flux_err - the error in the flux data points
+        sys_model_inputs - the array of values/inputs to feed to the polynomial/GP. Can be left blank if these have not changed since the initial init call or you're not using a polynomial.
 
         Returns:
         the evaluated RMS of the residuals"""
 
         if self.GP_used:
-            mu, std = self.calc_gp_component(time,flux,flux_err)
-            resids = (flux - self.calc(time) - mu)
+            mu, std = self.calc_gp_component(time,flux,flux_err,sys_model_inputs)
+            resids = (flux - self.calc(time,sys_model_inputs) - mu)
         else:
-            resids = (flux - self.calc(time))
+            resids = (flux - self.calc(time,sys_model_inputs))
 
         rms = np.sqrt(np.square(resids).mean())
 
