@@ -10,3 +10,4 @@ for i in range(starting_bin,stopping_bin):
 	os.system("python %s/gppm_fit.py %d"%(Tiberius_path,i))
 
 os.system("python %s/plot_output.py -s -st -cp"%Tiberius_path)
+os.system("python %s/model_table_generator.py"%Tiberius_path)

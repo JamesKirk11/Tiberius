@@ -1,5 +1,5 @@
 #### Author of this code: James Kirk with contributions from James McCormac
-#### Contact: jameskirk@live.co.uk 
+#### Contact: jameskirk@live.co.uk
 
 from astropy.io import fits
 from astropy.time import Time
@@ -15,8 +15,6 @@ args = parser.parse_args()
 
 # Observatory
 OBSERVATORY = EarthLocation.of_site(args.obs)
-# print(OBSERVATORY)
-
 
 def getLightTravelTimes(ra, dec, time_to_correct):
     """

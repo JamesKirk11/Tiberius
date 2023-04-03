@@ -41,6 +41,7 @@ show_plots = bool(int(input_dict['show_plots']))
 
 ### Load in various input arrays
 time = pickle.load(open(input_dict['time_file'],'rb'))
+time -= int(time[0]) # offset the time array to help with minimization
 
 if white_light_fit:
     flux = pickle.load(open(input_dict['flux_file'],'rb'))
@@ -227,6 +228,7 @@ if not white_light_fit:
     aRs = float(input_dict['aRs'])
     inclination = float(input_dict['inclination'])
     t0 = float(input_dict['t0'])
+    t0 -= int(t0)
     ecc = float(input_dict['ecc'])
     omega = float(input_dict['omega'])
     period = float(input_dict['period'])
@@ -299,7 +301,9 @@ else:
         else:
             sys_priors["omega_prior"] = None
 
-    t0 = tmgp.Param(float(input_dict['t0']))
+    t0_guess = float(input_dict['t0'])
+    t0_guess -= int(t0_guess)
+    t0 = tmgp.Param(t0_guess)
 
 
 ### Limb darkening
@@ -774,25 +778,11 @@ if not GP_used:
 
         # first get the red noise model
         red_noise_model = prod_model.red_noise_poly(time,systematics_model_inputs)
-
-        # if not clip_outliers:
-        #     keep_idx = np.arange(len(time))
-
-        # Need to make sure common noise model acts over all frames, as it will have been calculated for the clipped frames only
-        # To do this, use a spline
-        # if np.any(~keep_idx):
-        #     red_noise_spline = US(np.arange(len(time))[keep_idx],red_noise_model,s=0)
-        #     red_noise_model = red_noise_spline(np.arange(len(time)))
-
         pickle.dump(red_noise_model,open('red_noise_model.pickle','wb'))
 
         # now get the common noise model, which is the flux array minus the best fitting transit model
         full_model = prod_model.calc(time,systematics_model_inputs)
 
-        # if np.any(~keep_idx):
-        #     full_model_spline = US(np.arange(len(time))[keep_idx],full_model,s=0)
-        #     transit_model = full_model_spline(np.arange(len(time)))/red_noise_model
-        # else:
         transit_model = full_model/red_noise_model
 
         common_noise_model = flux/transit_model
@@ -805,26 +795,13 @@ else:
     if white_light_fit:
         mu,std,mu_components = prod_model.calc_gp_component(time,flux,flux_error,systematics_model_inputs,True)
 
-        # if not clip_outliers:
-        #     keep_idx = np.arange(len(time))
-
-        # Need to make sure common noise model acts over all frames, as it will have been calculated for the clipped frames only
-        # To do this, use a spline
-        # spline_all = US(np.arange(len(time))[keep_idx],mu,s=0)
-        # extrapolated_all = spline_all(np.arange(len(time)))
         pickle.dump(mu,open('gp_model_all.pickle','wb'))
 
         for i,m in enumerate(mu_components):
-            # spline = US(np.arange(len(time))[keep_idx],m,s=0)
-            # extrapolated = spline(np.arange(len(time)))
             pickle.dump(m,open('gp_model_kernel%d.pickle'%(i+1),'wb'))
 
         # the GP component combined with the residuals is given by subtracting the best-fitting transit model. This can be calculated for original arrays
         tm = prod_model.calc(time,systematics_model_inputs)
-        # tm_spline = US(np.arange(len(time))[keep_idx],tm,s=0)
-        # tm_extrapolated = tm_spline(np.arange(len(time)))
-
-        # ~ common_noise_model = flux/prod_model.calc(time)
         common_noise_model = flux/tm
         pickle.dump(common_noise_model,open("common_noise_model.pickle","wb"))
 
@@ -833,3 +810,5 @@ if white_light_fit: # make plot of rms vs bins and expected vs calculated LDCs f
     print("\nNow running plot_output.py for expected_vs_calculated_LDCS.pdf and rms_vs_bins.pdf...")
     import os
     os.system("python %s/plot_output.py -wlc -cp -st -s"%os.path.dirname(tmgp.__file__))
+    print("Making model table")
+    os.system("python %s/model_table_generator.py"%os.path.dirname(tmgp.__file__))

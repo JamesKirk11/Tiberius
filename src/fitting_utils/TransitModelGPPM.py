@@ -42,6 +42,7 @@ class TransitModelGPPM(object):
 
         self.pars = pars_dict
         self.systematics_model_inputs = systematics_model_inputs
+        self.time_array = time_array
         self.kernel_classes = kernel_classes
         self.kernel_priors = kernel_priors
         self.wn_kernel = wn_kernel
@@ -255,7 +256,7 @@ class TransitModelGPPM(object):
         self.batman_params.u = gamma                #limb darkening coefficients [u1, u2]
 
         if time is not None:
-            if time != time_array: # optionally recalculating batman model if the time array has changed
+            if np.any(time != self.time_array): # optionally recalculating batman model if the time array has changed
                 self.batman_model = batman.TransitModel(self.batman_params, time, nthreads=1)
 
         transitShape = self.batman_model.light_curve(self.batman_params)

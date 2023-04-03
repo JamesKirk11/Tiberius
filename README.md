@@ -19,7 +19,9 @@ A dedicated Tiberius paper is in the pipeline.
 
 ### Dependencies:
 
- -- these should be automatically installed via pip install Tiberius but note that ExoTiC-LD requires additional files. <br>
+To run stage 1 JWST data reduction, you need to install the STScI jwst pipeline following the instructions [here](https://jwst-pipeline.readthedocs.io/en/stable/index.html). I don't package this with Tiberius since the jwst installation requires some additional steps.  
+
+ -- these should be automatically installed via pip install Tiberius but note that ExoTiC-LD also requires [additional files](https://exotic-ld.readthedocs.io/en/latest/views/installation.html). <br>
 
  argparse <br>
  astropy <br>

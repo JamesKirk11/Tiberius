@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import pickle
 import argparse
 import plotting_utils as pu
+from global_utils import parseInput
 
 parser = argparse.ArgumentParser(description='Generate .dat table of time, flux, err and transit and gp models and residuals')
 parser.add_argument("-pre",help="the prefix of the table name, to go before model_tab_wbXX.dat, can be left blank")
@@ -14,6 +15,14 @@ parser.add_argument("-dt_only",help='Use this if only wanting to save the detren
 args = parser.parse_args()
 
 x,y,e,e_r,m,m_in,w,we,completed_bins,nbins = pu.load_completed_bins(directory=".",start_bin=None,end_bin=None,mask=None,return_index_only=False)
+
+if args.off is None: # automatically load in the time offset
+    input_dict = parseInput('fitting_input.txt')
+    time = pickle.load(open(input_dict['time_file'],'rb'))
+    time_offset = int(time[0])
+else:
+    time_offset = args.off
+
 
 for i,n in enumerate(completed_bins):
 
@@ -38,8 +47,7 @@ for i,n in enumerate(completed_bins):
 
     npoints = len(x[i])
 
-    if args.off is not None:
-        x[i] += args.off
+    x[i] += time_offset
 
     if args.pre is not None:
         table_name = "%s_model_tab_"%args.pre
@@ -50,9 +58,9 @@ for i,n in enumerate(completed_bins):
         table_name += "detrended_"
 
     if WL:
-        table_name += "WL.dat"
+        table_name += "WL.txt"
     else:
-        table_name += "wb%s.dat"%(str(n).zfill(4))
+        table_name += "wb%s.txt"%(str(n).zfill(4))
 
     new_tab = open(table_name,'w')
 

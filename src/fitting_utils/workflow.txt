@@ -1,17 +1,14 @@
-The workflow for fitting light curves generated through the reduction_utils process.
+A basic workflow for fitting light curves generated through the reduction_utils process.
 
 This broadly follows the following main steps:
 
-1) edit mcmc_input.dat
+1) edit fitting_input.txt
 2) generate limb darkening coefficients with generate_LDCS.py
 3) fit light white curve
 4) repeat for spectroscopic light curves, but holding time of mid-transit (t0), the inclination (i) of the planet's transit, and the ratio of the semi-major axis to stellar radius (a/R*) to results from white light curve fit
-5) iterate through various systematics models (and possibly wavelength bins) to obtain the most precise transmission spectrum
-6) if desired, can experiment with parametric model fitting (pm_fit.py) and GP + parametric model fitting (gppm_fit.py) in addition to standard GP fitting (gp_fit.py)
+5) iterate through various systematics models (polynomials/GPs) (and possibly wavelength bins) via running run_gppm_fit.py
 
 NOTE:
-1) in my experience, I find the best fitting workflow is to run a GP fit with all ancillary data (fwhm, xpos, ypos, am, sky) and then a second iteration with these + time. I then compare the different uncertainties and goodness of fits to see whether time is necessary for each night's data.
+1) in my experience, I find the best fitting workflow is to run a GP/polynomial fit with all ancillary data (fwhm, xpos, ypos, am, sky) and then a second iteration with these + time. I then compare the different uncertainties and goodness of fits to see whether time is necessary for each night's data.
 
 Author: James Kirk
-
-Please cite the following paper if you make use of this code: https://ui.adsabs.harvard.edu/abs/2021AJ....162...34K/abstract 
