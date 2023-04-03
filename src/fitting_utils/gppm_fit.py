@@ -773,27 +773,27 @@ if not GP_used:
         # generate red noise model for possible common mode correction. Note this is performed on the full time array, not the clipped time array, so that the same number of data points are used in the WLC and wb fits
 
         # first get the red noise model
-        red_noise_model = prod_model.red_noise_poly(time)
+        red_noise_model = prod_model.red_noise_poly(time,systematics_model_inputs)
 
-        if not clip_outliers:
-            keep_idx = np.arange(len(time))
+        # if not clip_outliers:
+        #     keep_idx = np.arange(len(time))
 
         # Need to make sure common noise model acts over all frames, as it will have been calculated for the clipped frames only
         # To do this, use a spline
-        if np.any(~keep_idx):
-            red_noise_spline = US(np.arange(len(time))[keep_idx],red_noise_model,s=0)
-            red_noise_model = red_noise_spline(np.arange(len(time)))
+        # if np.any(~keep_idx):
+        #     red_noise_spline = US(np.arange(len(time))[keep_idx],red_noise_model,s=0)
+        #     red_noise_model = red_noise_spline(np.arange(len(time)))
 
         pickle.dump(red_noise_model,open('red_noise_model.pickle','wb'))
 
         # now get the common noise model, which is the flux array minus the best fitting transit model
-        full_model = prod_model.calc(time)
+        full_model = prod_model.calc(time,systematics_model_inputs)
 
-        if np.any(~keep_idx):
-            full_model_spline = US(np.arange(len(time))[keep_idx],full_model,s=0)
-            transit_model = full_model_spline(np.arange(len(time)))/red_noise_model
-        else:
-            transit_model = full_model/red_noise_model
+        # if np.any(~keep_idx):
+        #     full_model_spline = US(np.arange(len(time))[keep_idx],full_model,s=0)
+        #     transit_model = full_model_spline(np.arange(len(time)))/red_noise_model
+        # else:
+        transit_model = full_model/red_noise_model
 
         common_noise_model = flux/transit_model
         pickle.dump(common_noise_model,open('common_noise_model.pickle','wb'))
@@ -803,29 +803,29 @@ else:
 
     # Save white light GP model as common mode
     if white_light_fit:
-        mu,std,mu_components = prod_model.calc_gp_component(clipped_time,clipped_flux,clipped_flux_error,True)
+        mu,std,mu_components = prod_model.calc_gp_component(time,flux,flux_error,systematics_model_inputs,True)
 
-        if not clip_outliers:
-            keep_idx = np.arange(len(time))
+        # if not clip_outliers:
+        #     keep_idx = np.arange(len(time))
 
         # Need to make sure common noise model acts over all frames, as it will have been calculated for the clipped frames only
         # To do this, use a spline
-        spline_all = US(np.arange(len(time))[keep_idx],mu,s=0)
-        extrapolated_all = spline_all(np.arange(len(time)))
-        pickle.dump(extrapolated_all,open('gp_model_all.pickle','wb'))
+        # spline_all = US(np.arange(len(time))[keep_idx],mu,s=0)
+        # extrapolated_all = spline_all(np.arange(len(time)))
+        pickle.dump(mu,open('gp_model_all.pickle','wb'))
 
         for i,m in enumerate(mu_components):
-            spline = US(np.arange(len(time))[keep_idx],m,s=0)
-            extrapolated = spline(np.arange(len(time)))
-            pickle.dump(extrapolated,open('gp_model_kernel%d.pickle'%(i+1),'wb'))
+            # spline = US(np.arange(len(time))[keep_idx],m,s=0)
+            # extrapolated = spline(np.arange(len(time)))
+            pickle.dump(m,open('gp_model_kernel%d.pickle'%(i+1),'wb'))
 
         # the GP component combined with the residuals is given by subtracting the best-fitting transit model. This can be calculated for original arrays
-        tm = prod_model.calc(clipped_time)
-        tm_spline = US(np.arange(len(time))[keep_idx],tm,s=0)
-        tm_extrapolated = tm_spline(np.arange(len(time)))
+        tm = prod_model.calc(time,systematics_model_inputs)
+        # tm_spline = US(np.arange(len(time))[keep_idx],tm,s=0)
+        # tm_extrapolated = tm_spline(np.arange(len(time)))
 
         # ~ common_noise_model = flux/prod_model.calc(time)
-        common_noise_model = flux/tm_extrapolated
+        common_noise_model = flux/tm
         pickle.dump(common_noise_model,open("common_noise_model.pickle","wb"))
 
 
