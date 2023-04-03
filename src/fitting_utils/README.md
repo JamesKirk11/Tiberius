@@ -51,19 +51,3 @@ https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3907K/abstract <br>
 https://ui.adsabs.harvard.edu/abs/2021AJ....162...34K/abstract <br>
 
 A dedicated Tiberius paper is in the pipeline.
-
-### Dependencies:
-
-numpy <br>
-scipy <br>
-matplotlib <br>
-pandas <br>
-george: https://george.readthedocs.io/en/latest/user/quickstart/ (via conda install george)<br>
-emcee: https://emcee.readthedocs.io/en/v2.2.1/ (via conda/pip install emcee)<br>
-Limb Darkening Toolkit: https://github.com/hpparvi/ldtk (via pip install ldtk) <br>
-batman: https://www.cfa.harvard.edu/~lkreidberg/batman/ (via pip install batman-package )<br>
-corner: https://corner.readthedocs.io/en/latest/install.html (via pip install corner) <br>
-netCDF4 (optional): to use the script to convert fitting_utils output into uniform JWST output. Can be installed via pip install <br>
-h5netcdf (optional): to use the script to convert fitting_utils output into uniform JWST output. Can be installed via pip install <br>
-xarray (optional): to use the script to convert fitting_utils output into uniform JWST output. Can be installed via pip install <br>
-ExoTiC-LD (optional): to use 3D limb darkening laws and instrument throughputs. Can be installed via pip install, followed by data download. See https://exotic-ld.readthedocs.io/en/latest/views/installation.html <br>

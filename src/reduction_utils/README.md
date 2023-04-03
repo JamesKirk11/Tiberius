@@ -72,17 +72,6 @@ Functions used in the wavelength binning of the data
 - **wavelength_calibration.py*** \
 Functions used in the wavelength calibration of the data.
 
-- **white_light_fitting.py** \
-Loads in system parameters from a file within the current directory (this needs to be created by the user) and fits a Mandel & Agol model to the white light curve with a quoted precision in the residuals of the fit. This is useful for a check of how well a reduction has performed. However, I now prefer to use fitting_utils to do the white light curve fitting.
-
-
-## Dependencies (non-standard)
-
-- peakutils (via pip install peakutils)
-- pysynphot (via pip install pysynphot)
-- fitting_utils (via git clone)
-- astroscrappy (if wanting to perform autmoatic cosmic ray detection during extraction. This is not fully tested and hence not totally necessary)
-
 ## Contributors
 
 James Kirk
