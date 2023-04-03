@@ -1,7 +1,7 @@
 # Tiberius
 The Tiberius pipeline to extract time-series spectra and fit exoplanet transit light curves.
 
-There is a readthedocs in development.
+There is a [readthedocs](https://tiberius.readthedocs.io/en/latest/) in development.
 
 In the meantime, please checkout the READMEs under reduction_utils (to extract stellar spectra) and fitting_utils (to fit transit light curves).
 

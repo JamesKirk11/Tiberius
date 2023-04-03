@@ -17,5 +17,7 @@ Contents
 
 .. toctree::
 
-   usage
+   installation
+   extracting spectra
+   fitting light curves
    api
