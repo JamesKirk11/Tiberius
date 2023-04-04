@@ -439,9 +439,7 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
     diagnostic_tab.close()
 
 
-    if burn:
-        pickle.dump(fitted_model,open('burn_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
-    else:
+    if not burn:
         pickle.dump(fitted_model,open('prod_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
 
     if burn:
