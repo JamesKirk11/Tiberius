@@ -288,7 +288,10 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
         p0 = [np.array(starting_model_values) + 1e-8 * np.random.randn(ndim) for j in range(nwalkers)]
 
     # intiate emcee sampler object
-    sampler = emcee.EnsembleSampler(nwalkers,npars,lnprob_emcee,args=[starting_model,x,y,e,sys_priors,typeII],threads=nthreads)
+    if ndim > 1:
+        sampler = emcee.EnsembleSampler(nwalkers,npars,lnprob_emcee,args=[starting_model,x,y,e,sys_priors,typeII],threads=nthreads)
+    else: # from my own tests I find that for a single parameter, the acceptance fraction is too high. Increasing the stretch scale factor decreases the acceptance fraction to a more acceptable value
+        sampler = emcee.EnsembleSampler(nwalkers,npars,lnprob_emcee,args=[starting_model,x,y,e,sys_priors,typeII],threads=nthreads,moves=emcee.moves.StretchMove(10))
 
     # run chains
     print('################')
@@ -357,13 +360,19 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
         for j in range(ndim):
             axes[j].plot(sampler.chain[:, :, j].T, color="k", alpha=0.4)
             axes[j].set_ylabel(starting_model.namelist[j],fontsize=20)
-        axes[j].set_xlabel("step number")
-        fig.tight_layout(h_pad=0.0)
-        if burn:
-            fig.savefig('burn_chain_wb%s.png'%(str(wavelength_bin+1).zfill(4)))
-        else:
-            fig.savefig('prod_chain_wb%s.png'%(str(wavelength_bin+1).zfill(4)))
-        plt.close()
+            axes[j].set_xlabel("step number")
+    else:
+        fig,axes = plt.subplots(1,1,figsize=(6,3))
+        axes.plot(sampler.chain[:, :, 0].T, color="k", alpha=0.4)
+        axes.set_ylabel(starting_model.namelist[0],fontsize=20)
+        axes.set_xlabel("step number")
+
+    fig.tight_layout(h_pad=0.0)
+    if burn:
+        fig.savefig('burn_chain_wb%s.png'%(str(wavelength_bin+1).zfill(4)))
+    else:
+        fig.savefig('prod_chain_wb%s.png'%(str(wavelength_bin+1).zfill(4)))
+    plt.close()
 
     if nsteps > 500:
         if burn:
