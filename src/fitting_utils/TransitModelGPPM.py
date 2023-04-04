@@ -646,7 +646,7 @@ class TransitModelGPPM(object):
 
         Returns:
         the evaluated reduced chi squared"""
-        return self.chisq(time,flux,flux_err,sys_model_inputs) / (len(flux) - self.npars - 1)
+        return self.chisq(time,flux,flux_err,sys_model_inputs) / (len(flux) - self.npars)
 
 
     def rms(self,time,flux,flux_err=None,sys_model_inputs=None):
