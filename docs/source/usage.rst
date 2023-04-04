@@ -10,12 +10,12 @@ I am working on making Tiberius pip installable from pypi.
 
 In the meantime, if you use conda environments, I recommend first making a new conda environment:
 
-.. code-block:: console
+.. code-block:: bash
    (.venv) $ conda create -n Tiberius python=3.8
 
 and then download the repository from GitHub. Navigate to the Tiberius directory and within a terminal do:
 
-.. code-block:: console
+.. code-block:: bash
    (.venv) $ pip install -e .
 
 
