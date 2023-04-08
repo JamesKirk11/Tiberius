@@ -10,12 +10,12 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 from global_utils import parseInput
 
-try:
-    import fitting_utils.plotting_utils as pu
-    import fitting_utils.mcmc_utils as mc
-except:
-    from . import plotting_utils as pu
-    from . import mcmc_utils as mc
+# try:
+#     import fitting_utils.plotting_utils as pu
+#     import fitting_utils.mcmc_utils as mc
+# except:
+import plotting_utils as pu
+import mcmc_utils as mc
 
 ### Define command line arguments with help
 

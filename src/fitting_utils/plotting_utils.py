@@ -13,7 +13,7 @@ from global_utils import parseInput
 # try:
 #     import fitting_utils.mcmc_utils as mc
 # except:
-#     from . import mcmc_utils as mc
+import mcmc_utils as mc
 
 ### FUNCTIONS USEFUL FOR THE PLOTTING OF DATA
 
@@ -649,7 +649,7 @@ def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mas
 
     for i,wb in enumerate(completed_bins):
 
-        k_curr,k_up_curr,k_low_curr = parseParam(best_dict['k_%d'%wb])
+        k_curr,k_up_curr,k_low_curr = mc.parseParam(best_dict['k_%d'%wb])
         k.append(k_curr)
         k_up.append(k_up_curr)
         k_low.append(k_low_curr)
@@ -686,26 +686,26 @@ def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mas
             print("\n")
 
         if not bool(int(input_dict['fix_u1'])):
-            u1_curr,u1_up_curr,u1_low_curr = parseParam(best_dict['u1_%d'%(wb)])
+            u1_curr,u1_up_curr,u1_low_curr = mc.parseParam(best_dict['u1_%d'%(wb)])
             u1.append(u1_curr)
             u1_up.append(u1_up_curr)
             u1_low.append(u1_low_curr)
 
         if not bool(int(input_dict['fix_u2'])):
-            u2_curr,u2_up_curr,u2_low_curr = parseParam(best_dict['u2_%d'%(wb)])
+            u2_curr,u2_up_curr,u2_low_curr = mc.parseParam(best_dict['u2_%d'%(wb)])
             u2.append(u2_curr)
             u2_up.append(u2_up_curr)
             u2_low.append(u2_low_curr)
 
         if input_dict["ld_law"] == "nonlinear":
             if not bool(int(input_dict['fix_u3'])):
-                u3_curr,u3_up_curr,u3_low_curr = parseParam(best_dict['u3_%d'%(wb)])
+                u3_curr,u3_up_curr,u3_low_curr = mc.parseParam(best_dict['u3_%d'%(wb)])
                 u3.append(u3_curr)
                 u3_up.append(u3_up_curr)
                 u3_low.append(u3_low_curr)
 
             if not bool(int(input_dict['fix_u4'])):
-                u4_curr,u4_up_curr,u4_low_curr = parseParam(best_dict['u4_%d'%(wb)])
+                u4_curr,u4_up_curr,u4_low_curr = mc.parseParam(best_dict['u4_%d'%(wb)])
                 u4.append(u4_curr)
                 u4_up.append(u4_up_curr)
                 u4_low.append(u4_low_curr)
@@ -994,7 +994,7 @@ def expected_vs_calculated_ldcs(directory='.',save_fig=False,bin_mask=None):
     for i in range(nbins):
         if not fix_u1:
             try:
-                u1_curr,u1_up_curr,u1_low_curr = parseParam(best_dict['u1_%d'%(i+1)])
+                u1_curr,u1_up_curr,u1_low_curr = mc.parseParam(best_dict['u1_%d'%(i+1)])
                 u1.append(u1_curr)
                 u1_up.append(u1_up_curr)
                 u1_low.append(u1_low_curr)
@@ -1005,7 +1005,7 @@ def expected_vs_calculated_ldcs(directory='.',save_fig=False,bin_mask=None):
 
         if not fix_u2:
             try:
-                u2_curr,u2_up_curr,u2_low_curr = parseParam(best_dict['u2_%d'%(i+1)])
+                u2_curr,u2_up_curr,u2_low_curr = mc.parseParam(best_dict['u2_%d'%(i+1)])
                 u2.append(u2_curr)
                 u2_up.append(u2_up_curr)
                 u2_low.append(u2_low_curr)
@@ -1016,7 +1016,7 @@ def expected_vs_calculated_ldcs(directory='.',save_fig=False,bin_mask=None):
 
         if not fix_u3:
             try:
-                u3_curr,u3_up_curr,u3_low_curr = parseParam(best_dict['u3_%d'%(i+1)])
+                u3_curr,u3_up_curr,u3_low_curr = mc.parseParam(best_dict['u3_%d'%(i+1)])
                 u3.append(u3_curr)
                 u3_up.append(u3_up_curr)
                 u3_low.append(u3_low_curr)
@@ -1027,7 +1027,7 @@ def expected_vs_calculated_ldcs(directory='.',save_fig=False,bin_mask=None):
 
         if not fix_u4:
             try:
-                u4_curr,u4_up_curr,u4_low_curr = parseParam(best_dict['u4_%d'%(i+1)])
+                u4_curr,u4_up_curr,u4_low_curr = mc.parseParam(best_dict['u4_%d'%(i+1)])
                 u4.append(u4_curr)
                 u4_up.append(u4_up_curr)
                 u4_low.append(u4_low_curr)
