@@ -8,12 +8,12 @@ from george import kernels
 from scipy import optimize,stats
 import matplotlib.pyplot as plt
 
-try:
-    import fitting_utils.parametric_fitting_functions as pf
-    import fitting_utils.plotting_utils as pu
-except:
-    from . import parametric_fitting_functions as pf
-    from . import plotting_utils as pu
+# try:
+#     import fitting_utils.parametric_fitting_functions as pf
+#     import fitting_utils.plotting_utils as pu
+# except:
+import parametric_fitting_functions as pf
+import plotting_utils as pu
 
 class TransitModelGPPM(object):
     def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic"):
@@ -547,7 +547,7 @@ class TransitModelGPPM(object):
                 gp.compute(gp_model_inputs[0],flux_err)
         else:
             n = len(flux)
-            return -0.5*(n*np.log(2*np.pi) + np.sum(np.log(flux_err**2)) + np.sum(((flux-self.calc(time))**2)/(2*flux_err**2)))
+            return -0.5*(n*np.log(2*np.pi) + np.sum(np.log(flux_err**2)) + np.sum(((flux-self.calc(time))**2)/(flux_err**2)))
 
         return gp.lnlikelihood(flux-self.calc(time),quiet=True)
 
