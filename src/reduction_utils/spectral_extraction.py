@@ -26,7 +26,7 @@ plt.rcParams['image.origin'] = 'lower'
 
 def gauss(x,amplitude,mean,std,offset):
     """A Gaussian with a fitted flux offset"""
-    return amplitude*np.exp(-(x-mean)**2/(2*std**2))+offset
+    return amplitude*np.exp(-(x-mean)**2/(std**2))+offset
 
 
 def BIC(model,data,error,n):
@@ -255,6 +255,21 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
         plt.plot(row_array[clipped_trace_idx],np.array(trace_centre)[clipped_trace_idx]-fitted_function(row_array)[clipped_trace_idx],'ro',ms=4)#,markerfacecolor='None')
         plt.title('Residuals of trace fitting, star %d'%(star+1))
         plt.ylabel('Residuals')
+        plt.xlabel('X pixel')
+        plt.xlim(0,nrows)
+        plt.legend(numpoints=1)
+        if delay == -2:
+            plt.show()
+        else:
+            plt.show(block=False)
+            plt.pause(delay)
+            plt.close()
+
+        plt.figure(figsize=(8,4))
+        plt.plot(row_array[clipped_trace_idx],np.array(gauss_std)[clipped_trace_idx],label='Standard deviation of Gaussian')
+        plt.plot(row_array[clipped_trace_idx],np.array(fwhm)[clipped_trace_idx],label="FWHM of trace")
+        plt.title('Trace width, star %d'%(star+1))
+        plt.ylabel('Width in pixels')
         plt.xlabel('X pixel')
         plt.xlim(0,nrows)
         plt.legend(numpoints=1)
@@ -1144,7 +1159,7 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                 trace, force_verbose, fwhm, gauss_std = find_spectral_trace(frame,guess_location[star_number],search_width[star_number],gaussian_width,trace_poly_order,trace_spline_sf,star_number,verbose,co_add_rows,instrument)
 
                 if gaussian_defined_aperture:
-                    trace_std = gauss_std
+                    trace_std = gauss_std*2*np.sqrt(2*np.log(2))
                 else:
                     trace_std = None
 
