@@ -184,7 +184,7 @@ def make_corner_plot(sample_chains,bin_number,namelist,save_fig=False,title=None
         plt.show()
 
 
-def lnprob_emcee(pars,model,x,y,e,sys_priors=None,typeII=False):
+def lnprob_emcee(pars,model,x,y,e,sys_model_inputs=None,sys_priors=None,typeII=False):
     """Calculate the lnprobability of the model using the function inbuilt into the transit model classes.
 
     Inputs:
@@ -193,6 +193,7 @@ def lnprob_emcee(pars,model,x,y,e,sys_priors=None,typeII=False):
     x - array of times
     y - array of fluxes
     e - array of errors on fluxes
+    sys_model_inputs - the inputs of the systematics model. Can be left blank if these are unchanged since the model was initialised.
     sys_priors - array of standard deviations on Rp/Rs, a/Rs and inclination. Only used for white light fits. Default = None (no prior used).
     typeII - True/False: are we performing typeII maximum likelihood - only used by TransitModelGP
 
@@ -209,7 +210,7 @@ def lnprob_emcee(pars,model,x,y,e,sys_priors=None,typeII=False):
         for i in range(model.npars):
                 model[i] = pars[i]
 
-    model_lnprob = model.lnprob(x,y,e,sys_priors,typeII)
+    model_lnprob = model.lnprob(x,y,e,sys_model_inputs,sys_priors,typeII)
 
     return model_lnprob
 
@@ -289,9 +290,9 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
 
     # intiate emcee sampler object
     if ndim > 1:
-        sampler = emcee.EnsembleSampler(nwalkers,npars,lnprob_emcee,args=[starting_model,x,y,e,sys_priors,typeII],threads=nthreads)
+        sampler = emcee.EnsembleSampler(nwalkers,npars,lnprob_emcee,args=[starting_model,x,y,e,None,sys_priors,typeII],threads=nthreads)
     else: # from my own tests I find that for a single parameter, the acceptance fraction is too high. Increasing the stretch scale factor decreases the acceptance fraction to a more acceptable value
-        sampler = emcee.EnsembleSampler(nwalkers,npars,lnprob_emcee,args=[starting_model,x,y,e,sys_priors,typeII],threads=nthreads,moves=emcee.moves.StretchMove(10))
+        sampler = emcee.EnsembleSampler(nwalkers,npars,lnprob_emcee,args=[starting_model,x,y,e,None,sys_priors,typeII],threads=nthreads,moves=emcee.moves.StretchMove(10))
 
     # run chains
     print('################')
