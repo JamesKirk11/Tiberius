@@ -7,7 +7,6 @@ from scipy.interpolate import UnivariateSpline
 from scipy.stats import median_abs_deviation as mad
 from scipy.ndimage import median_filter as MF
 from scipy.ndimage import interpolation
-from cosmic_removal import interp_bad_pixels
 from astropy.io import fits
 import matplotlib.pyplot as plt
 import time
@@ -19,6 +18,8 @@ try:
     import astroscrappy
 except:
     print("astroscrappy not imported, automatic cosmic ray detection can't be performed with lacosmic")
+
+from cosmic_removal import interp_bad_pixels
 
 # Prevent matplotlib plotting frames upside down
 plt.rcParams['image.origin'] = 'lower'

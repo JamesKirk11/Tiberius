@@ -7,11 +7,6 @@ import george
 from george import kernels
 from scipy import optimize,stats
 import matplotlib.pyplot as plt
-
-# try:
-#     import fitting_utils.parametric_fitting_functions as pf
-#     import fitting_utils.plotting_utils as pu
-# except:
 import parametric_fitting_functions as pf
 import plotting_utils as pu
 

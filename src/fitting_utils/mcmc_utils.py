@@ -7,11 +7,7 @@ import matplotlib.pyplot as plt
 import emcee
 from corner import corner
 import sys
-
-try:
-    import fitting_utils.TransitModelGPPM as tmgp
-except:
-    from . import TransitModelGPPM as tmgp
+import TransitModelGPPM as tmgp
 
 
 def parseParam(parString):

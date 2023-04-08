@@ -8,13 +8,8 @@ import sys
 import os
 import copy
 from collections import OrderedDict
-
-try:
-    import fitting_utils.TransitModelGPPM as tmgp
-    import fitting_utils.plotting_utils as pu
-except:
-    from . import TransitModelGPPM as tmgp
-    from . import plotting_utils as pu
+import TransitModelGPPM as tmgp
+import plotting_utils as pu
 
 def systematics_model(p0,model_inputs,poly_orders,normalise_inputs=False,deconstruct_polys=False):
 

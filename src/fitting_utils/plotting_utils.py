@@ -9,10 +9,6 @@ import pickle
 import glob
 from matplotlib.ticker import AutoMinorLocator
 from global_utils import parseInput
-
-# try:
-#     import fitting_utils.mcmc_utils as mc
-# except:
 import mcmc_utils as mc
 
 ### FUNCTIONS USEFUL FOR THE PLOTTING OF DATA
