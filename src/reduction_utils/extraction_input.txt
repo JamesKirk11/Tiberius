@@ -69,7 +69,7 @@ rectify_data = 0
 # The width of the aperture (in pixels) used to perform simple aperture photometry (should be an even number). Different apertures can be used for multiple stars by defining multiple values here, separated by commas. 
 aperture_width =  8
 
-# Set this equal to 1 if wanting to set aperture based on the mean FWHM of the surrounding 20 rows. In this case, aperture_width is a multiplication factor to the FWHM. NOTE: this is currently in Beta phase
+# Set this equal to 1 if wanting to set aperture based on the mean FWHM of the surrounding 10 rows. In this case, aperture_width is a multiplication factor to the FWHM.
 gaussian_defined_aperture = 0 
 
 # The offset in pixels between the edge of the extraction aperture and the region which is being used to estimate the background. The motivation being that you don't want to contaminate the background estimate with the wings of the stellar PSF. Different offsets can be used for each star by defining multiple values here, separated by commas.
