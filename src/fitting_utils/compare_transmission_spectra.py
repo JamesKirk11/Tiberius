@@ -8,8 +8,8 @@ import pickle
 from astropy import constants
 from matplotlib.ticker import AutoMinorLocator,ScalarFormatter
 
-import plotting_utils as pu
-import reduction_utils.wavelength_binning as wb
+from Tiberius.src.fitting_utils import plotting_utils as pu
+from Tiberius.src.reduction_utils import wavelength_binning as wb
 from global_utils import parseInput
 
 parser = argparse.ArgumentParser(description='Convert ACCESS pipeline outputs to input pickle files needed by LRG-BEASTS fitting_utils')

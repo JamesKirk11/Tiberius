@@ -9,7 +9,7 @@ import pickle
 import glob
 from matplotlib.ticker import AutoMinorLocator
 from global_utils import parseInput
-import mcmc_utils as mc
+from Tiberius.src.fitting_utils import mcmc_utils as mc
 
 ### FUNCTIONS USEFUL FOR THE PLOTTING OF DATA
 
@@ -1337,3 +1337,83 @@ def load_completed_bins(directory=".",start_bin=None,end_bin=None,mask=None,retu
     m = [pickle.load(open(i,'rb')) for i in model_files]
 
     return x,y,e,e_r,m,m_in,w,we,completed_bins,nbins
+
+
+def bin_wave_to_R(w,R):
+	"""A function to bin a wavelength grid to a specified resolution
+
+	Parameters
+	----------
+	w : list of float or numpy array of float
+	    Wavelength axis to be rebinned
+	R : float or int
+	    Resolution to bin axis to
+
+	Returns
+	-------
+	list of float
+	    New wavelength axis at specified resolution
+	"""
+
+	wvls = []
+	starting_wvl = w[0]
+	stopping_wvl = w[-1]
+	i = starting_wvl
+	while i < stopping_wvl:
+	    delta_lam = i/R
+	    wvls.append(i+delta_lam)
+	    i += delta_lam
+	return np.array(wvls)
+
+
+def bin_trans_spec(bin_edges,x,y,e1,e2=None):
+    """A function to bin a transmission spectrum to a lower resolution using weighted means of depths within a bin.
+
+    Inputs:
+    bin_edges -- an array of the *edges* of the bins, not the centres
+    x -- the input wavelength array
+    y -- the input spectrum (depths or Rp/Rs)
+    e1 -- the 1 sigma uncertainties on y. Can be defined as the upper errors if errors are asymmetric
+	e2 -- the 1 sigma uncertainties on y. Can be defined as the lower errors if errors are asymmetric
+
+    Returns:
+    A dictionary of 'bin_x' the bin *centres*, 'bin_dx' the bin widths, 'bin_y' the binned spectrum, 'bin_dy' the binned uncertainties on the spectrum"""
+
+    digitized = np.digitize(x,bin_edges)
+
+    binned_x = []
+    binned_xe = []
+    binned_y = []
+    binned_e = []
+
+    for i in range(1,len(bin_edges)):
+        if e2 is not None:
+            mean_y,mean_e = weighted_mean_uneven_errors(y[digitized==i],e1[digitized==i],e2[digitized==i])
+        else:
+	        mean_y,weights = np.average(y[digitized==i],weights=1/e1[digitized==i]**2,returned=True)
+	        mean_e = np.sqrt(1/weights)
+
+        binned_x.append(x[digitized==i].mean())
+        binned_xe.append(x[digitized==i].max()-x[digitized==i].min())
+        binned_y.append(mean_y)
+        binned_e.append(mean_e)
+
+    binned = {"bin_x":np.array(binned_x),"bin_dx":np.array(binned_xe),"bin_y":np.array(binned_y),"bin_dy":np.array(binned_e)}
+
+    return binned
+
+def calc_bin_edges_from_centres(bin_centres):
+    """A function that calculates the edges of bins from an array of bin centres, assuming that bin edges are halfway between the bin edges.
+
+    Inputs:
+    bin_centres - an array of wavelength bin centres
+
+    Returns:
+    bin_edges - the array of wavelength bin edges"""
+
+    bin_edges = []
+    bin_widths = np.diff(bin_centres)
+    bin_edges = bin_centres[:-1] + bin_widths/2
+    first_bin_edge = bin_centres[0] - bin_widths[0]/2
+    last_bin_edge = bin_centres[-1] + bin_widths[-1]/2
+    return np.hstack((first_bin_edge,bin_edges,last_bin_edge))

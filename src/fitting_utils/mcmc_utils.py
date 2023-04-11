@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import emcee
 from corner import corner
 import sys
-import TransitModelGPPM as tmgp
+from Tiberius.src.fitting_utils import TransitModelGPPM as tmgp
 
 
 def parseParam(parString):

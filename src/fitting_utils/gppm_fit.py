@@ -9,10 +9,10 @@ import argparse
 from scipy.interpolate import UnivariateSpline as US
 
 from global_utils import parseInput
-import mcmc_utils as mc
-import TransitModelGPPM as tmgp
-import parametric_fitting_functions as pf
-import plotting_utils as pu
+from Tiberius.src.fitting_utils import mcmc_utils as mc
+from Tiberius.src.fitting_utils import TransitModelGPPM as tmgp
+from Tiberius.src.fitting_utils import parametric_fitting_functions as pf
+from Tiberius.src.fitting_utils import plotting_utils as pu
 
 
 parser = argparse.ArgumentParser(description='Run fit to a single light curve that is either a wavelength-binned or white light curve. This makes use of the TransitModelGPPM class, which fits the red noise as a GP + parametric model.')
