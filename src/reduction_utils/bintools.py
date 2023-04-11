@@ -9,6 +9,7 @@ with warnings.catch_warnings():
 	import pysynphot.binning as astrobin
 import warnings as warn
 import astropy.units as u
+from Tiberius.src.fitting_utils import plotting_utils as pu
 
 def binning(x, y,  dy=None, binwidth=None, r=None,newx= None, log = False, nan=False):
 	"""
@@ -276,14 +277,15 @@ def bin_wave_to_R(w,R):
 	return np.array(wvls)
 
 
-def bin_trans_spec(bin_edges,x,y,e):
+def bin_trans_spec(bin_edges,x,y,e1,e2=None):
     """JK's function to bin a transmission spectrum to a lower resolution using weighted means of depths within a bin.
 
     Inputs:
     bin_edges -- an array of the *edges* of the bins, not the centres
     x -- the input wavelength array
     y -- the input spectrum (depths or Rp/Rs)
-    e -- the 1 sigma uncertainties on y. Assumed to be symmetrical
+    e1 -- the 1 sigma uncertainties on y. Can be defined as the upper errors if errors are asymmetric
+	e2 -- the 1 sigma uncertainties on y. Can be defined as the lower errors if errors are asymmetric
 
     Returns:
     A dictionary of 'bin_x' the bin *centres*, 'bin_dx' the bin widths, 'bin_y' the binned spectrum, 'bin_dy' the binned uncertainties on the spectrum"""
@@ -296,9 +298,11 @@ def bin_trans_spec(bin_edges,x,y,e):
     binned_e = []
 
     for i in range(1,len(bin_edges)):
-
-        mean_y,weights = np.average(y[digitized==i],weights=1/e[digitized==i]**2,returned=True)
-        mean_e = np.sqrt(1/weights)
+        if e2 is not None:
+            mean_y,mean_e = pu.weighted_mean_uneven_errors(y[digitized==i],e1[digitized==i],e2[digitized==i])
+        else:
+	        mean_y,weights = np.average(y[digitized==i],weights=1/e[digitized==i]**2,returned=True)
+	        mean_e = np.sqrt(1/weights)
 
         binned_x.append(x[digitized==i].mean())
         binned_xe.append(x[digitized==i].max()-x[digitized==i].min())
