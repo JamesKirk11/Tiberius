@@ -385,7 +385,7 @@ def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavel
     # calculate M&A transit model
     model_y = model.calc(time)
 
-    if poly and not gp:
+    if poly:# and not gp:
         if deconstruct:
             oot,poly_components = model.red_noise_poly(time,deconstruct_polys=True)
         else:
