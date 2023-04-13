@@ -625,7 +625,7 @@ def simple_bin(flux,flux_error,ancillary_data,wvl_solution,bin_edges,weighted=Tr
     return np.array(binned_flux),np.array(binned_error),binned_ancillary
 
 
-def plot_spectra(star1,star2,wvl_solution,wvl_solution_2=None,bin_edges=None,bin_centres=None,telluric=False,alkali=False,save_fig=False,ratio=True,xmin=None,xmax=None):
+def plot_spectra(star1,star2,wvl_solution,wvl_solution_2=None,bin_edges=None,bin_centres=None,alkali=False,save_fig=False,ratio=True,xmin=None,xmax=None):
 
     """A function that plots the spectra of target and comparison and the ratio of these, along with bin boundaries and ability to plot telluric spectra.
 
@@ -636,7 +636,6 @@ def plot_spectra(star1,star2,wvl_solution,wvl_solution_2=None,bin_edges=None,bin
     wvl_solution_2 - the wavelength solution for star 2, in case the stellar spectra were not resampled onto the same x-axis. Default=None
     bin_edges - a list of the locations of the edges of the wavelength bins if wanting to overplot them. Default=None
     bin_centres - a list of the locations of the centres of the wavelength bins if wanting to overplot them as text on the figure. Default=None
-    telluric - True/False - use this if wanting to overplot a telluric spectrum on the figure. This can be useful for defining bin boundaries away from strong telluric lines. Default=False
     alkali - True/False - use this if wanting to overplot vertical lines at the locations of Na & K. Default=True
     save_fig - True/False - use this if wanting to save the figure to file, saved as 'wavelength_bins.pdf'. Default=False
     ratio - True/False - use this if wanting to plot the ratio of star1/star2 to identify where residual features exist to avoid setting bin edges there. Default=True
@@ -695,13 +694,6 @@ def plot_spectra(star1,star2,wvl_solution,wvl_solution_2=None,bin_edges=None,bin
     if bin_edges is not None:
         for i in bin_edges:
             plt.axvline(i,color='k',ls='--')
-
-    if telluric:
-        path = os.path.dirname(wc.__file__)
-        tell_table = np.loadtxt(path+'/line_lists/tellurics_halpha.dat')
-        tell_wvl = tell_table[:,0]
-        tell_flux = tell_table[:,1]
-        plt.plot(tell_wvl,tell_flux,'k')
 
     if alkali:
         plt.axvline(sodium_d1,color='g')

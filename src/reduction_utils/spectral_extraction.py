@@ -1257,12 +1257,12 @@ def generate_wl_curve(stellar_fluxes,stellar_errors,time,nstars,overwrite=True):
         ratio = np.mean(star1,axis=1)
         err_ratio = np.mean(error1,axis=1)
 
-    if overwrite or not os.path.isfile('white_light.dat'):
-        tab = open('white_light.dat','w')
+    if overwrite or not os.path.isfile('white_light.txt'):
+        tab = open('white_light.txt','w')
         old_time = None
     else:
-        tab = open('white_light.dat','a')
-        old_time,old_ratio,old_err_ratio = np.loadtxt('white_light.dat',unpack=True)
+        tab = open('white_light.txt','a')
+        old_time,old_ratio,old_err_ratio = np.loadtxt('white_light.txt',unpack=True)
 
     for i in range(len(ratio)):
         tab.write("%f %f %f \n"%(time[i],ratio[i],err_ratio[i]))
@@ -1400,8 +1400,8 @@ def main(input_file='extraction_input.txt'):
         ref_frame = input_dict['science_list']
         science_files = file_names[file_names.index(ref_frame):]
 
-    if not overwrite and os.path.isfile('white_light.dat'):
-        test = np.loadtxt('white_light.dat')
+    if not overwrite and os.path.isfile('white_light.txt'):
+        test = np.loadtxt('white_light.txt')
         n = len(test[:,0])
         print("...loading from frame %d"%n)
         science_files = science_files[n:]

@@ -325,7 +325,7 @@ if use_kipping and FIX_U1 or use_kipping and FIX_U2:
 
 # Load in coefficients generated through generate_LDCS.py
 try:
-    wc,we,u1,u1_err,u2,u2_err,u3,u3_err,u4,u4_err = np.loadtxt('LD_coefficients.dat',unpack=True)
+    wc,we,u1,u1_err,u2,u2_err,u3,u3_err,u4,u4_err = np.loadtxt('LD_coefficients.txt',unpack=True)
 except:
     raise SystemError('Need to first generate limb darkening values before running this fitting.')
 

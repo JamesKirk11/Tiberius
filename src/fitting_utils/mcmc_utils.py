@@ -46,16 +46,16 @@ def save_LM_results(best_pars,uncertainties,namelist,bin_number,best_model,time,
     verbose - True/False - print the best-fitting results to terminal?
 
     Returns:
-    Nothing but saving the results to best_fit_parameters.dat and LM_statistics.dat"""
+    Nothing but saving the results to best_fit_parameters.dat and LM_statistics.txt"""
 
     ndim = len(best_pars)
 
     if bin_number == 1:
-        new_tab = open('best_fit_parameters.dat','w')
-        diagnostic_tab = open('LM_statistics.dat','w')
+        new_tab = open('best_fit_parameters.txt','w')
+        diagnostic_tab = open('LM_statistics.txt','w')
     else:
-        new_tab = open('best_fit_parameters.dat','a')
-        diagnostic_tab = open('LM_statistics.dat','a')
+        new_tab = open('best_fit_parameters.txt','a')
+        diagnostic_tab = open('LM_statistics.txt','a')
 
     fitted_chi2 = best_model.chisq(time,flux,flux_err)
     fitted_reducedChi2 = best_model.reducedChisq(time,flux,flux_err)
@@ -121,14 +121,14 @@ def recover_quartiles_single(samples,namelist,bin_number,verbose=True,save_resul
     if save_result:
         if bin_number == 1:
             if burn:
-                new_tab = open('burn_parameters.dat','w')
+                new_tab = open('burn_parameters.txt','w')
             else:
-                new_tab = open('best_fit_parameters.dat','w')
+                new_tab = open('best_fit_parameters.txt','w')
         else:
             if burn:
-                new_tab = open('burn_parameters.dat','a')
+                new_tab = open('burn_parameters.txt','a')
             else:
-                new_tab = open('best_fit_parameters.dat','a')
+                new_tab = open('best_fit_parameters.txt','a')
 
     for i in range(ndim):
         par = samples[:,i]
@@ -255,23 +255,23 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
 
 
     if wavelength_bin > 0 and burn:
-        diagnostic_tab = open('burn_statistics.dat','a')
+        diagnostic_tab = open('burn_statistics.txt','a')
 
     elif wavelength_bin > 0 and not burn:
-        diagnostic_tab = open('prod_statistics.dat','a')
+        diagnostic_tab = open('prod_statistics.txt','a')
 
     else: # starting fresh
         if burn:
-            diagnostic_tab = open('burn_statistics.dat','w')
+            diagnostic_tab = open('burn_statistics.txt','w')
         else:
-            diagnostic_tab = open('prod_statistics.dat','w')
+            diagnostic_tab = open('prod_statistics.txt','w')
 
     diagnostic_tab.close()
 
     if burn:
-        diagnostic_tab = open('burn_statistics.dat','a')
+        diagnostic_tab = open('burn_statistics.txt','a')
     else:
-        diagnostic_tab = open('prod_statistics.dat','a')
+        diagnostic_tab = open('prod_statistics.txt','a')
 
     starting_model_values = tmgp.extract_model_values(starting_model,typeII)
 
@@ -294,12 +294,12 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
     print('################')
     if burn:
         print("Running burn-in for bin %d..."%(wavelength_bin+1))
-        # f = open('burn_chain_%d.dat'%(wavelength_bin+1),'w') # deciding to only save production chain
+        # f = open('burn_chain_%d.txt'%(wavelength_bin+1),'w') # deciding to only save production chain
 
     else:
         print("Running production for bin %d..."%(wavelength_bin+1))
         if save_chain:
-            f = open('prod_chain_wb%s.dat'%(str(wavelength_bin+1).zfill(4)),'w')
+            f = open('prod_chain_wb%s.txt'%(str(wavelength_bin+1).zfill(4)),'w')
             f.close()
 
     if nsteps == "auto":
@@ -469,7 +469,7 @@ def advance_chain(sampler,p0,nsteps,burn,save_chain):
         n = int((width+1) * float(i) / nsteps)
         sys.stdout.write("\r[{0}{1}]".format('#' * n, ' ' * (width - n))) # for progress bar
         if not burn and save_chain:
-            f = open('prod_chain_wb%s.dat'%(str(wavelength_bin+1).zfill(4)),'a')
+            f = open('prod_chain_wb%s.txt'%(str(wavelength_bin+1).zfill(4)),'a')
         for k in range(pos.shape[0]):
             # loop over all walkers and append to file
             thisPos = pos[k]
@@ -494,7 +494,7 @@ def beta_rescale_uncertainties(beta_factors,best_fit_tab,trans_spec_tab=None):
     trans_spec_Tab - the transmission spectrum table
 
     Returns:
-    nothing but new tables with _rescaled_beta_uncertainties.dat"""
+    nothing but new tables with _rescaled_beta_uncertainties.txt"""
 
     # First load in the existing table info.
     best_fit_pars = np.genfromtxt(best_fit_tab,dtype=str)
@@ -508,7 +508,7 @@ def beta_rescale_uncertainties(beta_factors,best_fit_tab,trans_spec_tab=None):
     rescaled_pve = rescaled_pve.reshape(nbins*npars)
     rescaled_nve = rescaled_nve.reshape(nbins*npars)
 
-    new_tab = open("%s_rescaled_beta_uncertainties.dat"%best_fit_tab[:-4],"w")
+    new_tab = open("%s_rescaled_beta_uncertainties.txt"%best_fit_tab[:-4],"w")
 
     current_bin = 1
     for i in range(npars):
@@ -519,7 +519,7 @@ def beta_rescale_uncertainties(beta_factors,best_fit_tab,trans_spec_tab=None):
         new_tab.write("%s = %f + %f - %f \n"%(best_fit_pars[:,0][i],best_fit_pars[:,2][i].astype(float),rescaled_pve[i],rescaled_nve[i]))
 
     if trans_spec_tab is not None:
-        new_tab_2 = open("transmission_spectrum_rescaled_beta_uncertainties.dat","w")
+        new_tab_2 = open("transmission_spectrum_rescaled_beta_uncertainties.txt","w")
         new_tab_2.write("# Wavelength bin centre, wavelength bin full width, Rp/Rs, Rp/Rs +ve error, Rp/Rs -ve error \n")
         w,we,k,k_up,k_lo = np.loadtxt(trans_spec_tab,unpack=True,usecols=[0,1,2,3,4])
         k_up *= beta_factors

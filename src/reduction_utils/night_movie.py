@@ -22,7 +22,7 @@ args = parser.parse_args()
 file_list = np.loadtxt(args.science_list,str)[::args.skip]
 
 
-time, flux, flux_err = np.loadtxt('white_light.dat',unpack=True)
+time, flux, flux_err = np.loadtxt('white_light.txt',unpack=True)
 time = time[::args.skip]
 flux = flux[::args.skip]
 flux_err = flux_err[::args.skip]

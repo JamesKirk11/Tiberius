@@ -478,15 +478,15 @@ if args.save_fig:
     if args.combine:
 
         # save the combined transmission spectrum to a table
-        new_tab = open('combined_trans_spec_%s.dat'%title,'w')
+        new_tab = open('combined_trans_spec_%s.txt'%title,'w')
         new_tab.write('# Wvl_centre Wvl_error Rp/Rs Rp/Rs_err Rp/Rs_err \n')
 
         # save the combined transmission spectrum to a table
-        depths_tab = open('combined_trans_spec_depths_%s.dat'%title,'w')
+        depths_tab = open('combined_trans_spec_depths_%s.txt'%title,'w')
         depths_tab.write('# Wvl centre (%s), Wvl error (%s), Transit depth (ppm), Transit depth err (ppm) \n'%(pu.determine_wvl_units(w_mean),pu.determine_wvl_units(w_mean)))
 
         # Make table ready for PLATON input
-        retrieval_tab = open('combined_trans_spec_%s_PLATON.dat'%title,'w')
+        retrieval_tab = open('combined_trans_spec_%s_PLATON.txt'%title,'w')
         retrieval_tab.write('# Wlow (%s) Wup (%s) Transit_Depth (ppm) Transit_Depth_ErrUp (ppm) Transit_Depth_ErrLow (ppm) \n'%(pu.determine_wvl_units(w_mean),pu.determine_wvl_units(w_mean)))
 
         Wlow = w_mean-we_mean/2

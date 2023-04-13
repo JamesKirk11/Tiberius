@@ -37,10 +37,10 @@ if not args.photon_noise: # if we're not using photon noise uncertainties, then 
 
 ### Print median RMS of all bins from LM_statistics.dat/prod_statistics.dat
 try:
-    rms_tab = "LM_statistics.dat"
+    rms_tab = "LM_statistics.txt"
     r = open(rms_tab,"r")
 except:
-    rms_tab = "prod_statistics.dat"
+    rms_tab = "prod_statistics.txt"
     r = open(rms_tab,"r")
 
 all_RMS = []
@@ -191,7 +191,7 @@ if nbins > 2:
         nplots = 1
 
 if args.save_table:
-    beta_factor_tab = open("red_noise_beta_factors.dat","w")
+    beta_factor_tab = open("red_noise_beta_factors.txt","w")
     beta_factor_tab.write("# Wavelength bin, Beta factor \n")
 
 beta_factors = []
@@ -290,6 +290,6 @@ if args.save_table:
     beta_factor_tab.write("\n******Median red noise beta factor = %.3f*****\n"%np.median(beta_factors))
     beta_factor_tab.close()
     if args.white_light_curve:
-        mc.beta_rescale_uncertainties(np.array(beta_factors),"best_fit_parameters.dat",trans_spec_tab=None)
+        mc.beta_rescale_uncertainties(np.array(beta_factors),"best_fit_parameters.txt",trans_spec_tab=None)
     else:
-        mc.beta_rescale_uncertainties(np.array(beta_factors),"best_fit_parameters.dat","transmission_spectrum.dat")
+        mc.beta_rescale_uncertainties(np.array(beta_factors),"best_fit_parameters.txt","transmission_spectrum.txt")

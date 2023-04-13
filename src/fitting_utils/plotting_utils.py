@@ -104,7 +104,7 @@ def rayleigh_slope(Teq,logg,Rp,Rstar,k,k_up,k_low,wvl_bin_centres,save_output=Fa
     k_up - the positive errors in k
     k_low - the negative errors in k
     wvl_bin_centres - the centres of the wavelength bins as used in the transmission spectrum, in Angstroms
-    save_output - True/False - use this to save the chi squared of fits of a flat line, Rayleigh slope at Teq and a Rayleigh slope with a fitted temperature to a table called 'trans_models_statistics.dat'. Default=False
+    save_output - True/False - use this to save the chi squared of fits of a flat line, Rayleigh slope at Teq and a Rayleigh slope with a fitted temperature to a table called 'trans_models_statistics.txt'. Default=False
     verbose - True/False - use this to plot the different slopes along with the transmission spectrum. Default=False
 
     Returns:
@@ -183,7 +183,7 @@ def rayleigh_slope(Teq,logg,Rp,Rstar,k,k_up,k_low,wvl_bin_centres,save_output=Fa
     print("Chi2 of flat line = %f; reduced chi2 = %f; BIC = %f; DOF = 0"%(chi2_flat,rchi2_flat,chi2_flat))
 
     if save_output:
-        tab = open('trans_models_statistics.dat','w')
+        tab = open('trans_models_statistics.txt','w')
         tab.write("Chi2 of Rayleigh at T_eq = %f; reduced chi2 = %f; BIC = %f; DOF = 0 \n"%(chi2_Teq,rchi2_Teq,chi2_Teq))
         tab.write("Chi2 of Rayleigh at T_fit = %f; reduced chi2 = %f; BIC = %f; DOF = 1 \n"%(chi2_Tfit,rchi2_Tfit,BIC_Tfit))
         tab.write("Chi2 of flat line = %f; reduced chi2 = %f; BIC = %f; DOF = 0 \n"%(chi2_flat,rchi2_flat,chi2_flat))
@@ -594,9 +594,9 @@ def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mas
     """
 
     try:
-        best_dict = parseInput(directory+'/best_fit_parameters_GP.dat')
+        best_dict = parseInput(directory+'/best_fit_parameters_GP.txt')
     except:
-        best_dict = parseInput(directory+'/best_fit_parameters.dat')
+        best_dict = parseInput(directory+'/best_fit_parameters.txt')
 
     input_dict = parseInput(directory+'/fitting_input.txt')
 
@@ -734,10 +734,10 @@ def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mas
 
     if save_to_tab:
 
-        new_tab = open('transmission_spectrum.dat','w')
+        new_tab = open('transmission_spectrum.txt','w')
         new_tab.write('# Wavelength bin centre (%s), wavelength bin full width (%s), Rp/Rs, Rp/Rs +ve error, Rp/Rs -ve error'%(determine_wvl_units(w),determine_wvl_units(w)))
 
-        new_tab_2 = open('transmission_spectrum_depths.dat','w')
+        new_tab_2 = open('transmission_spectrum_depths.txt','w')
         if np.all(d_up == d_low):
             new_tab_2.write('# Wavelength bin centre (%s), wavelength bin full width (%s), Transit depth, Transit depth error'%(determine_wvl_units(w),determine_wvl_units(w)))
         else:
@@ -831,9 +831,9 @@ def plot_multi_trans_spec(directory_lists,save_fig=False,plot_fig=False):
 
     for d in directory_lists:
         try:
-            k,k_up,k_low,w,we,H_Rs = recover_transmission_spectrum(d+'best_fit_parameters_GP.dat',d+'fitting_input.txt',False,False)
+            k,k_up,k_low,w,we,H_Rs = recover_transmission_spectrum(d+'best_fit_parameters_GP.txt',d+'fitting_input.txt',False,False)
         except:
-            k,k_up,k_low,w,we,H_Rs = recover_transmission_spectrum(d+'best_fit_parameters_noGP.dat',d+'fitting_input.txt',False,False)
+            k,k_up,k_low,w,we,H_Rs = recover_transmission_spectrum(d+'best_fit_parameters_noGP.txt',d+'fitting_input.txt',False,False)
         k_all = np.hstack((k_all,k))
         k_up_all = np.hstack((k_up_all,k_up))
         k_low_all = np.hstack((k_low_all,k_low))
@@ -955,13 +955,13 @@ def expected_vs_calculated_ldcs(directory='.',save_fig=False,bin_mask=None):
     Returns:
     Nothing, it just plots the figure"""
 
-    wvl_centre,wvl_error,ldtk_u1,ldtk_u1_err,ldtk_u2,ldtk_u2_err,ldtk_u3,ldtk_u3_err,ldtk_u4,ldtk_u4_err = np.loadtxt('%s/LD_coefficients.dat'%directory,unpack=True)
+    wvl_centre,wvl_error,ldtk_u1,ldtk_u1_err,ldtk_u2,ldtk_u2_err,ldtk_u3,ldtk_u3_err,ldtk_u4,ldtk_u4_err = np.loadtxt('%s/LD_coefficients.txt'%directory,unpack=True)
     wvl_error = wvl_error/2
 
     try:
-        best_dict = parseInput('%s/best_fit_parameters.dat'%directory)
+        best_dict = parseInput('%s/best_fit_parameters.txt'%directory)
     except:
-        best_dict = parseInput('%sbest_fit_parameters_GP.dat'%directory)
+        best_dict = parseInput('%sbest_fit_parameters_GP.txt'%directory)
 
     model_list = glob.glob('%s/prod_model_*.pickle'%directory)
     nbins = len(model_list)
@@ -1303,7 +1303,7 @@ def load_completed_bins(directory=".",start_bin=None,end_bin=None,mask=None,retu
         e_r = None
 
     ### Load in LD coefficients table for the wavelength centres and widths of the bins
-    w,we = np.loadtxt('%s/LD_coefficients.dat'%directory,unpack=True,usecols=[0,1])
+    w,we = np.loadtxt('%s/LD_coefficients.txt'%directory,unpack=True,usecols=[0,1])
     w,we = np.atleast_1d(w)[completed_bins-1],np.atleast_1d(we)[completed_bins-1]
 
     ### Bin mask

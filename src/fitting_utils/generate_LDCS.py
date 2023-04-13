@@ -326,7 +326,7 @@ def smooth_ld(w,u,ue):
 
     return smoothed_u,smoothed_ue
 
-tab = open('LD_coefficients.dat','w')
+tab = open('LD_coefficients.txt','w')
 tab.write('# Teff = %d +/- %.2f K ; log(g) = %.2f +/- %.2f ; FeH = %.2f +/- %.2f ; u error inflation factor = %.1f \n'%(Teff,Teff_err,logg_star,logg_star_err,FeH,FeH_err,error_inflation))
 tab.write('# %s law used \n'%(args.ld_law))
 if args.use_exotic:
@@ -339,7 +339,7 @@ if white_light_fit:
     tab.write('%f %f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f \n'%(wavelength_centres,wvl_bin_full_width,u1[0],u1e[0],u2[0],u2e[0],u3[0],u3e[0],u4[0],u4e[0]))
 else:
     tab.write("# %d wavelength bins \n"%len(wavelength_centres))
-    smoothed_tab = open('LD_coefficients_smoothed.dat','w')
+    smoothed_tab = open('LD_coefficients_smoothed.txt','w')
     smoothed_tab.write('# Teff = %d +/- %.2f K ; log(g) = %.2f +/- %.2f ; FeH = %.2f +/- %.2f ; u error inflation factor = %.1f \n'%(Teff,Teff_err,logg_star,logg_star_err,FeH,FeH_err,error_inflation))
     smoothed_tab.write('# %s law used \n'%(args.ld_law))
     if args.use_exotic:

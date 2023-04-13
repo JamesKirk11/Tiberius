@@ -35,7 +35,7 @@ try:
     nsubplots += 1
 
 except:
-    am = np.loadtxt('airmass.dat')
+    am = np.loadtxt('airmass.txt')
     nsubplots += 1
 
 am_cut = np.max(np.where(am <= args.am_limit)[0])
@@ -95,7 +95,7 @@ if args.raw_lcs:
     print('Plotting raw light curves')
     nsubplots += 1
     try:
-        exposure_times = np.loadtxt('exposure_times.dat')[:am_cut]
+        exposure_times = np.loadtxt('exposure_times.txt')[:am_cut]
     except:
         exposure_times = pickle.load(open('exposure_times.pickle','rb'))[:am_cut]
         #print 'No exposure times loaded, may generate problems when plotting raw light curves'
@@ -146,7 +146,7 @@ nsubplots += 1
 if args.model1 is None and args.model2 is None:
     print('Not plotting white light model fit')
     plot_model = False
-    white_light = np.loadtxt('white_light.dat')
+    white_light = np.loadtxt('white_light.txt')
     wl_flux = white_light[:,1][:am_cut]
     wl_error = white_light[:,2][:am_cut]
 
