@@ -501,9 +501,9 @@ class TransitModelGPPM(object):
 
         if compute:
             if self.gp_ndim > 1:
-                gp.compute(self.gp_model_inputs.T,yerr=flux_err)
+                gp.compute(gp_model_inputs.T,yerr=flux_err)
             else:
-                gp.compute(self.gp_model_inputs[0],yerr=flux_err)
+                gp.compute(gp_model_inputs[0],yerr=flux_err)
 
         if split:
             return gp,gp_split
