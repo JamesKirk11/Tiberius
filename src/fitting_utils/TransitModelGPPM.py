@@ -360,6 +360,9 @@ class TransitModelGPPM(object):
                 # t0 prior
                 if self.pars['t0'].currVal < -2. or self.pars['t0'].currVal > 2.:
                     return -np.inf
+                    if sys_priors["t0_prior"] is not None:
+                        retVal += stats.norm(scale=sys_priors["t0_prior"],loc=self.pars['t0'].startVal).pdf(self.pars['t0'].currVal)
+
 
         if self.pars['k'].currVal < 0. or self.pars['k'].currVal > 0.3: # reject non-physical and non-sensical values
             return -np.inf

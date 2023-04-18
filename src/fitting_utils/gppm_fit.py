@@ -305,6 +305,11 @@ else:
     t0_guess -= int(t0_guess)
     t0 = tmgp.Param(t0_guess)
 
+    if input_dict['t0_prior'] is not None:
+        sys_priors["t0_prior"] = float(input_dict['t0_prior'])
+    else:
+        sys_priors["t0_prior"] = None
+
 
 ### Limb darkening
 ld_law = input_dict["ld_law"]
