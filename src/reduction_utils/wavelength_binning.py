@@ -7,9 +7,7 @@ import pickle
 from scipy import stats, signal
 import os
 import pandas as pd
-with warnings.catch_warnings():
-	warnings.filterwarnings("ignore")
-	import pysynphot.binning as astrobin
+import pysynphot.binning as astrobin
 import warnings as warn
 from Tiberius.src.reduction_utils import wavelength_calibration as wc
 
