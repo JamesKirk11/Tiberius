@@ -34,7 +34,7 @@ strun dark_current $1_linearitystep.fits --override_dark $HOME/crds_cache/jwst_p
 echo ""
 echo "****running 1overf_subtraction.py****"
 echo ""
-python $HOME/python/Tiberius/src/reduction_utils/JWST_utils/1overf_subtraction.py $1_darkcurrentstep.fits --extraction_input /Users/james/JWSTdata/GJ341b/MAST_2023-03-04T0414/JWST/jw01981032001_04103_00001-seg001_nrcalong/finding_the_trace/extraction_input_v2.dat --trace_location /Users/james/JWSTdata/GJ341b/MAST_2023-03-04T0414/JWST/jw01981032001_04103_00001-seg001_nrcalong/finding_the_trace/pickled_objects/x_positions_1.pickle
+python $HOME/python/Tiberius/src/reduction_utils/JWST_utils/1overf_subtraction.py $1_darkcurrentstep.fits --extraction_input /Users/james/JWSTdata/GJ341b/MAST_2023-03-04T0414/JWST/jw01981032001_04103_00001-seg001_nrcalong/finding_the_trace/extraction_input.txt --trace_location /Users/james/JWSTdata/GJ341b/MAST_2023-03-04T0414/JWST/jw01981032001_04103_00001-seg001_nrcalong/finding_the_trace/pickled_objects/x_positions_1.pickle
 echo ""
 echo "****running ramp_fit****"
 echo ""

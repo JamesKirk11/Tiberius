@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser(description="subtract 1/f noise at the group st
 parser.add_argument('fits_file',help='the name of the fits file to load in')
 parser.add_argument('--pixel_mask',help='the name of the bad pixel mask file to load in')
 parser.add_argument("--trace_location",help="optionally parse the locations of the stellar trace to define where the background should be estimated")
-parser.add_argument("--extraction_input",help="optionally parse the extraction_input_v2.dict file associated with the trace_location file to determine the width of the background region")
+parser.add_argument("--extraction_input",help="optionally parse the extraction_input.txt file associated with the trace_location file to determine the width of the background region")
 args = parser.parse_args()
 
 f = fits.open(args.fits_file)
@@ -43,7 +43,7 @@ if args.trace_location is not None:
         bkg_mask[:,col][trace_centre[i]: trace_centre[i] + int(input_dict["aperture_width"])//2 + int(input_dict["background_offset"])] = 0
         bkg_mask[:,col][trace_centre[i] - int(input_dict["aperture_width"])//2 - int(input_dict["background_offset"]): trace_centre[i]] = 0
 
-    if input_dict["bad_pixel_mask"] is not "":
+    if input_dict["bad_pixel_mask"] != "":
         pixel_mask = pickle.load(open(input_dict["bad_pixel_mask"],"rb"))
         bkg_mask[pixel_mask] = 0
 
