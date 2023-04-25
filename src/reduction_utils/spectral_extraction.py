@@ -1271,10 +1271,10 @@ def generate_wl_curve(stellar_fluxes,stellar_errors,time,nstars,overwrite=True):
 
     plt.figure(figsize=(8,6))
     if old_time is None:
-        plt.errorbar(time-int(time[0]),ratio,yerr=err_ratio,fmt='None',ecolor='k')
+        plt.plot(time-int(time[0]),ratio,'k.')
         plt.xlabel('Time (MJD/BJD - %d)'%int(time[0]))
     else:
-        plt.errorbar(np.hstack((old_time,time))-int(old_time[0]),np.hstack((old_ratio,ratio)),yerr=np.hstack((old_err_ratio,err_ratio)),fmt='None',ecolor='k')
+        plt.plot(np.hstack((old_time,time))-int(old_time[0]),np.hstack((old_ratio,ratio)),'k.')
         plt.xlabel('Time (MJD/BJD - %d)'%int(old_time[0]))
     plt.ylabel('Flux')
     plt.savefig('white_light_curve.pdf')
