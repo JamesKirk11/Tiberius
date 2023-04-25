@@ -338,7 +338,7 @@ class TransitModelGPPM(object):
 
                 # a/Rs prior
                 if not self.ars_fixed:
-                    if self.pars['aRs'].currVal <= 1 or self.pars['aRs'].currVal >= 20:
+                    if self.pars['aRs'].currVal <= 1 or self.pars['aRs'].currVal >= 50:
                         return -np.inf
                     if sys_priors["aRs_prior"] is not None:
                         retVal += stats.norm(scale=sys_priors["aRs_prior"],loc=self.pars['aRs'].startVal).pdf(self.pars['aRs'].currVal)
@@ -364,7 +364,7 @@ class TransitModelGPPM(object):
                         retVal += stats.norm(scale=sys_priors["t0_prior"],loc=self.pars['t0'].startVal).pdf(self.pars['t0'].currVal)
 
 
-        if self.pars['k'].currVal < 0. or self.pars['k'].currVal > 0.3: # reject non-physical and non-sensical values
+        if self.pars['k'].currVal < 0. or self.pars['k'].currVal > 0.5: # reject non-physical and non-sensical values
             return -np.inf
 
         if self.GP_used:
