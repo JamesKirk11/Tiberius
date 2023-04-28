@@ -321,7 +321,7 @@ def interp_bad_pixels(frame,pixel_mask,return_nans=False):
 
 
 
-def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad=False,verbose=False,mf_box_width=3):
+def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad=False,verbose=False,mf_box_width=3,left_col=0,right_col=-1,axis=None):
     """A function that performs a row-by-row running median to locate bad pixels in a given frame.
 
     Inputs:
@@ -332,36 +332,42 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
     use_mad - True/False - use the running median rather than the standard deviation of the residuals to flag outliers? Default=False
     verbose - True/False - if True plot the resulting pixel map
     mf_box_width - the number of pixels over which to calculate the running median. Default=3
+    left_col - set the leftmost column to consider. Default = 0, i.e. column 0
+    right_col - set the rightmost column to consider. Default = -1, i.e. last column
+    axis - set whether to calculate one std/mad across the whole frame (axis=None) or calculae a std/mad for every row (axis=1). Default=None
 
     Returns:
     pixel_flags - the boolean (nrows,ncols) array of flagged bad pixels"""
 
-    pixel_flags = np.zeros_like(frame)
+    pixel_flags_all = np.zeros_like(frame).astype(bool)
+    pixel_flags = np.zeros_like(frame[:,left_col:right_col])
 
-    nrows,ncols = frame.shape
+    nrows,ncols = frame[:,left_col:right_col].shape
 
     residuals = []
 
-    median = np.array([medfilt(row,mf_box_width) for row in frame])
-    residuals = median - frame
+    median = np.array([medfilt(row,mf_box_width) for row in frame[:,left_col:right_col]])
+    residuals = median - frame[:,left_col:right_col]
 
     if use_mad:
-        good_pixels = ((residuals <= cut_off*median_absolute_deviation(residuals,ignore_nan=True)) & (residuals >= -cut_off*median_absolute_deviation(residuals,ignore_nan=True)))
+        threshold = median_absolute_deviation(residuals,ignore_nan=True,axis=axis)
     else:
-        good_pixels = ((residuals <= cut_off*np.nanstd(residuals)) & (residuals >= -cut_off*np.nanstd(residuals)))
+        threshold = np.nanstd(residuals,axis=axis)
 
+    if axis == 1:
+        threshold = np.ones_like(median)*threshold.reshape(nrows,1)
+    else:
+        threshold = np.ones_like(median)*threshold
+
+    good_pixels = ((residuals <= cut_off*threshold) & (residuals >= -cut_off*threshold))
     bad_pixels = ~good_pixels
 
-    for i,row in enumerate(frame):
+    for i,row in enumerate(frame[:,left_col:right_col]):
 
         bad_pixels[i][~np.isfinite(row)] = True
 
         # in order to remove rows where lots of pixels are flagged (probably due to the stellar spectrum), ignore these rows
         if len(np.where(bad_pixels[i])[0]) > max_pixels_per_row:
-            if i in plot_rows:
-                print(np.where(bad_pixels[i])[0])
-            if i in plot_rows:
-                print(np.where(bad_pixels[i])[0])
             bad_pixels[i] = np.zeros_like(good_pixels[i]).astype(bool)
 
         pixel_flags[i] = bad_pixels[i]
@@ -383,14 +389,8 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
                 plt.plot(residuals[i])
                 plt.plot(np.arange(ncols)[bad_pixels[i]],residuals[i][bad_pixels[i]],"rx",label="Clipped point")
 
-                if use_mad:
-                    plt.axhline(cut_off*median_absolute_deviation(residuals,ignore_nan=True),ls='--',color='k')
-                    plt.axhline(-cut_off*median_absolute_deviation(residuals,ignore_nan=True),ls='--',color='k')
-                    plt.ylim(-(cut_off+1)*median_absolute_deviation(residuals,ignore_nan=True),(cut_off+1)*median_absolute_deviation(residuals,ignore_nan=True))
-                else:
-                    plt.axhline(cut_off*np.nanstd(residuals),ls='--',color='k')
-                    plt.axhline(-cut_off*np.nanstd(residuals),ls='--',color='k')
-                    plt.ylim(-(cut_off+1)*np.nanstd(residuals),(cut_off+1)*np.nanstd(residuals))
+                plt.axhline(cut_off*threshold[i].mean(),ls='--',color='k')
+                plt.axhline(-cut_off*threshold[i].mean(),ls='--',color='k')
                 plt.ylabel("Residuals")
                 plt.show()
 
@@ -404,7 +404,9 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
         plt.title("Bad pixel map")
         plt.show()
 
-    return pixel_flags.astype(bool)
+    pixel_flags_all[:,left_col:right_col] = pixel_flags
+
+    return pixel_flags_all.astype(bool)
 
 def gif_init(i,im,data):
     """Function used by animation via the gif() function to generate gifs"""
