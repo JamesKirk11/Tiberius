@@ -331,7 +331,7 @@ class TransitModelGPPM(object):
 
                 # inclination prior
                 if not self.inc_fixed:
-                    if self.pars['inc'].currVal > 90 or self.pars['inc'].currVal < 80:
+                    if self.pars['inc'].currVal > 90  or self.pars['inc'].currVal < self.pars['inc'].startVal - 5:
                         return -np.inf
                     if sys_priors["inc_prior"] is not None:
                         retVal += stats.norm(scale=sys_priors["inc_prior"],loc=self.pars['inc'].startVal).pdf(self.pars['inc'].currVal)
@@ -358,10 +358,10 @@ class TransitModelGPPM(object):
                         retVal += stats.norm(scale=sys_priors["omega_prior"],loc=self.pars['omega'].startVal).pdf(self.pars['omega'].currVal)
 
                 # t0 prior
-                if self.pars['t0'].currVal < -2. or self.pars['t0'].currVal > 2.:
+                if self.pars['t0'].currVal < self.pars['t0'].startVal-0.1 or self.pars['t0'].currVal > self.pars['t0'].startVal+0.1:
                     return -np.inf
-                    if sys_priors["t0_prior"] is not None:
-                        retVal += stats.norm(scale=sys_priors["t0_prior"],loc=self.pars['t0'].startVal).pdf(self.pars['t0'].currVal)
+                if sys_priors["t0_prior"] is not None:
+                    retVal += stats.norm(scale=sys_priors["t0_prior"],loc=self.pars['t0'].startVal).pdf(self.pars['t0'].currVal)
 
 
         if self.pars['k'].currVal < 0. or self.pars['k'].currVal > 0.5: # reject non-physical and non-sensical values
@@ -801,9 +801,9 @@ class TransitModelGPPM(object):
             if self.white_light_fit:
                 bnds += [(self.pars['t0'].currVal-0.1,self.pars['t0'].currVal+0.1)]
                 if not self.inc_fixed:
-                    bnds += [(self.pars['inc'].currVal-2,90)]
+                    bnds += [(self.pars['inc'].currVal-5,90)]
                 if not self.ars_fixed:
-                    bnds += [(self.pars['aRs'].currVal-3,self.pars['aRs'].currVal+3)]
+                    bnds += [(self.pars['aRs'].currVal-10,self.pars['aRs'].currVal+10)]
                 if not self.period_fixed:
                     bnds += [(self.pars['period'].currVal-0.1,self.pars['period'].currVal+0.1)]
                 if not self.ecc_fixed:
