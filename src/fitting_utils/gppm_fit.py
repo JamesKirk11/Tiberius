@@ -514,6 +514,7 @@ if clip_outliers and median_clip:
 
 
 ### Optionally optimise the transit model parameters using a cubic-in-time polynomial here to handle systematic noise here. We can also optionally use this fit to clip outliers instead of through the median clip
+# raise SystemExit
 
 if optimise_model or clip_outliers and not median_clip:
 
@@ -702,7 +703,7 @@ if nstep != 0:
     if not prod_only:
         # Run burn-in
         if nstep != "auto":
-            if nstep > 5000: # only run a maximum of 5000 steps for burn in
+            if nstep > 5000 and GP_used: # only run a maximum of 5000 steps for burn in if we're using a GP since we don't perform an uncertainty rescaling
                 nstep_burn = 5000
             else:
                 nstep_burn = nstep
