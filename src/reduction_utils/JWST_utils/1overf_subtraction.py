@@ -75,26 +75,49 @@ for i in range(nints):
 
         bkg = []
 
-        for c in range(ncols):
+        if "nircam" not in instrument.lower():
+            # for non-NIRCam, the 1/f noise is along the columns not the rows. Here we're dealing with column-wise 1/f
+            for c in range(ncols):
 
-            bkg_pixels = image[:,c][bkg_mask[:,c].astype(bool)]
+                bkg_pixels = image[:,c][bkg_mask[:,c].astype(bool)]
 
-            col_median = np.median(bkg_pixels)
+                col_median = np.median(bkg_pixels)
 
-            bkg.append(col_median)
+                bkg.append(col_median)
 
-            if i == 0 and g == ngroups - 1:
+                if i == 0 and g == ngroups - 1:
 
-                bias_bkg_pixels = super_bias[1].data[:,c][bkg_mask[:,c].astype(bool)]
+                    bias_bkg_pixels = super_bias[1].data[:,c][bkg_mask[:,c].astype(bool)]
 
-                bias_col_median = np.median(bias_bkg_pixels)
+                    bias_col_median = np.median(bias_bkg_pixels)
 
-                bias_bkg.append(bias_col_median)
+                    bias_bkg.append(bias_col_median)
+
+        else:
+            # for NIRCam, the 1/f noise is along the rows not the columns. Here we're dealing with row-wise 1/f
+            for r in range(nrows):
+
+                bkg_pixels = image[r][bkg_mask[r].astype(bool)]
+
+                row_median = np.median(bkg_pixels)
+
+                bkg.append(row_median)
+
+                if i == 0 and g == ngroups - 1:
+
+                    bias_bkg_pixels = super_bias[1].data[r][bkg_mask[r].astype(bool)]
+
+                    bias_row_median = np.median(bias_bkg_pixels)
+
+                    bias_bkg.append(bias_row_median)
 
         if g == ngroups - 1:
             one_over_f_noise.append(np.array(bkg))
 
-        image = image - np.array(bkg)
+        if "nircam" in instrument.lower():
+            image = image - np.array(bkg).reshape(nrows,1)
+        else:
+            image = image - np.array(bkg)
 
         f[extension].data[i][g] = image
 
