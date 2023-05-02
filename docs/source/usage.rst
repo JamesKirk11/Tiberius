@@ -17,6 +17,7 @@ In the meantime, if you use conda environments, I recommend first making a new c
 Next you'll need to download the repository from GitHub, cd into the directory and pip install within the Tiberius directory. In a terminal, this would look like:
 
 .. code-block:: bash
+
    git clone https://github.com/JamesKirk11/Tiberius.git
    cd Tiberius
    pip install -e .
