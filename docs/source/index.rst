@@ -8,7 +8,7 @@ The light curve fitting routines can be used as as standalone to fit, for exampl
 Reference / citing Tiberius
 ---------------------------
 
-If you wish to just cite the use of ``Eureka!`` in published work, please use the following citation to the `JOSS paper <https://joss.theoj.org/papers/10.21105/joss.04503>`_.
+If you use ``Tiberius`` in published work, please cite the following papers.
 
 .. code-block::
 
@@ -56,12 +56,4 @@ A dedicated Tiberius paper is in the pipeline.
    :caption: Contents:
 
    installation
-   JWST
-   Fitting light curves
-   Extracting ACAM/EFOSC2 stellar spectra
-   Extracting Keck/NIRSPEC stellar spectra
    api
-
- .. note::
-
-    This project is under active development.
