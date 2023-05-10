@@ -32,10 +32,6 @@ echo "****running dark_current****"
 echo ""
 strun dark_current $1_linearitystep.fits --override_dark $HOME/crds_cache/jwst_pub/references/jwst/nircam/jwst_nircam_dark_0363.fits
 echo ""
-echo "****running 1overf_subtraction.py****"
-echo ""
-python $HOME/python/Tiberius/src/reduction_utils/JWST_utils/1overf_subtraction.py $1_darkcurrentstep.fits --extraction_input /Users/james/JWSTdata/GJ341b/MAST_2023-03-04T0414/JWST/jw01981032001_04103_00001-seg001_nrcalong/finding_the_trace/extraction_input.txt --trace_location /Users/james/JWSTdata/GJ341b/MAST_2023-03-04T0414/JWST/jw01981032001_04103_00001-seg001_nrcalong/finding_the_trace/pickled_objects/x_positions_1.pickle
-echo ""
 echo "****running ramp_fit****"
 echo ""
 strun ramp_fit $1_darkcurrentstep.fits --suppress_one_group True --override_readnoise $HOME/crds_cache/jwst_pub/references/jwst/nircam/jwst_nircam_readnoise_0199.fits --override_gain /Users/james/crds_cache/jwst_pub/references/jwst/nircam/jwst_nircam_gain_0097.fits
