@@ -346,6 +346,7 @@ else:
     	smoothed_tab.write("# Exo-TIC-LD used with a %s model for instrument %s \n"%(args.ld_model_dimensionality,args.instrument))
     else:
     	smoothed_tab.write("# LDTk used")
+    smoothed_tab.write("# Quadratic polynomial was used to smooth the limb darkening coefficients \n")
     smoothed_tab.write("# %d wavelength bins \n"%len(wavelength_centres))
     smoothed_tab.write('# Wavelength | Width | u1 | u1 error | u2 | u2 error | u3 | u3 error | u4 | u4 error |\n')
 
