@@ -56,4 +56,5 @@ A dedicated Tiberius paper is in the pipeline.
    :caption: Contents:
 
    installation
+   jwst
    api
