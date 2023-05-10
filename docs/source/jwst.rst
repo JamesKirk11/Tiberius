@@ -7,46 +7,43 @@ Firstly, you'll need to download your data! Navigate to `MAST <https://mast.stsc
 
 Alternatively, you can download the rateints.fits files if you don't want to perform stage 1 extraction yourself (not recommended) and jump straight to "Stage 2" below.
 
-Stage 1
--------
+1. Stage 1
+----------
 
-After downloading and unpacking the JWST data, navigate to your downloaded directory. You will see that the JWST files are divided into segments. At this point, I like to take a quick look at the data and to make an initial bad pixel mask, which we will use later.
+1.1 Running the ``jwst pipeline`` on uncal.fits files
+-----------------------------------------------------
+
+After downloading and unpacking the JWST data, navigate to your downloaded directory. You will see that the JWST files are divided into separate segment subdirectories ``jw......-seg001``, ``jw.........-seg002``,... . I tend to leave these subdirectories as they are and run the below stage 1 steps separately within each segment sub-directory.
+
+At this point, I like to take a quick look at the data and to make an initial bad pixel mask, which we will use later.
 
 For the quick look and bad pixel mask creation, look at the example jupyter notebook under ``Tiberius/src/reduction_utils/JWST_utils/reduction_notebooks/0_quick_look_data.ipynb``.
 
 Now you will want to run the relevant stage 1 executable found under ``Tiberius/src/reduction_utils/JWST_utils/stage1_*``. These are just executable text files that string together the relevant commands from the ``jwst`` pipeline, following the procedure outlined `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html#calwebb-detector1>`_.
 
-***Note: the PRISM stage 1 includes a 1/f correction and saturation flagging override as default, following the procedures outlined in `Rustamkulov et al. 2023 <https://ui.adsabs.harvard.edu/abs/2023Natur.614..659R/abstract>`_. If you don't wish to perform these corrections, you'll need to comment out these lines within the relevant "stage1_*" file.***
+**Note:** the PRISM stage 1 includes a 1/f correction and saturation flagging override as default, following the procedures outlined in `Rustamkulov et al. 2023 <https://ui.adsabs.harvard.edu/abs/2023Natur.614..659R/abstract>`_. If you don't wish to perform these corrections, you'll need to comment out these lines within the relevant "stage1_*" file.
 
 In ``stage1_NIRCam``, I demonstrate how to override the reference files that ``jwst`` will try to use by default, as I've found that it won't always use the most recent reference files. You can download the latest JWST reference files `here <https://jwst-crds.stsci.edu/>`_.
 
 If you do download new reference files, I recommend putting them in:
 ``$HOME/crds_cache/jwst_pub/references/jwst/[instrument-name-in-lower-case]/``
 
+Once you are happy with your ``stage1_*`` file, you can run the stage 1 extraction by doing the following (assuming you have installed ``jwst`` into a new conda environment called ``JWST``). Note if you copy/make a new ``stage1_*`` file, you'll need to make it exectuable by doing ``$ chmod +x stage1_*``.
 
+.. code-block:: bash
 
+    conda activate JWST
+    export CRDS_PATH=$HOME/crds_cache/jwst_pub
+    export CRDS_SERVER_URL=https://jwst-crds-pub.stsci.edu
+    . /path/to/stage1_* [file-name-of-jwst-fits-file-truncated-before-_uncal.fits]
 
+e.g.,
 
+.. code-block:: bash
 
+   . /path/to/stage1_PRISM jw01366004001_04101_00001-seg001
 
-Stage 1
--------
+This will produce a series of fits files, with the main one of interest being the ``gainscalestep.fits`` files which is what we will work with in Stage 2. By default, Tiberius' stage1_ executables clean the subdirectories of other intermediate fits files, otherwise you can quickly run out of storage! You can prevent this behaviour by commenting out the relevant lines at the bottom of the ``stage1_`` text files.
 
-1. Download the data
-
-Go to https://mast.stsci.edu/portal/Mashup/Clients/Mast/Portal.html
-
-2. Install the STScI jwst pipeline within a new conda environment called "JWST"
-
-Follow the jwst installation guidelines at https://jwst-pipeline.readthedocs.io/en/stable/
-
-3. Run custom_strun on the uncal.fits JWST data files after first editing them so that they point to the correct path location on your file system
-
-$ . /path/to/custom_strun_no_sat_override [file-name-before-the-_uncal.fits-suffix]
-
-Notes:
-1) if there is saturation within the images then you will need to look into the custom_strun script that includes prescriptions for overriding the saturation step.
-2) if you are working with MIRI data then you will need to run custom_strun_MIRI
-
-
-4. Run expand_JWST_fits.py to convert jwst .fits files into Tiberius-readable files
+1.2 Cleaning the cosmic rays / telegraph pixels
+-----------------------------------------------
