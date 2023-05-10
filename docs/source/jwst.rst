@@ -3,14 +3,16 @@
 Extracting JWST data
 ====================
 
-Firstly, you'll need to download your data! Navigate to `MAST <https://mast.stsci.edu/portal/Mashup/Clients/Mast/Portal.html>`_ and use the search boxes to find your target / program. Add your desired observations to your download basket and then make sure to download the uncal.fits files, by marking the check box next to "UNCAL" in the "Group" filter within the download basket. These are what we will use for the stage 0 reduction. You don't need to download any more files than the uncal.fits files.
+Firstly, you'll need to download your data! Navigate to `MAST <https://mast.stsci.edu/portal/Mashup/Clients/Mast/Portal.html>`_ and use the search boxes to find your target / program. Add your desired observations to your download basket and then make sure to download the ``uncal.fits`` files, by marking the check box next to "UNCAL" in the "Group" filter within the download basket. These are what we will use for the Stage 1 reduction. You don't need to download any more files than the ``uncal.fits`` files.
 
 Alternatively, you can download the rateints.fits files if you don't want to perform stage 1 extraction yourself (not recommended) and jump straight to "Stage 2" below.
 
 1. Stage 1
 ----------
 
-1.1 Running the ``jwst pipeline`` on uncal.fits files
+.. _stage1:
+
+1.1 Running the ``jwst`` pipeline on uncal.fits files
 -----------------------------------------------------
 
 After downloading and unpacking the JWST data, navigate to your downloaded directory. You will see that the JWST files are divided into separate segment subdirectories ``jw......-seg001``, ``jw.........-seg002``,... . I tend to leave these subdirectories as they are and run the below stage 1 steps separately within each segment sub-directory.
