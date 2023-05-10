@@ -5,20 +5,16 @@ Welcome to Tiberius' documentation!
 
 The light curve fitting routines can be used as as standalone to fit, for example, HST light curves extracted with other methods.
 
-.. note::
+Reference / citing Tiberius
+---------------------------
 
-   This project is under active development.
+Please cite the following papers if you use Tiberius:
 
- Reference / citing Tiberius:
- ---------------------------
+`Kirk et al. 2017 <https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3907K/abstract>`_
 
- Please cite the following papers if you use Tiberius:
+`Kirk et al. 2021 <https://ui.adsabs.harvard.edu/abs/2021AJ....162...34K/abstract>`_
 
- https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3907K/abstract
-
- https://ui.adsabs.harvard.edu/abs/2021AJ....162...34K/abstract
-
- A dedicated Tiberius paper is in the pipeline.
+A dedicated Tiberius paper is in the pipeline.
 
 Contents
 --------
@@ -31,3 +27,7 @@ Contents
    Extracting ACAM/EFOSC2 stellar spectra
    Extracting Keck/NIRSPEC stellar spectra
    api
+
+ .. note::
+
+    This project is under active development.
