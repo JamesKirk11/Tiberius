@@ -1,5 +1,7 @@
+.. _jwst:
+
 Extracting JWST data
-=======================
+====================
 
 Firstly, you'll need to download your data! Navigate to `MAST <https://mast.stsci.edu/portal/Mashup/Clients/Mast/Portal.html>`_ and use the search boxes to find your target / program. Add your desired observations to your download basket and then make sure to download the uncal.fits files, by marking the check box next to "UNCAL" in the "Group" filter within the download basket. These are what we will use for the stage 0 reduction. You don't need to download any more files than the uncal.fits files.
 

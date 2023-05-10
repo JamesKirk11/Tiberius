@@ -15,7 +15,7 @@ Contents
 .. toctree::
 
    installation
-   Extracting JWST stellar spectra
+   JWST
    Fitting light curves
    Extracting ACAM/EFOSC2 stellar spectra
    Extracting Keck/NIRSPEC stellar spectra
