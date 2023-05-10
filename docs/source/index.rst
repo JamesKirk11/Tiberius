@@ -30,7 +30,7 @@ If you use ``Tiberius`` in published work, please cite the following papers.
         adsnote = {Provided by the SAO/NASA Astrophysics Data System}
   }
 
-    @ARTICLE{2021AJ....162...34K,
+    @ARTICLE{Kirk2021,
            author = {{Kirk}, James and {Rackham}, Benjamin V. and {MacDonald}, Ryan J. and {L{\'o}pez-Morales}, Mercedes and {Espinoza}, N{\'e}stor and {Lendl}, Monika and {Wilson}, Jamie and {Osip}, David J. and {Wheatley}, Peter J. and {Skillen}, Ian and {Apai}, D{\'a}niel and {Bixel}, Alex and {Gibson}, Neale P. and {Jord{\'a}n}, Andr{\'e}s and {Lewis}, Nikole K. and {Louden}, Tom and {McGruder}, Chima D. and {Nikolov}, Nikolay and {Rodler}, Florian and {Weaver}, Ian C.},
             title = "{ACCESS and LRG-BEASTS: A Precise New Optical Transmission Spectrum of the Ultrahot Jupiter WASP-103b}",
           journal = {\aj},
