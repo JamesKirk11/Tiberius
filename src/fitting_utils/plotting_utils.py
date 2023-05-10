@@ -10,6 +10,9 @@ import glob
 from matplotlib.ticker import AutoMinorLocator
 from global_utils import parseInput
 from Tiberius.src.fitting_utils import mcmc_utils as mc
+from scipy.stats import chi2 as c2
+from scipy.special import erfinv
+
 
 ### FUNCTIONS USEFUL FOR THE PLOTTING OF DATA
 
@@ -192,6 +195,20 @@ def rayleigh_slope(Teq,logg,Rp,Rstar,k,k_up,k_low,wvl_bin_centres,save_output=Fa
     return resampled_x,equilibrium_slope_resampled,fitted_slope_resampled,flat_line
 
 
+def calc_sigma_confidence(chi2,DOF):
+    """Calculating the sigma confidence at which a model is ruled out after first calculating the p-value.
+
+    Inputs:
+    chi2 - the chi2 of the fitted model to the data
+    DOF - the degrees of freedom
+
+    Returns:
+    sigma_rejection - the sigma confidence at which the model is ruled out"""
+    p_value = 1 - c2.cdf(chi2, DOF)
+    sigma_rejection = erfinv(1-p_value)*np.sqrt(2)
+    print("p_value = %f"%(p_value))
+    print("sigma_rejection = %f sigma"%(sigma_rejection))
+    return sigma_rejection
 
 
 
