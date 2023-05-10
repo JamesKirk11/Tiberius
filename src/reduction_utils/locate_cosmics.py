@@ -159,17 +159,17 @@ def check_cosmic_frames(cosmic_pixels,frame_cut_off):
     for i,c in enumerate(cosmic_pixels):
         ncosmics = len(np.where(c==1)[0])
         if ncosmics > frame_cut_off*median_cosmics:
-            print("Frame %d has %.2fX the median number of cosmics, somethings up"%(i,ncosmics/median_cosmics))
+            print("Integration %d has %.2fX the median number of cosmics, somethings up"%(i,ncosmics/median_cosmics))
             plt.figure()
             plt.imshow(c,cmap='Greys', interpolation='none',aspect="auto")
             incorrectly_flagged_cosmics.append(i)
-            plt.title("Frame %d"%i)
+            plt.title("Integration %d"%i)
             plt.ylabel("Pixel row")
             plt.xlabel("Pixel column")
             plt.show(block=False)
             # plt.clf()
 
-            reset_mask = input("Reset mask for frame %d? [y/n]: "%i)
+            reset_mask = input("Reset mask for integration %d? [y/n]: "%i)
             if reset_mask == "y":
                 print("...resetting mask\n")
                 cosmic_pixels[i] = np.zeros_like(c)
