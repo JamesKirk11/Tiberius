@@ -5,6 +5,8 @@ Welcome to Tiberius' documentation!
 
 The light curve fitting routines can be used as as standalone to fit, for example, HST light curves extracted with other methods.
 
+***NOTE: This readthedocs is under heavy development and is not yet complete. In the simplest terms, spectral extraction is performed by running ``reduction_utils/spectral_extraction.py`` and is controlled by ``reduction_utils/extraction_input.txt``. Light curve fitting is performed by running ``fitting_utils/gppm_fit.py`` and is controlled by ``fitting_utils/fitting_input.txt``.***
+
 Reference / citing Tiberius
 ---------------------------
 
