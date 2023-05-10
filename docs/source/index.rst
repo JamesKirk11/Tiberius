@@ -8,18 +8,52 @@ The light curve fitting routines can be used as as standalone to fit, for exampl
 Reference / citing Tiberius
 ---------------------------
 
-Please cite the following papers if you use Tiberius:
+If you wish to just cite the use of ``Eureka!`` in published work, please use the following citation to the `JOSS paper <https://joss.theoj.org/papers/10.21105/joss.04503>`_.
 
-`Kirk et al. 2017 <https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3907K/abstract>`_
+.. code-block::
 
-`Kirk et al. 2021 <https://ui.adsabs.harvard.edu/abs/2021AJ....162...34K/abstract>`_
+  @ARTICLE{Kirk2017,
+         author = {{Kirk}, J. and {Wheatley}, P.~J. and {Louden}, T. and {Doyle}, A.~P. and {Skillen}, I. and {McCormac}, J. and {Irwin}, P.~G.~J. and {Karjalainen}, R.},
+          title = "{Rayleigh scattering in the transmission spectrum of HAT-P-18b}",
+        journal = {\mnras},
+       keywords = {methods: observational, techniques: spectroscopic, planets and satellites: atmospheres, planets and satellites: individual: HAT-P-18b, Astrophysics - Earth and Planetary Astrophysics},
+           year = 2017,
+          month = jul,
+         volume = {468},
+         number = {4},
+          pages = {3907-3916},
+            doi = {10.1093/mnras/stx752},
+  archivePrefix = {arXiv},
+         eprint = {1611.06916},
+   primaryClass = {astro-ph.EP},
+         adsurl = {https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3907K},
+        adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+  }
+
+    @ARTICLE{2021AJ....162...34K,
+           author = {{Kirk}, James and {Rackham}, Benjamin V. and {MacDonald}, Ryan J. and {L{\'o}pez-Morales}, Mercedes and {Espinoza}, N{\'e}stor and {Lendl}, Monika and {Wilson}, Jamie and {Osip}, David J. and {Wheatley}, Peter J. and {Skillen}, Ian and {Apai}, D{\'a}niel and {Bixel}, Alex and {Gibson}, Neale P. and {Jord{\'a}n}, Andr{\'e}s and {Lewis}, Nikole K. and {Louden}, Tom and {McGruder}, Chima D. and {Nikolov}, Nikolay and {Rodler}, Florian and {Weaver}, Ian C.},
+            title = "{ACCESS and LRG-BEASTS: A Precise New Optical Transmission Spectrum of the Ultrahot Jupiter WASP-103b}",
+          journal = {\aj},
+         keywords = {Exoplanet astronomy, Exoplanet atmospheres, Exoplanet atmospheric composition, Extrasolar gaseous giant planets, Hot Jupiters, Planet hosting stars, 486, 487, 2021, 509, 753, 1242, Astrophysics - Earth and Planetary Astrophysics},
+             year = 2021,
+            month = jul,
+           volume = {162},
+           number = {1},
+              eid = {34},
+            pages = {34},
+              doi = {10.3847/1538-3881/abfcd2},
+    archivePrefix = {arXiv},
+           eprint = {2105.00012},
+     primaryClass = {astro-ph.EP},
+           adsurl = {https://ui.adsabs.harvard.edu/abs/2021AJ....162...34K},
+          adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+    }
 
 A dedicated Tiberius paper is in the pipeline.
 
-Contents
---------
-
 .. toctree::
+   :maxdepth: 2
+   :caption: Contents:
 
    installation
    JWST
