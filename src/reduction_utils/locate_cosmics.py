@@ -39,16 +39,22 @@ else:
 # load in the science data
 print("Loading in data...")
 data = []
+nints = []
+
 for s in science_list:
     f = fits.open(s,memmap=False)
     if args.jwst:
         data.append(f["SCI"].data)
+        nints.append(f["SCI"].data.shape[0])
     else:
         if bias: # subtract the bias if using one
             data.append(f[0].data-master_bias)
         else:
             data.append(f[0].data)
+        nints.append(f[0].data.shape[0])
     f.close()
+
+nints = np.cumsum(nints)
 
 if args.jwst:
     data = np.vstack(data)
@@ -177,7 +183,7 @@ def check_cosmic_frames(cosmic_pixels,frame_cut_off):
     return cosmic_pixels
 
 
-def replace_cosmics(cosmic_pixels,medians,science_list,jwst=False):
+def replace_cosmics(cosmic_pixels,medians,science_list,nints,jwst=False):
 
     try:
         os.mkdir("cosmic_cleaned_fits")
@@ -185,32 +191,65 @@ def replace_cosmics(cosmic_pixels,medians,science_list,jwst=False):
         pass
 
     nframes,nrows,ncols = cosmic_pixels.shape
+    total_nints = nints[-1]
 
     if jwst:
-
-        fits_files = [fits.open(s,memmap=False) for s in science_list]
-        new_fits_files = [copy.deepcopy(f) for f in fits_files]
-        filenames = [s.split("/")[-1] for s in science_list]
-        nints = np.cumsum([f["SCI"].data.shape[0] for f in fits_files])
-        total_nints = nints[-1]
 
         for i,c in enumerate(cosmic_pixels):
 
             jwst_fits_counter = np.digitize(i,nints)
+            if i == 0 or i in nints:
+                fits_file = fits.open(science_list[jwst_fits_counter],memmap=False)
+                new_fits_file = copy.deepcopy(fits_file)
+                filename = science_list[jwst_fits_counter].split("/")[-1]
 
             if jwst_fits_counter > 0:
                 jwst_index_counter = i-nints[jwst_fits_counter]
             else:
                 jwst_index_counter = i
 
-            print("Cleaning integration %d, %s"%(i,filenames[jwst_fits_counter]))
+            print("Cleaning integration %d, %s"%(i,filename))
 
             for row in range(nrows):
-                new_fits_files[jwst_fits_counter]["SCI"].data[jwst_index_counter][row][c[row]] = medians[i][row][c[row]]
+                new_fits_file["SCI"].data[jwst_index_counter][row][c[row]] = medians[i][row][c[row]]
 
-        for i,nf in enumerate(new_fits_files):
-            print("Saving cosmic_cleaned_fits/%s"%(filenames[i]))
-            nf.writeto("cosmic_cleaned_fits/%s"%filenames[i],overwrite=True)
+            if i in nints-1:
+                fits_file.close()
+                print("Saving cosmic_cleaned_fits/%s"%(filename))
+                new_fits_file.writeto("cosmic_cleaned_fits/%s"%filename,overwrite=True)
+
+        return
+
+
+
+        # fits_files = [fits.open(s,memmap=False) for s in science_list]
+        # new_fits_files = [copy.deepcopy(f) for f in fits_files]
+        # filenames = [s.split("/")[-1] for s in science_list]
+        # nints = np.cumsum([f["SCI"].data.shape[0] for f in fits_files])
+        # total_nints = nints[-1]
+
+        for s in science_list:
+            fits_file = fits.open(s,memmap=False)
+            new_fits_file = copy.deepcopy(fits_file)
+            filename = s.split("/")[-1]
+
+            for i,c in enumerate(cosmic_pixels):
+
+                jwst_fits_counter = np.digitize(i,nints)
+
+                if jwst_fits_counter > 0:
+                    jwst_index_counter = i-nints[jwst_fits_counter]
+                else:
+                    jwst_index_counter = i
+
+                print("Cleaning integration %d, %s"%(i,filenames[jwst_fits_counter]))
+
+                for row in range(nrows):
+                    new_fits_files[jwst_fits_counter]["SCI"].data[jwst_index_counter][row][c[row]] = medians[i][row][c[row]]
+
+            for i,nf in enumerate(new_fits_files):
+                print("Saving cosmic_cleaned_fits/%s"%(filenames[i]))
+                nf.writeto("cosmic_cleaned_fits/%s"%filenames[i],overwrite=True)
 
         return
 
@@ -267,6 +306,7 @@ pickle.dump(cosmic_pixels,open("cosmic_pixel_mask_%dsigma_clip.pickle"%cut_off,"
 
 # optionally save new fits files with cosmics replaced by median pixel values
 # note: this doesn't offer much improvement over the interpolation performed in long_slit_science_extraction.py
+
 replace = input("Replace cosmic values with median and save to new fits? [y/n]: ")
 if replace == "y":
-    replace_cosmics(cosmic_pixels,median_values,science_list,args.jwst)
+    replace_cosmics(cosmic_pixels,median_values,science_list,nints,args.jwst)
