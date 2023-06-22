@@ -20,6 +20,10 @@ except:
     print("astroscrappy not imported, automatic cosmic ray detection can't be performed with lacosmic")
 
 from cosmic_removal import interp_bad_pixels
+from wavelength_calibration import rebin_spec
+from specutils import Spectrum1D
+from specutils.manipulation import FluxConservingResampler
+from astropy import units as u
 
 # Prevent matplotlib plotting frames upside down
 plt.rcParams['image.origin'] = 'lower'
@@ -155,7 +159,10 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
             plt.plot(x,row,'bo',ms=5,label='data')
             plt.axvline(centre_guess,label='guessed centre',color='grey',ls='--')
             plt.axvline(TC,label='fitted centre',color='r',ls='--')
-            plt.plot(x,gauss(x,*popt1),'g',label='fit')
+            try:
+                plt.plot(x,gauss(x,*popt1),'g',label='fit')
+            except:
+                pass
             plt.title('Trace detection, star %d'%(star+1))
             plt.xlabel('X pixel')
             plt.ylabel('Counts at row %d'%(i+1))
@@ -266,20 +273,21 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
             plt.pause(delay)
             plt.close()
 
-        plt.figure(figsize=(8,4))
-        plt.plot(row_array[clipped_trace_idx],np.array(gauss_std)[clipped_trace_idx],label='Standard deviation of Gaussian')
-        plt.plot(row_array[clipped_trace_idx],np.array(fwhm)[clipped_trace_idx],label="FWHM of trace")
-        plt.title('Trace width, star %d'%(star+1))
-        plt.ylabel('Width in pixels')
-        plt.xlabel('X pixel')
-        plt.xlim(0,nrows)
-        plt.legend(numpoints=1)
-        if delay == -2:
-            plt.show()
-        else:
-            plt.show(block=False)
-            plt.pause(delay)
-            plt.close()
+        if len(fwhm) > 0:
+            plt.figure(figsize=(8,4))
+            plt.plot(row_array[clipped_trace_idx],np.array(gauss_std)[clipped_trace_idx],label='Standard deviation of Gaussian')
+            plt.plot(row_array[clipped_trace_idx],np.array(fwhm)[clipped_trace_idx],label="FWHM of trace")
+            plt.title('Trace width, star %d'%(star+1))
+            plt.ylabel('Width in pixels')
+            plt.xlabel('X pixel')
+            plt.xlim(0,nrows)
+            plt.legend(numpoints=1)
+            if delay == -2:
+                plt.show()
+            else:
+                plt.show(block=False)
+                plt.pause(delay)
+                plt.close()
 
     if override_force_verbose and not verbose:
         delay = 0
@@ -440,7 +448,7 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
         # plot the science frame with apertures overlaid
         plt.figure(figsize=(8,6))
 
-        vmin,vmax = np.nanpercentile(frame,[10,90])
+        vmin,vmax = np.nanpercentile(frame,[50,70])
         plt.imshow(frame,vmin=vmin,vmax=vmax,aspect="auto")
 
         plt.plot(trace,np.arange(nrows),'k',label="fitted centre")
@@ -709,7 +717,7 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
                 error.append(np.sqrt(sum(row[aperture_left_hand_edge:aperture_right_hand_edge])/oversampling_factor + (aperture_width/oversampling_factor)*readnoise**2 + dark_current*(aperture_width/oversampling_factor)*exposure_time/3600.)) # raw_flux here takes into account noise from the source and noise from the sky, since this is before background subtraction
 
             elif "JWST" in instrument: # we're using the error frame
-                error.append(np.sqrt(np.sum((error_frame[i][aperture_left_hand_edge:aperture_right_hand_edge])**2)))
+                error.append(np.sqrt(np.sum((error_frame[i][aperture_left_hand_edge:aperture_right_hand_edge])**2)/(oversampling_factor**2)))
 
             else: # I'm assuming we're looking at ACAM/EFOSC data and we're including scintillation but not dark current
                 error.append(np.sqrt(sum(row[aperture_left_hand_edge:aperture_right_hand_edge])/oversampling_factor + (aperture_width/oversampling_factor)*readnoise**2 + scintillation**2))
@@ -815,9 +823,9 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
     """The funtion that loops through all science frames,finding the trace locations, extracting the flux, and saving the final
     output."""
 
-    if verbose:
-        if verbose == -1:
-            verbose = False
+    # if verbose:
+    #     if verbose == -1:
+    #         verbose = False
 
     start_time = time.time()
 
@@ -1029,9 +1037,7 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                 if bad_pixel_mask is not None and cosmic_pixel_mask is not None:
                     pixel_mask = bad_pixel_mask + cosmic_pixel_mask[i]
 
-
-
-                if verbose and i == 0 or verbose and cosmic_pixel_mask is not None:
+                if verbose != -1 and verbose != 0 and i == 0 or verbose != -1 and verbose != 0 and cosmic_pixel_mask is not None:
                     plt.figure()
                     plt.imshow(pixel_mask, interpolation='none',aspect="auto")
                     plt.title("Pixel mask, frame %d"%i)
@@ -1050,7 +1056,7 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                 else:
                     frame = interp_bad_pixels(frame,pixel_mask)
 
-                if verbose and i == 0 or verbose and cosmic_pixel_mask is not None:
+                if verbose != -1 and verbose != 0 and i == 0 or verbose != -1 and verbose != 0 and cosmic_pixel_mask is not None:
                     plt.figure()
 
                     plt.subplot(211)
@@ -1107,7 +1113,7 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                                                           cleantype='medmask', fsmode='median',verbose=True)
                 frame[frame == 0] = np.nan
 
-                if verbose:
+                if verbose != -1 and verbose != 0:
                     plt.figure(figsize=(4,12))
                     plt.imshow(cosmic_pixels,aspect="auto")
                     plt.title("Lacosmic-flagged cosmic pixels")
@@ -1136,12 +1142,14 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                 uncorrected_frame = uncorrected_frame[row_min:row_max]
 
             if oversampling_factor > 1:
+                # nrows,ncols = frame.shape
                 if "JWST" in instrument:
                     frame = np.array([resample_frame(frame[0],oversampling_factor,verbose=verbose),resample_frame(frame[1],oversampling_factor)])
                     uncorrected_frame = np.array([resample_frame(uncorrected_frame[0],oversampling_factor),resample_frame(uncorrected_frame[1],oversampling_factor)])
                 else:
                     frame = resample_frame(frame,oversampling_factor,verbose=verbose)
                     uncorrected_frame = resample_frame(uncorrected_frame,oversampling_factor)
+                # oversampling_factor = ((ncols-1)*oversampling+1)/ncols
 
 
             if ACAM_linearity_correction and instrument == 'ACAM':
@@ -1157,7 +1165,12 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                 if nwindows > 1:
                     star_number += window - 1
 
-                trace, force_verbose, fwhm, gauss_std = find_spectral_trace(frame,guess_location[star_number],search_width[star_number],gaussian_width,trace_poly_order,trace_spline_sf,star_number,verbose,co_add_rows,instrument)
+                if search_width[star_number] > 0:
+                    trace, force_verbose, fwhm, gauss_std = find_spectral_trace(frame,guess_location[star_number],search_width[star_number],gaussian_width,trace_poly_order,trace_spline_sf,star_number,verbose,co_add_rows,instrument)
+                else:
+                    trace = np.ones(row_max-row_min)*guess_location[star_number]
+                    fwhm = gauss_std = np.ones(row_max-row_min)
+                    force_verbose = verbose
 
                 if gaussian_defined_aperture:
                     trace_std = gauss_std*2*np.sqrt(2*np.log(2))
@@ -1535,6 +1548,7 @@ def resample_frame(data,oversampling=10,xmin=0,verbose=False):
 
     nrows,ncols = data.shape
     old_x = np.arange(xmin,ncols)
+    # new_x = np.arange(xmin,ncols-1+1/oversampling,1/oversampling)
     new_x = np.linspace(xmin,ncols,ncols*oversampling)
 
     data_resampled = np.array([np.interp(new_x,old_x,y) for y in data])
@@ -1545,8 +1559,8 @@ def resample_frame(data,oversampling=10,xmin=0,verbose=False):
 
     if verbose:
         plt.figure()
-        plt.plot(new_x,data_resampled[nrows//2],'r+',label='Post-oversampling')
-        plt.plot(old_x,data[nrows//2],'ko',label="Pre-oversampling")
+        plt.plot(old_x,data[nrows//2],'ko',ms=10,mfc="white",label="Pre-oversampling")
+        plt.plot(new_x,data_resampled[nrows//2],'r.',label='Post-oversampling')
         plt.xlabel("X pixel")
         plt.ylabel("Counts")
         plt.title("Pixel resampling to deal with partial pixels")
