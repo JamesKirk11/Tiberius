@@ -212,7 +212,7 @@ for plot_no in range(nplots):
         # ~ max_points = int(np.round(30/time_diff)) # go up to maximum of 30 minute bins
         max_points = contact2 - contact1 # go up to ingress duration as max points per bin
 
-        npoints_per_bin = np.hstack((np.linspace(1,max_points,100),max_points))
+        npoints_per_bin = np.hstack((np.linspace(1,max_points,1000),max_points))
 
         for j in npoints_per_bin:
             if j == 1:
@@ -230,8 +230,10 @@ for plot_no in range(nplots):
         gaussian_white_noise = np.array([1/np.sqrt(n) for n in npoints_per_bin])
         offset = max(gaussian_white_noise)/rms[0]
         gaussian_white_noise = gaussian_white_noise/offset
-        beta_factor = np.max(rms/gaussian_white_noise) # average ratio of measured dispersion to theortical value, https://iopscience.iop.org/article/10.1086/589737/pdf
-
+        # beta_factor = np.max(rms/gaussian_white_noise) # average ratio of measured dispersion to theortical value, https://iopscience.iop.org/article/10.1086/589737/pdf
+        #
+        # beta_factors.append(beta_factor)
+        beta_factor = (rms[-1]/rms[0])/(gaussian_white_noise[-1]/gaussian_white_noise[0])
         beta_factors.append(beta_factor)
 
         if args.save_table:
@@ -244,6 +246,9 @@ for plot_no in range(nplots):
         else:
             ax.plot(npoints_per_bin,rms/rms[0],'r',lw=2,zorder=1)
             ax.plot(npoints_per_bin,gaussian_white_noise/gaussian_white_noise[0],color='k',lw=2,zorder=0)
+
+
+
 
         ax.set_yscale('log')
         ax.set_xscale('log')
