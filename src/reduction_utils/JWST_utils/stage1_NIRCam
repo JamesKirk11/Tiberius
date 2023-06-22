@@ -1,6 +1,6 @@
 #!/bin/bash
 # following steps as defined here: https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html#calwebb-detector1
-#conda activate JWST
+conda activate JWST
 export CRDS_PATH=$HOME/crds_cache/jwst_pub
 export CRDS_SERVER_URL=https://jwst-crds-pub.stsci.edu
 echo ""
@@ -39,6 +39,7 @@ echo ""
 echo "****running gain_scale****"
 echo ""
 strun gain_scale $1_1_rampfitstep.fits --override_gain $HOME/crds_cache/jwst_pub/references/jwst/nircam/jwst_nircam_gain_0097.fits
+# python $HOME/python/Tiberius/src/reduction_utils/JWST_utils/gainscalestep.py --science_file $1_1_rampfitstep.fits --gain_file $HOME/crds_cache/jwst_pub/references/jwst/nircam/jwst_nircam_gain_0097.fits
 echo ""
 echo "****running assign_wcs****"
 echo ""
@@ -58,4 +59,4 @@ rm $1_linearitystep.fits
 rm $1_refpixstep.fits
 rm $1_saturationstep.fits
 rm $1_superbiasstep.fits
-#conda deactivate
+conda deactivate
