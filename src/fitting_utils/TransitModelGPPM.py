@@ -384,8 +384,8 @@ class TransitModelGPPM(object):
 
         if self.poly_used: # priors on polynomial coefficients
             if not self.poly_fixed:
-                for i in range(1,self.polynomial_orders.sum()+1):
-                    if self.pars['c%d'%(i)].currVal > 10 or self.pars['c%d'%(i)].currVal < -10:
+                for i in range(0,self.polynomial_orders.sum()+1):
+                    if self.pars['c%d'%(i+1)].currVal > 10 or self.pars['c%d'%(i+1)].currVal < -10:
                         return -np.inf
 
         else: # if not using a polynomial, this is the prior on the normalization constant
