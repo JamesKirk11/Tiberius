@@ -12,6 +12,7 @@ parser.add_argument('fits_file',help='the name of the fits file to load in')
 parser.add_argument('--pixel_mask',help='the name of the bad pixel mask file to load in')
 parser.add_argument("--trace_location",help="optionally parse the locations of the stellar trace to define where the background should be estimated")
 parser.add_argument("--extraction_input",help="optionally parse the extraction_input.txt file associated with the trace_location file to determine the width of the background region")
+parser.add_argument("--row_wise_1overf",help="Use this if wanting to perform a row-wise correction (like for NIRCam) rather than column-wise",action="store_true")
 args = parser.parse_args()
 
 f = fits.open(args.fits_file)
@@ -75,7 +76,8 @@ for i in range(nints):
 
         bkg = []
 
-        if "nircam" not in instrument.lower():
+        # if "nircam" not in instrument.lower():
+        if not args.row_wise_1overf:
             # for non-NIRCam, the 1/f noise is along the columns not the rows. Here we're dealing with column-wise 1/f
             for c in range(ncols):
 
@@ -114,7 +116,8 @@ for i in range(nints):
         if g == ngroups - 1:
             one_over_f_noise.append(np.array(bkg))
 
-        if "nircam" in instrument.lower():
+        # if "nircam" in instrument.lower():
+        if args.row_wise_1overf:
             image = image - np.array(bkg).reshape(nrows,1)
         else:
             image = image - np.array(bkg)
