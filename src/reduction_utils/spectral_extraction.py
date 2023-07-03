@@ -124,6 +124,7 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
             popt1,pcov1 = optimize.curve_fit(gauss,x,row,p0=[amplitude,centre_guess,gaussian_width,amplitude_offset])
 
             # Make sure fitted amplitude (with offset) is not less than 25% of the guess amplitude. - note for ACAM this number was 0.3 (70%).
+            # print(search_left_edge,search_right_edge,popt1[1])
             if np.fabs(popt1[0] + popt1[-1] - amplitude) < amplitude * 0.75:
                 TC = popt1[1] # trace centre
                 trace_centre.append(TC)
@@ -195,7 +196,10 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
     clipped_trace_idx = (np.fabs(trace_residuals) <= 5*std_residuals)
 
     if trace_poly_order > 0: # we're using a polynomial for our final trace positions
-        fitted_function = np.poly1d(np.polyfit(row_array[clipped_trace_idx],np.array(trace_centre)[clipped_trace_idx],trace_poly_order))
+        if len(row_array[clipped_trace_idx]) > 2:
+            fitted_function = np.poly1d(np.polyfit(row_array[clipped_trace_idx],np.array(trace_centre)[clipped_trace_idx],trace_poly_order))
+        else:
+            fitted_function = poly
 
     if trace_spline_sf > 0: # we're using a spline for our final trace positions
         spline = UnivariateSpline(row_array,np.array(trace_centre),k=3,s=trace_spline_sf)
@@ -757,7 +761,6 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
         # background subtracted image
         clipped_frame = np.array(clipped_frame)
         plt.figure(figsize=(12,8))
-
         plt.subplot(121)
 
         vmin,vmax = np.nanpercentile(clipped_frame,[10,50])
