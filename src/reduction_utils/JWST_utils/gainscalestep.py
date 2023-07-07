@@ -15,6 +15,7 @@ gain_file = fits.open(args.gain_file)
 print("loading %s"%args.science_file)
 
 gain_factor = gain_file["SCI"].data[gain_file["SCI"].data > 0].mean()
+print("Gain factor = ",gain_factor)
 
 new_science_file = copy.deepcopy(science_file)
 
