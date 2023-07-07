@@ -119,18 +119,31 @@ else:
     polynomial_coefficients = None
     poly_used = False
 
+# determine whether we're using an exponential ramp model or not
+if bool(int(input_dict['exponential_ramp'])):
+    exp_ramp_used = True
+else:
+    exp_ramp_used = False
+
+
 # check whether the starting locations for the coefficients are given in fitting_input.txt, otherwise define these here
-if poly_used:
+if poly_used or exp_ramp_used:
     if input_dict['polynomial_coefficients'] is not None:
         # polynomial_coefficients = np.array([float(i) for i in input_dict['polynomial_coefficients'].split(',')]) # in case the white light fit has already been performed, we can define the actual values here
         polynomial_coefficients_keys = np.loadtxt(input_dict['polynomial_coefficients'],usecols=0,dtype=str)
         polynomial_coefficients_values = np.loadtxt(input_dict['polynomial_coefficients'],usecols=2)
         polynomial_coefficients = []
+        ramp_coefficients = []
         for k,v in zip(polynomial_coefficients_keys,polynomial_coefficients_values):
             if int(k.split("_")[1]) == wb + 1:
-                polynomial_coefficients.append(v)
+                if "c" in k.split("_")[0]:
+                    polynomial_coefficients.append(v)
+                if "r" in k.split("_")[0]:
+                    ramp_coefficients.append(v)
     else:
         polynomial_coefficients = None
+        ramp_coefficients = None
+
 
 # Do we want to normalise inputs? Defined as (input - mean(input))/std(input)
 norm_inputs = bool(int(input_dict['normalise_inputs']))
@@ -448,7 +461,20 @@ if poly_used:
         d['c1'] = tmgp.Param(1.0)
         for i in range(1,polynomial_orders.sum()+1):
             d['c%d'%(i+1)] = tmgp.Param(1e-3)
-else:
+
+if exp_ramp_used:
+    if ramp_coefficients is not None:
+        for i,c in enumerate(ramp_coefficients):
+            d['r%d'%(i+1)] = c
+    else:
+        d['r1'] = tmgp.Param(1)
+        d['r2'] = tmgp.Param(10)
+        d['r3'] = tmgp.Param(5)
+        d['r4'] = tmgp.Param(1)
+        d['r5'] = tmgp.Param(10)
+        d['r6'] = tmgp.Param(1)
+
+if not poly_used and not exp_ramp_used:
     # if we're not using a polynomial, we're including a normalization factor to multiply the transit light curve by to account for imperfect normalisation of out-of-transit data
     d['f'] = tmgp.Param(1)
 
@@ -535,6 +561,15 @@ if optimise_model or clip_outliers and not median_clip:
         d_clip['c1'] = tmgp.Param(1.0)
         d_clip['c2'] = tmgp.Param(1e-3)
         d_clip['c3'] = tmgp.Param(1e-3)
+
+        if exp_ramp_used:
+            d_clip['r1'] = tmgp.Param(1e-3)
+            d_clip['r2'] = tmgp.Param(1e-3)
+            d_clip['r3'] = tmgp.Param(1e-3)
+            d_clip['r4'] = tmgp.Param(1e-3)
+            d_clip['r5'] = tmgp.Param(1e-3)
+            d_clip['r6'] = tmgp.Param(1e-3)
+
         if median_clip:
             red_noise_model_inputs = [clipped_time]
         else:
@@ -543,9 +578,9 @@ if optimise_model or clip_outliers and not median_clip:
 
     ### Generate starting model
     if median_clip:
-        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law)
+        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law,exp_ramp_used)
     else:
-        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,flux_error,time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law)
+        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,flux_error,time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law,exp_ramp_used)
 
     if not np.any(flux_error) > 0: # the errors are all zeroes, need to be replaced for sake of fit only
         print("using dummy flux errors for sigma clipping only")
@@ -570,7 +605,12 @@ if optimise_model or clip_outliers and not median_clip:
 
 
         # check contact points
-        initial_transit_model = fitted_clip_model.calc(time)/fitted_clip_model.red_noise_poly(time)
+        if exp_ramp_used:
+            initial_red_noise = fitted_clip_model.red_noise_poly(time) * fitted_clip_model.exponential_ramp(time)
+        else:
+            initial_red_noise = fitted_clip_model.red_noise_poly(time)
+
+        initial_transit_model = fitted_clip_model.calc(time)/initial_red_noise
 
     if white_light_fit:
         try:
@@ -637,7 +677,7 @@ if clip_outliers:
     print("\n %d data points (%.2f%%) clipped from fit"%(len(time)-len(clipped_time),100*(len(time)-len(clipped_time))/len(time)))
 
 
-starting_model = tmgp.TransitModelGPPM(d,clipped_model_input,kernel_classes,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders,ld_law)
+starting_model = tmgp.TransitModelGPPM(d,clipped_model_input,kernel_classes,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders,ld_law,exp_ramp_used)
 
 ### Optionally fit all combinations of polynomials with a Nelder-Mead to determine the best orders and inputs to use
 if args.determine_best_polynomials > 0 and not GP_used:
@@ -783,7 +823,14 @@ if not GP_used:
         # generate red noise model for possible common mode correction. Note this is performed on the full time array, not the clipped time array, so that the same number of data points are used in the WLC and wb fits
 
         # first get the red noise model
-        red_noise_model = prod_model.red_noise_poly(time,systematics_model_inputs)
+        red_noise_model = 1
+
+        if poly_used:
+            red_noise_model *= prod_model.red_noise_poly(time,systematics_model_inputs)
+
+        if exp_ramp_used:
+            red_noise_model *= prod_model.exponential_ramp(time)
+
         pickle.dump(red_noise_model,open('red_noise_model.pickle','wb'))
 
         # now get the common noise model, which is the flux array minus the best fitting transit model

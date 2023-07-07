@@ -11,7 +11,7 @@ from Tiberius.src.fitting_utils import parametric_fitting_functions as pf
 from Tiberius.src.fitting_utils import plotting_utils as pu
 
 class TransitModelGPPM(object):
-    def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic"):
+    def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False):
 
         """
         The GPPM transit model class, which uses batman to generate the analytic, quadratically limb-darkened transit light curves, and george to generate the GP red noise models.
@@ -30,6 +30,7 @@ class TransitModelGPPM(object):
         time_poly - the order of the polynomial used to fit the time dependent-noise. Default=0 (no poly)
         polynomial_orders - if wanting to use polynomial detrending, use this to define the corders of each polynomial to be used. This must be the same length as the systematic_model_inputs.
         ld_law - the limb darkening law we want to use: linear/quadratic/nonlinear/squareroot
+        exp_ramp - True/False. Do you want to additionally fit a 2 component expoential ramp model? Default = False
 
         Returns:
         TransitModelGPPM object
@@ -45,6 +46,7 @@ class TransitModelGPPM(object):
         self.ld_std_priors = ld_std_priors
         self.ld_law = ld_law
         self.polynomial_orders = polynomial_orders
+        self.exp_ramp_used = exp_ramp
 
         # Acknowledge the fact that we're using a polynomial here
         if polynomial_orders is None:
@@ -55,6 +57,12 @@ class TransitModelGPPM(object):
                 self.poly_fixed = False
             else:
                 self.poly_fixed = True
+
+        if exp_ramp:
+            if type(pars_dict["r1"]) is Param:
+                self.exp_ramp_fixed = False
+            else:
+                self.exp_ramp_fixed = True
 
         # Acknowledge the fact that we're using a GP model here, useful for mcmc_utils.py
         if kernel_classes is None:
@@ -255,15 +263,39 @@ class TransitModelGPPM(object):
                 self.batman_model = batman.TransitModel(self.batman_params, time, nthreads=1)
 
         transitShape = self.batman_model.light_curve(self.batman_params)
+        model = transitShape
 
         if self.poly_used: # then we're using a polynomial to fit systematics
             red_noise_poly_model = self.red_noise_poly(time,sys_model_inputs)
-            model = transitShape * red_noise_poly_model
+            model *= red_noise_poly_model
 
-        else: # we're using a normalization constant to offset the transit depth
-            model = transitShape * self.pars['f'].currVal
+        if self.exp_ramp_used:
+            exponential_ramp_model = self.exponential_ramp(time)
+            model *= exponential_ramp_model
+
+        if not self.poly_used and not self.exp_ramp_used: # we're using a normalization constant to offset the transit depth
+            model *= self.pars['f'].currVal
 
         return model
+
+
+    def exponential_ramp(self,time=None):
+
+        """The function that calculates a two component ramp model to fit trends in light curves. This only operates over the time axis.
+
+        Inputs:
+        time - the array of times at which to evaluate the polynomial. Can be blank if these haven't changed from the initial init call.
+
+        Returns:
+        exp_ramp_model - the evaluated exponential ramp
+        """
+
+        if self.exp_ramp_fixed:
+            exp_ramp_model = (1 + self.pars['r1']*np.exp(-self.pars['r2']*time + self.pars['r3']) + self.pars['r4']*np.exp(-self.pars['r5']*time + self.pars['r6']))
+        else:
+            exp_ramp_model = (1 + self.pars['r1'].currVal*np.exp(-self.pars['r2'].currVal*time + self.pars['r3'].currVal) + self.pars['r4'].currVal*np.exp(-self.pars['r5'].currVal*time + self.pars['r6'].currVal))
+
+        return exp_ramp_model
 
 
     def red_noise_poly(self,time=None,sys_model_inputs=None,deconstruct_polys=False):
@@ -388,7 +420,13 @@ class TransitModelGPPM(object):
                     if self.pars['c%d'%(i+1)].currVal > 10 or self.pars['c%d'%(i+1)].currVal < -10:
                         return -np.inf
 
-        else: # if not using a polynomial, this is the prior on the normalization constant
+        if self.exp_ramp_used: # priors on polynomial coefficients
+            if not self.exp_ramp_fixed:
+                for i in range(1,7):
+                    if self.pars['r%d'%(i)].currVal > 1e2 or self.pars['r%d'%(i)].currVal < -1e2:
+                        return -np.inf
+
+        if not self.poly_used and not self.exp_ramp_used: # if not using a polynomial, this is the prior on the normalization constant
             if self.pars['f'].currVal > 1.5 or self.pars['f'].currVal < 0.5:
                 return -np.inf
 
@@ -843,7 +881,12 @@ class TransitModelGPPM(object):
                 bnds += [(0,10)] # this is the y intercept
                 bnds += [(-5,5)]*self.polynomial_orders.sum() # these are the coefficients of the polynomial
 
-        if full_model and not self.poly_used:
+        if full_model and self.exp_ramp_used:
+            if not self.exp_ramp_fixed:
+                # put priors on the polynomical parameters
+                bnds += [(-100,100)]*6 # these are the coefficients of the polynomial
+
+        if full_model and not self.poly_used and not self.exp_ramp_fixed:
             bnds += [(0.5,2)] # this is the bound on the normalization constant that we use if we don't have a polynomial
 
         # Now if we're fitting the full model (all parameters) or we're not using a GP we perform this step

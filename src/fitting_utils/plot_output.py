@@ -147,7 +147,14 @@ for i,model in enumerate(m):
         # now get transit only model
         if not model.GP_used:
             # get the transit model
-            tm = model.calc(x[i])/model.red_noise_poly(x[i])
+            red_noise_model = 1
+            if model.poly_used:
+                red_noise_model *= model.red_noise_poly(x[i])
+            if model.exp_ramp_used:
+                 red_noise_model *= model.exponential_ramp(x[i])
+
+            tm = model.calc(x[i])/red_noise_model
+
         else:
             tm = model.calc(x[i])
 

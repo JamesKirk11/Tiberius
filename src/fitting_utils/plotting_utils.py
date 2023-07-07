@@ -395,18 +395,24 @@ def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavel
 
     gp = model.GP_used
     poly = model.poly_used
+    exp = model.exp_ramp_used
 
     # convert times from days to hours from mid-transit
     hours = mjd2hours(time,tc)
 
     # calculate M&A transit model
     model_y = model.calc(time)
+    oot = 1
 
     if poly:# and not gp:
         if deconstruct:
             oot,poly_components = model.red_noise_poly(time,deconstruct_polys=True)
         else:
             oot = model.red_noise_poly(time)
+
+    if exp:
+        exp_ramp = model.exponential_ramp(time)
+        oot *= exp_ramp
 
     if gp:
         if deconstruct:
@@ -444,9 +450,9 @@ def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavel
     if gp:
         ax1.legend(ncol=NCOL,fontsize=6)
 
-    if poly and not gp:
-        ax1.plot(hours,model_y,color='r',zorder=10,label='Poly & transit model',lw=1)
-        ax1.plot(hours,oot,color='g',label='Polynomial',lw=1)
+    if poly and not gp or exp and not gp:
+        ax1.plot(hours,model_y,color='r',zorder=10,label='Systematics & transit model',lw=1)
+        ax1.plot(hours,oot,color='g',label='Systematics model',lw=1)
         ax1.plot(hours,model_y/oot,color='0.75',ls='--',zorder=9,label='Transit model',lw=1)
         NCOL = 1
         ax1.legend(ncol=NCOL,fontsize=6)
@@ -478,7 +484,10 @@ def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavel
             for i,m in enumerate(poly_components):
                 model_ax.plot(hours,(m*1e6)-(m*1e6).mean(),label='poly %d'%(i+1),alpha=alpha,lw=1)
 
-        NCOL += 1
+        if exp:
+            model_ax.plot(hours,(exp_ramp*1e6)-(exp_ramp*1e6).mean(),label='exponential ramp',alpha=1,lw=1)
+
+        NCOL = 2
         subplot += 1
         model_ax.ticklabel_format(useOffset=False)
         plt.xticks(visible=False)

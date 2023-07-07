@@ -32,10 +32,15 @@ for i,n in enumerate(completed_bins):
 
     gp = m[i].GP_used
     poly = m[i].poly_used
+    exp = m[i].exp_ramp_used
     WL = m[i].white_light_fit
 
-    if poly and not gp:
-        oot = m[i].red_noise_poly(x[i])
+    if not gp:
+        oot = 1
+        if poly:
+            oot *= m[i].red_noise_poly(x[i])
+        if exp:
+            oot *= m[i].exponential_ramp(x[i])
         residuals = y[i] - transit_model
         full_model = transit_model.copy()
         transit_model /= oot
