@@ -1115,3 +1115,23 @@ def clip_shift_outliers(moffat_line_shifts,clip_level=2):
         moffat_line_shifts_clipped.append(current_frame_shifts)
 
     return np.array(moffat_line_shifts_clipped)
+
+
+def wavecal_F444(x):
+    """
+    Wavelength calibration from Flight Program 1076
+    for JWST NIRCam F444 filter.
+    Inputs
+    ------
+    x: float or numpy array
+        Zero-based index of the X pixel
+    Returns
+    -------
+    wave: numpy array
+        Wavelength in microns
+    """
+    x0 = 852.0756
+    coeff = np.array([ 3.928041104137344, 0.979649332832983])
+    xprime = (x - x0)/1000.
+    poly = np.polynomial.Polynomial(coeff)
+    return poly(xprime)
