@@ -21,8 +21,6 @@ except:
 
 from cosmic_removal import interp_bad_pixels
 from wavelength_calibration import rebin_spec
-from specutils import Spectrum1D
-from specutils.manipulation import FluxConservingResampler
 from astropy import units as u
 
 # Prevent matplotlib plotting frames upside down
