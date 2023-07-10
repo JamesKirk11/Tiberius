@@ -21,6 +21,7 @@ setup(
     'pandas',
     'peakutils',
     'photutils',
+    'pysynphot',
     'importlib-metadata; python_version >= "3.8"',
     'scipy',
     'xarray'
