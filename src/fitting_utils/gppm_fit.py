@@ -463,16 +463,22 @@ if poly_used:
             d['c%d'%(i+1)] = tmgp.Param(1e-3)
 
 if exp_ramp_used:
+    exp_ramp_components = int(input_dict["exponential_ramp"])
     if ramp_coefficients is not None:
         for i,c in enumerate(ramp_coefficients):
             d['r%d'%(i+1)] = c
     else:
-        d['r1'] = tmgp.Param(1)
-        d['r2'] = tmgp.Param(10)
-        d['r3'] = tmgp.Param(5)
-        d['r4'] = tmgp.Param(1)
-        d['r5'] = tmgp.Param(10)
-        d['r6'] = tmgp.Param(1)
+        for i in range(0,exp_ramp_components*3):
+            if i%3 == 1:
+                d["r%d"%(i+1)] = tmgp.Param(1) # the r1 parameter
+            if i%3 == 2:
+                d["r%d"%(i+1)] = tmgp.Param(10) # the r2 parameter
+            if i%3 == 0:
+                d["r%d"%(i+1)] = tmgp.Param(5) # the r3 parameter
+
+            # d['r4'] = tmgp.Param(1)
+            # d['r5'] = tmgp.Param(10)
+            # d['r6'] = tmgp.Param(1)
 
 if not poly_used and not exp_ramp_used:
     # if we're not using a polynomial, we're including a normalization factor to multiply the transit light curve by to account for imperfect normalisation of out-of-transit data
@@ -563,18 +569,18 @@ if optimise_model or clip_outliers and not median_clip:
         d_clip['c3'] = tmgp.Param(1e-3)
 
         if exp_ramp_used:
-            d_clip['r1'] = tmgp.Param(1e-3)
-            d_clip['r2'] = tmgp.Param(1e-3)
-            d_clip['r3'] = tmgp.Param(1e-3)
-            d_clip['r4'] = tmgp.Param(1e-3)
-            d_clip['r5'] = tmgp.Param(1e-3)
-            d_clip['r6'] = tmgp.Param(1e-3)
+            for i in range(0,exp_ramp_components*3):
+                if i%3 == 1:
+                    d_clip["r%d"%(i+1)] = tmgp.Param(1) # the r1 parameter
+                if i%3 == 2:
+                    d_clip["r%d"%(i+1)] = tmgp.Param(10) # the r2 parameter
+                if i%3 == 0:
+                    d_clip["r%d"%(i+1)] = tmgp.Param(5) # the r3 parameter
 
         if median_clip:
             red_noise_model_inputs = [clipped_time]
         else:
             red_noise_model_inputs = [time]
-
 
     ### Generate starting model
     if median_clip:
@@ -676,8 +682,11 @@ pickle.dump(keep_idx,open('data_quality_flags_wb%s.pickle'%(str(wb+1).zfill(4)),
 if clip_outliers:
     print("\n %d data points (%.2f%%) clipped from fit"%(len(time)-len(clipped_time),100*(len(time)-len(clipped_time))/len(time)))
 
-
 starting_model = tmgp.TransitModelGPPM(d,clipped_model_input,kernel_classes,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders,ld_law,exp_ramp_used)
+
+if not optimise_model and show_plots:
+    print("plotting starting model")
+    fig = pu.plot_single_model(starting_model,clipped_time,clipped_flux,clipped_flux_error,save_fig=False)
 
 ### Optionally fit all combinations of polynomials with a Nelder-Mead to determine the best orders and inputs to use
 if args.determine_best_polynomials > 0 and not GP_used:

@@ -59,6 +59,7 @@ class TransitModelGPPM(object):
                 self.poly_fixed = True
 
         if exp_ramp:
+            self.exp_ramp_components = exp_ramp
             if type(pars_dict["r1"]) is Param:
                 self.exp_ramp_fixed = False
             else:
@@ -290,10 +291,16 @@ class TransitModelGPPM(object):
         exp_ramp_model - the evaluated exponential ramp
         """
 
-        if self.exp_ramp_fixed:
-            exp_ramp_model = (1 + self.pars['r1']*np.exp(-self.pars['r2']*time + self.pars['r3']) + self.pars['r4']*np.exp(-self.pars['r5']*time + self.pars['r6']))
-        else:
-            exp_ramp_model = (1 + self.pars['r1'].currVal*np.exp(-self.pars['r2'].currVal*time + self.pars['r3'].currVal) + self.pars['r4'].currVal*np.exp(-self.pars['r5'].currVal*time + self.pars['r6'].currVal))
+        exp_ramp_model = 1
+
+        for i in range(0,3*self.exp_ramp_components,3):
+
+            if self.exp_ramp_fixed:
+                # exp_ramp_model = (1 + self.pars['r1']*np.exp(-self.pars['r2']*time + self.pars['r3']) + self.pars['r4']*np.exp(-self.pars['r5']*time + self.pars['r6']))
+                exp_ramp_model += self.pars['r%d'%(i+1)]*np.exp(-self.pars['r%d'%(i+2)]*time + self.pars['r%d'%(i+3)])
+            else:
+                # exp_ramp_model = (1 + self.pars['r1'].currVal*np.exp(-self.pars['r2'].currVal*time + self.pars['r3'].currVal) + self.pars['r4'].currVal*np.exp(-self.pars['r5'].currVal*time + self.pars['r6'].currVal))
+                exp_ramp_model += self.pars['r%d'%(i+1)].currVal*np.exp(-self.pars['r%d'%(i+2)].currVal*time + self.pars['r%d'%(i+3)].currVal)
 
         return exp_ramp_model
 
@@ -422,8 +429,8 @@ class TransitModelGPPM(object):
 
         if self.exp_ramp_used: # priors on polynomial coefficients
             if not self.exp_ramp_fixed:
-                for i in range(1,7):
-                    if self.pars['r%d'%(i)].currVal > 1e2 or self.pars['r%d'%(i)].currVal < -1e2:
+                for i in range(0,self.exp_ramp_components*3):
+                    if self.pars['r%d'%(i+1)].currVal > 1e2 or self.pars['r%d'%(i+1)].currVal < -1e2:
                         return -np.inf
 
         if not self.poly_used and not self.exp_ramp_used: # if not using a polynomial, this is the prior on the normalization constant
@@ -884,7 +891,7 @@ class TransitModelGPPM(object):
         if full_model and self.exp_ramp_used:
             if not self.exp_ramp_fixed:
                 # put priors on the polynomical parameters
-                bnds += [(-100,100)]*6 # these are the coefficients of the polynomial
+                bnds += [(-100,100)]*self.exp_ramp_components # these are the coefficients of the expoential ramp
 
         if full_model and not self.poly_used and not self.exp_ramp_fixed:
             bnds += [(0.5,2)] # this is the bound on the normalization constant that we use if we don't have a polynomial
