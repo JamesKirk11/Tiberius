@@ -12,7 +12,7 @@ Alternatively, you can download the rateints.fits files if you don't want to per
 
 .. _stage1:
 
-1.1 Running the ``jwst`` pipeline on uncal.fits files
+1.1 Running the ``jwst`` pipeline on ``uncal.fits`` files
 -----------------------------------------------------
 
 After downloading and unpacking the JWST data, navigate to your downloaded directory. You will see that the JWST files are divided into separate segment subdirectories ``jw......-seg001``, ``jw.........-seg002``,... . I tend to leave these subdirectories as they are and run the below stage 1 steps separately within each segment sub-directory.
@@ -34,7 +34,7 @@ Once you are happy with your ``stage1_*`` file, you can run the stage 1 extracti
 
 .. code-block:: bash
 
-    chmod +x stage1_*``
+    chmod +x stage1_*
 
 Then you can proceed as follows:
 
@@ -51,7 +51,7 @@ e.g.,
 
    . /path/to/stage1_PRISM jw01366004001_04101_00001-seg001
 
-This will produce a series of fits files, with the main one of interest being the ``gainscalestep.fits`` files which is what we will work with in Stage 2. By default, Tiberius' ``stage1_*`` executables clean the subdirectories of other intermediate fits files, otherwise you can quickly run out of storage! You can prevent this behaviour by commenting out the relevant lines at the bottom of the ``stage1_`` text files.
+This will produce a series of fits files, with the main one of interest being the ``gainscalestep.fits`` files which is what we will work with in Stage 2. By default, Tiberius' ``stage1_*`` executables clean the subdirectories of other intermediate fits files, otherwise you can quickly run out of storage! You can prevent this behaviour by commenting out the relevant lines (``rm jw......fits``) in the ``stage1_`` text files.
 
 1.2 Cleaning the cosmic rays / telegraph pixels
 -----------------------------------------------
@@ -93,3 +93,43 @@ Once you have vetted all these flagged frames, it will ask you one last question
   Replace cosmic values with median and save to new fits? [y/n]:
 
 Providing you are happy with everything up to this point, you can hit ``y`` which will replace all flagged pixels in the time-series with the medians and save the cleaned integrations to a new directory called ``cosmic_cleaned_fits/``. If you are not happy, hit ``n`` and play around with the command line arguments for ``locate_cosmics.py``.
+
+1.3 Extracting stellar spectra
+------------------------------
+
+Now we have our cosmic-cleaned integration level fits files, we are ready to run aperture photometry on these to extract our stellar spectra.
+
+I recommend you make a new directory (``reduction01, reduction02,...``) for each test reduction you perform (e.g., different aperture and background widths).
+
+In each new reduction directory, you will need to make a new ``extraction_input.txt`` file (which can be copied from a previous reduction or from ``/path/to/Tiberius/src/reduction_utils/extraction_input.txt``). You will also need to make a text file with a list of filenames defining the fits files you will be running the extraction over. Assuming you're working with the cosmic-cleaned fits files, this can be made like so:
+
+.. code-block:: bash
+
+  ls /path/to/cosmic_cleaned_fits/*.fits > science_list
+
+You then need to define the path to this ``science_list`` in your ``extraction_input.txt`` file. I don't explain the different parameters in ``extraction_input.txt`` at this point as they are each explained within the example ``extraction_input.txt`` bundled in the ``Tiberius`` download.
+
+One thing I do recommend, however, is that every time you run a reduction for the first time, or with a new set of extraction parameters, that you set ``verbose = -2`` in ``extraction_input.txt``. This will plot a number of helpful plots for every integration and allow you to check whether the parameters you've selected are sensible. If they are, then you can quit the extraction and set ``verbose = -1`` (for no plots) or ``verbose = 0`` (which will only show plots for a particular integration of something has gone wrong with that integration).
+
+To actually run the extraction, you will need to run the following from within your reduction directory where you have put ``extraction_input.txt`` and ``science_list``:
+
+.. code-block:: bash
+
+  python /path/to/Tiberius/src/reduction_utils/spectral_extraction.py
+
+This will loop through all integrations, performing aperture photometry, and print out its progress.
+
+After running ``spectral_extraction.py``, you will see that two new sub-directories have been made:
+
+* ``pickled_objects/`` which contains the extracted stellar flux (``star1_flux.pickle``), flux uncertainty (``star1_error.pickle``), time stamps, measured FWHM (``fwhm_1.pickle``), x position (``x_positions_1.pickle``) and measured background (``background_avg_star1.pickle``) as pickled numpy arrays.
+* ``initial_WL_fit/`` which contains the extracted white light light curve (``initial_WL_flux.pickle``), white light light curve error (``initial_WL_err.pickle``) and white light curve time arrays (``initial_WL_time.pickle``). These can be fitted with ``Tiberius``'s light curve fitting tools (read on to see how) to check the quality of your reduction.
+
+1.3.1 A note on background subtraction
+--------------------------------------
+
+some text
+
+1.3.2 A note on oversampling
+----------------------------
+
+some text
