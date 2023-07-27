@@ -11,7 +11,7 @@ from Tiberius.src.fitting_utils import parametric_fitting_functions as pf
 from Tiberius.src.fitting_utils import plotting_utils as pu
 
 class TransitModelGPPM(object):
-    def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False):
+    def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False,exp_ramp_components=0):
 
         """
         The GPPM transit model class, which uses batman to generate the analytic, quadratically limb-darkened transit light curves, and george to generate the GP red noise models.
@@ -31,6 +31,7 @@ class TransitModelGPPM(object):
         polynomial_orders - if wanting to use polynomial detrending, use this to define the corders of each polynomial to be used. This must be the same length as the systematic_model_inputs.
         ld_law - the limb darkening law we want to use: linear/quadratic/nonlinear/squareroot
         exp_ramp - True/False. Do you want to additionally fit a 2 component expoential ramp model? Default = False
+        exp_ramp_components (int) - The number of exponential ramp components to fit. Default=0, no ramp.
 
         Returns:
         TransitModelGPPM object
@@ -47,6 +48,7 @@ class TransitModelGPPM(object):
         self.ld_law = ld_law
         self.polynomial_orders = polynomial_orders
         self.exp_ramp_used = exp_ramp
+        self.exp_ramp_components = exp_ramp_components
 
         # Acknowledge the fact that we're using a polynomial here
         if polynomial_orders is None:
@@ -59,7 +61,6 @@ class TransitModelGPPM(object):
                 self.poly_fixed = True
 
         if exp_ramp:
-            self.exp_ramp_components = exp_ramp
             if type(pars_dict["r1"]) is Param:
                 self.exp_ramp_fixed = False
             else:
@@ -293,14 +294,12 @@ class TransitModelGPPM(object):
 
         exp_ramp_model = 1
 
-        for i in range(0,3*self.exp_ramp_components,3):
+        for i in range(0,2*self.exp_ramp_components,2):
 
             if self.exp_ramp_fixed:
-                # exp_ramp_model = (1 + self.pars['r1']*np.exp(-self.pars['r2']*time + self.pars['r3']) + self.pars['r4']*np.exp(-self.pars['r5']*time + self.pars['r6']))
-                exp_ramp_model += self.pars['r%d'%(i+1)]*np.exp(-self.pars['r%d'%(i+2)]*time + self.pars['r%d'%(i+3)])
+                exp_ramp_model += self.pars['r%d'%(i+1)]*np.exp(self.pars['r%d'%(i+2)]*time)
             else:
-                # exp_ramp_model = (1 + self.pars['r1'].currVal*np.exp(-self.pars['r2'].currVal*time + self.pars['r3'].currVal) + self.pars['r4'].currVal*np.exp(-self.pars['r5'].currVal*time + self.pars['r6'].currVal))
-                exp_ramp_model += self.pars['r%d'%(i+1)].currVal*np.exp(-self.pars['r%d'%(i+2)].currVal*time + self.pars['r%d'%(i+3)].currVal)
+                exp_ramp_model += self.pars['r%d'%(i+1)].currVal*np.exp(self.pars['r%d'%(i+2)].currVal*time)
 
         return exp_ramp_model
 
@@ -370,7 +369,7 @@ class TransitModelGPPM(object):
 
                 # inclination prior
                 if not self.inc_fixed:
-                    if self.pars['inc'].currVal > 90  or self.pars['inc'].currVal < self.pars['inc'].startVal - 5:
+                    if self.pars['inc'].currVal > 100  or self.pars['inc'].currVal < self.pars['inc'].startVal - 5:
                         return -np.inf
                     if sys_priors["inc_prior"] is not None:
                         retVal += stats.norm(scale=sys_priors["inc_prior"],loc=self.pars['inc'].startVal).pdf(self.pars['inc'].currVal)
@@ -429,7 +428,8 @@ class TransitModelGPPM(object):
 
         if self.exp_ramp_used: # priors on polynomial coefficients
             if not self.exp_ramp_fixed:
-                for i in range(0,self.exp_ramp_components*3):
+                # for i in range(0,self.exp_ramp_components*3):
+                for i in range(0,self.exp_ramp_components*2):
                     if self.pars['r%d'%(i+1)].currVal > 1e2 or self.pars['r%d'%(i+1)].currVal < -1e2:
                         return -np.inf
 
@@ -891,9 +891,9 @@ class TransitModelGPPM(object):
         if full_model and self.exp_ramp_used:
             if not self.exp_ramp_fixed:
                 # put priors on the polynomical parameters
-                bnds += [(-100,100)]*self.exp_ramp_components # these are the coefficients of the expoential ramp
+                bnds += [(-100,100)]*self.exp_ramp_components*2 # these are the coefficients of the expoential ramp
 
-        if full_model and not self.poly_used and not self.exp_ramp_fixed:
+        if full_model and not self.poly_used and not self.exp_ramp_used:
             bnds += [(0.5,2)] # this is the bound on the normalization constant that we use if we don't have a polynomial
 
         # Now if we're fitting the full model (all parameters) or we're not using a GP we perform this step
