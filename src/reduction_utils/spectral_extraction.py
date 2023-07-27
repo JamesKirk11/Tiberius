@@ -137,6 +137,7 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
                 trace_centre.append(TC)
                 nerrors += 1
                 gauss_std.append(0) # append 0, this will be replaced by the mean of surrounding rows in extract_trace_flux
+                fwhm.append(np.nan)
 
 
         except:
@@ -146,6 +147,7 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
             trace_centre.append(TC)
             nerrors += 1
             gauss_std.append(0) # append 0, this will be replaced by the mean of surrounding rows in extract_trace_flux
+            fwhm.append(np.nan)
 
         total_errors.append(nerrors)
 
@@ -665,6 +667,7 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
 
         sky_avg.append(np.mean(y_keep)/oversampling_factor)
         sky_poly.append(background_fit)
+        # sky_poly_full.append(background_fit)
 
         if verbose and i in plot_frames:
             fig = plt.figure(figsize=(8,6))
@@ -794,7 +797,6 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
             plt.show(block=False)
             plt.pause(verbose)
             plt.close()
-
 
     # Now print how many times the background aperture overlapped with the buffer pixels
     if len(lh_overlap) != 0:
@@ -1221,17 +1223,16 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
     for i in range(nstars):
         pickle.dump(np.array(stellar_fluxes[i::nstars]),open('pickled_objects/star%d_flux.pickle'%(i+1),'wb'))
         pickle.dump(np.array(stellar_errors[i::nstars]),open('pickled_objects/star%d_error.pickle'%(i+1),'wb'))
-        pickle.dump(np.array(sky_avgs[i::nstars]),open('pickled_objects/sky_avg_star%d.pickle'%(i+1),'wb'))
-        pickle.dump(np.array(base_rights[i::nstars]),open('pickled_objects/flux_base_level_right_star%d.pickle'%(i+1),'wb'))
         pickle.dump(np.array(traces[i::nstars]),open('pickled_objects/x_positions_%d.pickle'%(i+1),'wb'))
         pickle.dump(np.array(FWHM[i::nstars]),open('pickled_objects/fwhm_%d.pickle'%(i+1),'wb'))
+        pickle.dump(np.array(sky_avgs[i::nstars]),open('pickled_objects/background_avg_star%d.pickle'%(i+1),'wb'))
 
         if "JWST" not in instrument:
             pickle.dump(np.array(sky_lefts[i::nstars]),open('pickled_objects/sky_left_star%d.pickle'%(i+1),'wb'))
             pickle.dump(np.array(sky_rights[i::nstars]),open('pickled_objects/sky_right_star%d.pickle'%(i+1),'wb'))
             # pickle.dump(np.array(sky_polys[i::nstars]),open('pickled_objects/sky_poly_star%d.pickle'%(i+1),'wb'))
             pickle.dump(np.array(base_lefts[i::nstars]),open('pickled_objects/flux_base_level_left_star%d.pickle'%(i+1),'wb'))
-
+            pickle.dump(np.array(base_rights[i::nstars]),open('pickled_objects/flux_base_level_right_star%d.pickle'%(i+1),'wb'))
             pickle.dump(np.array(MAX_COUNTS[i::nstars]),open('pickled_objects/max_counts_%d.pickle'%(i+1),'wb'))
             pickle.dump(np.array(scintillation_error[i::nstars]),open('pickled_objects/scintillation_error_%d.pickle'%(i+1),'wb'))
             pickle.dump(np.array(readnoise_error[i::nstars]),open('pickled_objects/readnoise_error_%d.pickle'%(i+1),'wb'))
