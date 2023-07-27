@@ -464,9 +464,15 @@ else:
 
 if args.combine:
     plt.tight_layout()
-    fig.text(0.001, 0.5, '$R_P/R_*$', va='center', rotation='vertical',fontsize=14)
+    if args.auto_offset or args.manual_offset is not None:
+        fig.text(0.001, 0.5, '$R_P/R_*$ + offset', va='center', rotation='vertical',fontsize=14)
+    else:
+        fig.text(0.001, 0.5, '$R_P/R_*$', va='center', rotation='vertical',fontsize=14)
 else:
-    fig.text(0.03, 0.5, '$R_P/R_*$', va='center', rotation='vertical',fontsize=14)
+    if args.auto_offset or args.manual_offset is not None:
+        fig.text(0.03, 0.5, '$R_P/R_*$ + offset', va='center', rotation='vertical',fontsize=14)
+    else:
+        fig.text(0.03, 0.5, '$R_P/R_*$', va='center', rotation='vertical',fontsize=14)
 
 if H_Rs is not None:
     fig.text(1-0.04, 0.5, 'Atmospheric scale heights (H)', va='center', rotation='vertical',fontsize=14)
