@@ -44,7 +44,7 @@ if args.trace_location is not None:
         bkg_mask[:,col][trace_centre[i]: trace_centre[i] + int(input_dict["aperture_width"])//2 + int(input_dict["background_offset"])] = 0
         bkg_mask[:,col][trace_centre[i] - int(input_dict["aperture_width"])//2 - int(input_dict["background_offset"]): trace_centre[i]] = 0
 
-    if input_dict["bad_pixel_mask"] != "":
+    if input_dict["bad_pixel_mask"] != "" and args.pixel_mask is None:
         pixel_mask = pickle.load(open(input_dict["bad_pixel_mask"],"rb"))
         bkg_mask[pixel_mask] = 0
 
