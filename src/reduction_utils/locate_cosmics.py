@@ -26,7 +26,7 @@ parser.add_argument('-jwst','--jwst',help="""Use this option if we're looking at
 args = parser.parse_args()
 
 # load in the list of science file names
-science_list = np.loadtxt(args.sciencelist,dtype=str)
+science_list = np.atleast_1d(np.loadtxt(args.sciencelist,dtype=str))
 
 # optionally load in the master bias
 if args.bias_frame is not None:
