@@ -80,7 +80,7 @@ for i in model_input_files:
 ### Common noise correction using a fit to a white light curve
 
 if input_dict['common_noise_model'] is not None:
-
+    print("applying common mode correction...")
     common_noise_model = pickle.load(open(input_dict['common_noise_model'],'rb'))
 
     if show_plots:
@@ -466,19 +466,19 @@ if exp_ramp_used:
     exp_ramp_components = int(input_dict["exponential_ramp"])
     if ramp_coefficients is not None:
         for i,c in enumerate(ramp_coefficients):
+            # d['r%d'%(i+1)] = tmgp.Param(c)
             d['r%d'%(i+1)] = c
     else:
-        for i in range(0,exp_ramp_components*3):
-            if i%3 == 1:
-                d["r%d"%(i+1)] = tmgp.Param(1) # the r1 parameter
-            if i%3 == 2:
-                d["r%d"%(i+1)] = tmgp.Param(10) # the r2 parameter
-            if i%3 == 0:
-                d["r%d"%(i+1)] = tmgp.Param(5) # the r3 parameter
+        for i in range(0,exp_ramp_components*2):
+            if i%2 == 0:
+                d["r%d"%(i+1)] = tmgp.Param(0) # the r1 parameter
+            if i%2 == 1:
+                d["r%d"%(i+1)] = tmgp.Param(-5) # the r2 parameter
 
-            # d['r4'] = tmgp.Param(1)
-            # d['r5'] = tmgp.Param(10)
-            # d['r6'] = tmgp.Param(1)
+else:
+    exp_ramp_components = 0
+
+
 
 if not poly_used and not exp_ramp_used:
     # if we're not using a polynomial, we're including a normalization factor to multiply the transit light curve by to account for imperfect normalisation of out-of-transit data
@@ -563,30 +563,30 @@ if optimise_model or clip_outliers and not median_clip:
         else:
             red_noise_model_inputs = systematics_model_inputs
     else: # in this case we want to use a polynomial to clip outliers but for these purposes we're only going to use time (quadratic) to detrend
-        polynomial_orders_toy = np.array([2])
-        d_clip['c1'] = tmgp.Param(1.0)
-        d_clip['c2'] = tmgp.Param(1e-3)
-        d_clip['c3'] = tmgp.Param(1e-3)
-
-        if exp_ramp_used:
-            for i in range(0,exp_ramp_components*3):
-                if i%3 == 1:
-                    d_clip["r%d"%(i+1)] = tmgp.Param(1) # the r1 parameter
-                if i%3 == 2:
-                    d_clip["r%d"%(i+1)] = tmgp.Param(10) # the r2 parameter
-                if i%3 == 0:
-                    d_clip["r%d"%(i+1)] = tmgp.Param(5) # the r3 parameter
+        if not exp_ramp_used:
+            polynomial_orders_toy = np.array([2])
+            d_clip['c1'] = tmgp.Param(1.0)
+            d_clip['c2'] = tmgp.Param(1e-3)
+            d_clip['c3'] = tmgp.Param(1e-3)
+        else:
+            polynomial_orders_toy = None
 
         if median_clip:
             red_noise_model_inputs = [clipped_time]
         else:
             red_noise_model_inputs = [time]
 
+    if exp_ramp_used:
+        for i in range(0,exp_ramp_components*2):
+            if i%3 == 1:
+                d_clip["r%d"%(i+1)] = tmgp.Param(1) # the r1 parameter
+            if i%3 == 2:
+                d_clip["r%d"%(i+1)] = tmgp.Param(10) # the r2 parameter
     ### Generate starting model
     if median_clip:
-        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law,exp_ramp_used)
+        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law,exp_ramp_used,exp_ramp_components)
     else:
-        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,flux_error,time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law,exp_ramp_used)
+        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,flux_error,time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law,exp_ramp_used,exp_ramp_components)
 
     if not np.any(flux_error) > 0: # the errors are all zeroes, need to be replaced for sake of fit only
         print("using dummy flux errors for sigma clipping only")
@@ -601,8 +601,6 @@ if optimise_model or clip_outliers and not median_clip:
         except:
             fitted_clip_model,_ = clip_model.optimise_params(clipped_time,clipped_flux,clipped_flux_error,reset_starting_gp=False,contact1=contact1,contact4=contact4,full_model=True,sys_priors=sys_priors)
 
-        # check contact points
-        initial_transit_model = fitted_clip_model.calc(clipped_time)/fitted_clip_model.red_noise_poly(clipped_time)
     else:
         try:
             fitted_clip_model,_,_ = clip_model.optimise_params(time,flux,flux_error,reset_starting_gp=False,contact1=contact1,contact4=contact4,full_model=True,sys_priors=sys_priors,LM_fit=True)
@@ -611,10 +609,11 @@ if optimise_model or clip_outliers and not median_clip:
 
 
         # check contact points
+        initial_red_noise = 1
+        if poly_used:
+            initial_red_noise *= fitted_clip_model.red_noise_poly(time)
         if exp_ramp_used:
-            initial_red_noise = fitted_clip_model.red_noise_poly(time) * fitted_clip_model.exponential_ramp(time)
-        else:
-            initial_red_noise = fitted_clip_model.red_noise_poly(time)
+            initial_red_noise *= fitted_clip_model.exponential_ramp(time)
 
         initial_transit_model = fitted_clip_model.calc(time)/initial_red_noise
 
@@ -682,7 +681,7 @@ pickle.dump(keep_idx,open('data_quality_flags_wb%s.pickle'%(str(wb+1).zfill(4)),
 if clip_outliers:
     print("\n %d data points (%.2f%%) clipped from fit"%(len(time)-len(clipped_time),100*(len(time)-len(clipped_time))/len(time)))
 
-starting_model = tmgp.TransitModelGPPM(d,clipped_model_input,kernel_classes,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders,ld_law,exp_ramp_used)
+starting_model = tmgp.TransitModelGPPM(d,clipped_model_input,kernel_classes,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders,ld_law,exp_ramp_used,exp_ramp_components)
 
 if not optimise_model and show_plots:
     print("plotting starting model")
