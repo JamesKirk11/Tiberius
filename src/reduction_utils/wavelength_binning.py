@@ -47,30 +47,30 @@ def rebin(xbins,x,y,e=None,weighted=False,errors_from_rms=False):
     ybin = []
     ebin = []
     for i in range(1,len(xbins)):
-            bin_y_vals = y[digitized == i]
-            bin_x_vals = x[digitized == i]
-            if weighted:
-                if e is None:
-                    raise Exception('Cannot compute weighted mean without errors')
-                bin_e_vals = e[digitized == i]
-                weights = 1.0/bin_e_vals**2
-                xbin.append( np.sum(weights*bin_x_vals) / np.sum(weights) )
-                ybin.append( np.sum(weights*bin_y_vals) / np.sum(weights) )
-                if errors_from_rms:
-                    ebin.append(np.std(bin_y_vals))
-                else:
-                    ebin.append( np.sqrt(1.0/np.sum(weights) ) )
+        bin_y_vals = y[digitized == i]
+        bin_x_vals = x[digitized == i]
+        if weighted:
+            if e is None:
+                raise Exception('Cannot compute weighted mean without errors')
+            bin_e_vals = e[digitized == i]
+            weights = 1.0/bin_e_vals**2
+            xbin.append( np.sum(weights*bin_x_vals) / np.sum(weights) )
+            ybin.append( np.sum(weights*bin_y_vals) / np.sum(weights) )
+            if errors_from_rms:
+                ebin.append(np.std(bin_y_vals))
             else:
-                xbin.append(bin_x_vals.mean())
-                ybin.append(bin_y_vals.mean())
-                if errors_from_rms:
-                    ebin.append(np.std(bin_y_vals))
-                else:
-                    try:
-                        bin_e_vals = e[digitized == i]
-                        ebin.append(np.sqrt(np.sum(bin_e_vals**2)) / len(bin_e_vals))
-                    except:
-                        raise Exception('Must either supply errors, or calculate from rms')
+                ebin.append( np.sqrt(1.0/np.sum(weights) ) )
+        else:
+            xbin.append(bin_x_vals.mean())
+            ybin.append(bin_y_vals.mean())
+            if errors_from_rms:
+                ebin.append(np.std(bin_y_vals))
+            else:
+                try:
+                    bin_e_vals = e[digitized == i]
+                    ebin.append(np.sqrt(np.sum(bin_e_vals**2)) / len(bin_e_vals))
+                except:
+                    raise Exception('Must either supply errors, or calculate from rms')
     xbin = np.array(xbin)
     ybin = np.array(ybin)
     ebin = np.array(ebin)
