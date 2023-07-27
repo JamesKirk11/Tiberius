@@ -23,7 +23,9 @@ For the quick look and bad pixel mask creation, look at the example jupyter note
 
 Now you will want to run the relevant stage 1 executable found under ``Tiberius/src/reduction_utils/JWST_utils/stage1_*``. These are just executable text files that string together the relevant commands from the ``jwst`` pipeline, following the procedure outlined `here <https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html#calwebb-detector1>`_.
 
-**Note:** the PRISM stage 1 includes a 1/f correction and saturation flagging override as default, following the procedures outlined in `Rustamkulov et al. 2023 <https://ui.adsabs.harvard.edu/abs/2023Natur.614..659R/abstract>`_. If you don't wish to perform these corrections, you'll need to comment out these lines within the relevant "stage1_*" file.
+.. note::
+
+  The PRISM stage 1 includes a 1/f correction and saturation flagging override as default, following the procedures outlined in `Rustamkulov et al. 2023 <https://ui.adsabs.harvard.edu/abs/2023Natur.614..659R/abstract>`_. If you don't wish to perform these corrections, you'll need to comment out these lines within the relevant "stage1_*" file.
 
 In ``stage1_NIRCam``, I demonstrate how to override the reference files that ``jwst`` will try to use by default, as I've found that it won't always use the most recent reference files. You can download the latest JWST reference files `here <https://jwst-crds.stsci.edu/>`_.
 
@@ -109,7 +111,11 @@ In each new reduction directory, you will need to make a new ``extraction_input.
 
 You then need to define the path to this ``science_list`` in your ``extraction_input.txt`` file. I don't explain the different parameters in ``extraction_input.txt`` at this point as they are each explained within the example ``extraction_input.txt`` bundled in the ``Tiberius`` download.
 
-One thing I do recommend, however, is that every time you run a reduction for the first time, or with a new set of extraction parameters, that you set ``verbose = -2`` in ``extraction_input.txt``. This will plot a number of helpful plots for every integration and allow you to check whether the parameters you've selected are sensible. If they are, then you can quit the extraction and set ``verbose = -1`` (for no plots) or ``verbose = 0`` (which will only show plots for a particular integration of something has gone wrong with that integration).
+One thing I do recommend, however, is that every time you run a reduction for the first time, or with a new set of extraction parameters, that you set ``verbose = -2`` in ``extraction_input.txt``. This will plot a number of helpful plots for every integration and allow you to check whether the parameters you've selected are sensible. If they are, then you can quit the extraction and set ``verbose = -1`` (for no plots) or ``verbose = 0`` (which will only show plots for a particular integration if something has gone wrong with that integration).
+
+.. note::
+
+  ``Tiberius`` needs to have the dispersion/spectral direction along the vertical axis. That means for NIRSpec, NIRCam and NIRISS data you need to set ``rotate_frame = 1`` in ``extraction_input.txt``.
 
 To actually run the extraction, you will need to run the following from within your reduction directory where you have put ``extraction_input.txt`` and ``science_list``:
 
@@ -121,15 +127,22 @@ This will loop through all integrations, performing aperture photometry, and pri
 
 After running ``spectral_extraction.py``, you will see that two new sub-directories have been made:
 
-* ``pickled_objects/`` which contains the extracted stellar flux (``star1_flux.pickle``), flux uncertainty (``star1_error.pickle``), time stamps, measured FWHM (``fwhm_1.pickle``), x position (``x_positions_1.pickle``) and measured background (``background_avg_star1.pickle``) as pickled numpy arrays.
+* ``pickled_objects/`` which contains the extracted stellar flux (``star1_flux.pickle``), flux uncertainty (``star1_error.pickle``), time stamps (``time.pickle`` == ``int_mid_BJD_TDB`` from the FITS headers), measured FWHM (``fwhm_1.pickle``), x position (``x_positions_1.pickle``) and measured background (``background_avg_star1.pickle``) as pickled numpy arrays.
 * ``initial_WL_fit/`` which contains the extracted white light light curve (``initial_WL_flux.pickle``), white light light curve error (``initial_WL_err.pickle``) and white light curve time arrays (``initial_WL_time.pickle``). These can be fitted with ``Tiberius``'s light curve fitting tools (read on to see how) to check the quality of your reduction.
 
 1.3.1 A note on background subtraction
 --------------------------------------
 
-some text
+During the ``spectral_extraction.py`` step, you have the option to perform a background subtraction at the integration level, using the background parameters in ``extraction_input.txt``. ``Tiberius`` can fit any order of polynomial (or use a median) across two regions either side of the trace, as defined in ``extraction_input.txt``. I have found an additional background subtraction step to be advantageous even if you performed a 1/f correction at the group stage. This is because the background may have structure that is not well-described by the median that was used in the 1/f step.
 
 1.3.2 A note on oversampling
 ----------------------------
 
-some text
+``Tiberius`` allows you to oversample an integration's flux along the spatial dimension. This is done via a flux-conserving linear interpolation onto an axis with N times the original number of pixels. The motivation for this step is to be able to use sub-pixel apertures, which is particularly beneficial for curved and/or undersampled PSFs (e.g., PRISM). In tests on ERS PRISM data, setting ``oversampling_factor = 10`` in ``extraction_input.txt`` led to an improvement in white light scatter of 14%.
+
+1.4 Post-processing the spectra
+-------------------------------
+
+After you've extracted the spectra using ``spectral_extraction.py``, you're ready to perform the wavelength calibration, correct for any shifts in the spectra and create your wavelength bins and light curves. These steps are done using a serious of Jupyter notebooks, with examples included in ``Tiberius/src/reduction_utils/reduction_notebooks/``.
+
+I tend to copy the example ``reduction_notebooks`` directory into each of my ``reductionNN/`` directories. I go through each of these notebooks below.
