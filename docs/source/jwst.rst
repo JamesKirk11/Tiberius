@@ -25,7 +25,25 @@ Now you will want to run the relevant stage 1 executable found under ``Tiberius/
 
 .. note::
 
-  The PRISM stage 1 includes a 1/f correction and saturation flagging override as default, following the procedures outlined in `Rustamkulov et al. 2023 <https://ui.adsabs.harvard.edu/abs/2023Natur.614..659R/abstract>`_. If you don't wish to perform these corrections, you'll need to comment out these lines within the relevant "stage1_*" file.
+  The stage 1 files include a 1/f correction by default and saturation flagging override for PRISM data as default, following the procedures outlined in `Rustamkulov et al. 2023 <https://ui.adsabs.harvard.edu/abs/2023Natur.614..659R/abstract>`_. If you don't wish to perform these corrections, you'll need to comment out these lines within the relevant "stage1_*" file. If you do want to perform a 1/f correction, see the following sub-section, otherwise skip ahead.
+
+1.1.1 Performing a 1/f correction
+---------------------------------
+
+In JWST observations, there is column-dependent (for NIRCam it's row-dependent) noise which can increase the noise in your extracted light curves. As shown in `Rustamkulov et al. 2023 <https://ui.adsabs.harvard.edu/abs/2023Natur.614..659R/abstract>`_, this noise is best-removed at the group stage. In order to do this accurately, it is necessary to determine the locations of the trace so that it can be masked from the background estimation.
+
+To do this, first make a "master" ``uncal.fits`` file (a median frame of all ``uncal.fits`` files -- see ``Tiberius/src/reduction_utils/JWST_utils/0_quick_look_data.ipynb`` for an example. You'd then want to run ``Tiberius/src/reduction_utils/spectral_extraction.py`` on this master ``uncal.fits`` file to determine the location of the trace (see section 1.3 below to see how to do this).
+
+Then in the relevant line in your ``stage1_`` file, you would have to change the following:
+
+.. code-block:: bash
+
+python $HOME/python/Tiberius/src/reduction_utils/JWST_utils/1overf_subtraction.py $1_darkcurrentstep.fits --trace_location /path-to-master_uncal.fits/pickled_objects/x_positions_1.pickle --extraction_input /path-to-master_uncal.fits/extraction_input.txt
+
+Now you are ready to run stage 1, which is described in more detail below.
+
+1.1.2 Running ``stage1`` files
+------------------------------
 
 In ``stage1_NIRCam``, I demonstrate how to override the reference files that ``jwst`` will try to use by default, as I've found that it won't always use the most recent reference files. You can download the latest JWST reference files `here <https://jwst-crds.stsci.edu/>`_.
 
@@ -143,6 +161,18 @@ During the ``spectral_extraction.py`` step, you have the option to perform a bac
 1.4 Post-processing the spectra
 -------------------------------
 
-After you've extracted the spectra using ``spectral_extraction.py``, you're ready to perform the wavelength calibration, correct for any shifts in the spectra and create your wavelength bins and light curves. These steps are done using a serious of Jupyter notebooks, with examples included in ``Tiberius/src/reduction_utils/reduction_notebooks/``.
+After you've extracted the spectra using ``spectral_extraction.py``, you're ready to perform the wavelength calibration, correct for any shifts in the spectra and create your wavelength bins and light curves. These steps are done using a serious of Jupyter notebooks, with examples included in ``Tiberius/src/reduction_utils/JWST_utils/reduction_notebooks/``.
 
 I tend to copy the example ``reduction_notebooks`` directory into each of my ``reductionNN/`` directories. I go through each of these notebooks below.
+
+* ``0_quick_look_data.ipynb``:  I use this notebook to look at the uncal.fits files and make bad pixel masks
+* ``1_cosmic_removal.ipynb``: this notebook describes how you can check for and remove residual cosmic rays and bad pixels from your extracted spectra. Typically, if you've run ``locate_cosmics.py`` this step is not necessary.
+* ``2_spectra_resampling.ipynb``: this notebook cross-correlates each spectrum in the time-series with an reference spectrum from the time-series to determine how the spectra shift in the dispersion axis. You can then use these shifts to resample the spectra onto a common (sub)pixel grid. This is not strictly necessary given the shifts are typically << 1 pixel.
+* ``3_wavelength_calibration.ipynb``: this notebook shows you how to get the wavelength solution from the ``extract2d.fits`` files.
+* ``4_light_curve_creation.ipynb``: this notebook shows you how to make your spectroscopic light curves from your selected wavelength bins
+* ``5_reformatting_results.ipynb``: an example notebook about how to reformat the outputs from ``Tiberius`` for easier comparison with other pipelines.
+
+1.5 Outcome
+-----------
+
+At this stage, you should have extracted 2D stellar spectra and light curves (as pickled numpy arrays) and you're able to move onto light curve fitting!
