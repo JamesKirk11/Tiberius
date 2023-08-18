@@ -460,7 +460,7 @@ if poly_used:
     else:
         d['c1'] = tmgp.Param(1.0)
         for i in range(1,polynomial_orders.sum()+1):
-            d['c%d'%(i+1)] = tmgp.Param(1e-3)
+            d['c%d'%(i+1)] = tmgp.Param(-1e-5)
 
 if exp_ramp_used:
     exp_ramp_components = int(input_dict["exponential_ramp"])
@@ -566,8 +566,8 @@ if optimise_model or clip_outliers and not median_clip:
         if not exp_ramp_used:
             polynomial_orders_toy = np.array([2])
             d_clip['c1'] = tmgp.Param(1.0)
-            d_clip['c2'] = tmgp.Param(1e-3)
-            d_clip['c3'] = tmgp.Param(1e-3)
+            d_clip['c2'] = tmgp.Param(-1e-5)
+            d_clip['c3'] = tmgp.Param(-1e-5)
         else:
             polynomial_orders_toy = None
 
@@ -578,10 +578,11 @@ if optimise_model or clip_outliers and not median_clip:
 
     if exp_ramp_used:
         for i in range(0,exp_ramp_components*2):
-            if i%3 == 1:
-                d_clip["r%d"%(i+1)] = tmgp.Param(1) # the r1 parameter
-            if i%3 == 2:
-                d_clip["r%d"%(i+1)] = tmgp.Param(10) # the r2 parameter
+            if i%2 == 0:
+                d_clip["r%d"%(i+1)] = tmgp.Param(0) # the r1 parameter
+            if i%2 == 1:
+                d_clip["r%d"%(i+1)] = tmgp.Param(-5) # the r2 parameter
+
     ### Generate starting model
     if median_clip:
         clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law,exp_ramp_used,exp_ramp_components)
@@ -639,11 +640,16 @@ if optimise_model or clip_outliers and not median_clip:
             fig = pu.plot_single_model(fitted_clip_model,time,flux,flux_error,save_fig=False,plot_residual_std=sigma_clip)
 
     if optimise_model:
+
         ### update starting transit model parameters with these optimised parameters
         print("...updating transit and (optionally) polynomial parameters with optimised values")
         for k,v in zip(d_clip.keys(),d_clip.values()):
             if k in d:
                 d[k] = v
+
+        ### update photometric uncertainties given best-fit model
+        print("\nRescaling photometric uncertainties to give rChi2 = 1")
+        clipped_flux_error = clipped_flux_error*np.sqrt(fitted_clip_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error))
 
     if clip_outliers and not median_clip: # use the above to clip outliers, if we've not already clipped them with the median clipping above
         residuals_1 = flux - fitted_clip_model.calc(time)
