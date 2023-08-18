@@ -11,9 +11,12 @@ for i in range(starting_bin,stopping_bin):
 
 os.system("python %s/plot_output.py -s -st -cp"%Tiberius_path)
 os.system("python %s/model_table_generator.py"%Tiberius_path)
-os.system("mkdir tables")
-os.system("mkdir plots")
-os.system("mkdir pickled_objects")
+try:
+	os.system("mkdir tables")
+	os.system("mkdir plots")
+	os.system("mkdir pickled_objects")
+except:
+	pass
 os.system("mv *.pickle pickled_objects/")
 os.system("mv *.txt tables/")
 os.system("mv *.png plots/")
