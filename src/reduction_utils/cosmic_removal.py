@@ -321,7 +321,7 @@ def interp_bad_pixels(frame,pixel_mask,return_nans=False):
 
 
 
-def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad=False,verbose=False,mf_box_width=3,left_col=0,right_col=-1,axis=None):
+def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad=False,verbose=False,mf_box_width=3,left_col=0,right_col=-1,axis=None,std_box_width=0):
     """A function that performs a row-by-row running median to locate bad pixels in a given frame.
 
     Inputs:
@@ -350,9 +350,28 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
     residuals = median - frame[:,left_col:right_col]
 
     if use_mad:
-        threshold = median_absolute_deviation(residuals,ignore_nan=True,axis=axis)
+        if std_box_width > 0:
+            threshold_array = []
+            for i in range(nrows):
+                threshold_array.append(np.array([median_absolute_deviation(residuals[i][j:j+std_box_width],ignore_nan=True) for j in range(0,ncols,std_box_width)]))
+            threshold = np.zeros_like(residuals)
+            for i in range(nrows):
+                for j,k in enumerate(range(0,ncols,std_box_width)):
+                    threshold[i][k:k+std_box_width] = threshold_array[i][j]
+        else:
+            threshold = median_absolute_deviation(residuals,ignore_nan=True,axis=axis)
     else:
-        threshold = np.nanstd(residuals,axis=axis)
+        if std_box_width > 0:
+            threshold_array = []
+            for i in range(nrows):
+                threshold_array.append(np.array([np.std(residuals[i][j:j+std_box_width]) for j in range(0,ncols,std_box_width)]))
+            threshold = np.zeros_like(residuals)
+            print(residuals.shape)
+            for i in range(nrows):
+                for j,k in enumerate(range(0,ncols,std_box_width)):
+                    threshold[i][k:k+std_box_width] = threshold_array[i][j]
+        else:
+            threshold = np.nanstd(residuals,axis=axis)
 
     if axis == 1:
         threshold = np.ones_like(median)*threshold.reshape(nrows,1)
@@ -389,8 +408,12 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
                 plt.plot(residuals[i])
                 plt.plot(np.arange(ncols)[bad_pixels[i]],residuals[i][bad_pixels[i]],"rx",label="Clipped point")
 
-                plt.axhline(cut_off*threshold[i].mean(),ls='--',color='k')
-                plt.axhline(-cut_off*threshold[i].mean(),ls='--',color='k')
+                if std_box_width == 0:
+                    plt.axhline(cut_off*threshold[i].mean(),ls='--',color='k')
+                    plt.axhline(-cut_off*threshold[i].mean(),ls='--',color='k')
+                else:
+                    plt.plot(cut_off*threshold[i],ls='--',color='k')
+                    plt.plot(-cut_off*threshold[i],ls='--',color='k')
                 plt.ylabel("Residuals")
                 plt.show()
 
