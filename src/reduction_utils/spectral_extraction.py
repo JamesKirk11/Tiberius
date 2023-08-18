@@ -296,7 +296,9 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
     if override_force_verbose and not verbose:
         delay = 0
 
-    return fitted_positions, delay, np.median(fwhm), np.array(gauss_std)
+    fwhm = np.array(fwhm)
+
+    return fitted_positions, delay, np.median(fwhm[np.isfinite(fwhm)]), np.array(gauss_std)
 
 
 def extract_trace_flux(frame,trace,aperture_width,background_offset,background_width,pre_flat_frame,poly_bg_order=1,am=1.3,exposure_time=60,verbose=False,star=None,mask=None,instrument='ACAM',row_min=None,gauss_std=None,readout_speed='fast',co_add_rows=0,rectify_frame=False,oversampling_factor=1,gain_file=None,readnoise_file=None):
