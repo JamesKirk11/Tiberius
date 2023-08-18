@@ -49,7 +49,6 @@ rm $1_darkcurrentstep.fits
 echo ""
 echo "****running gain_scale****"
 echo ""
-strun gain_scale $1_0_rampfitstep.fits --override_gain /Users/james/crds_cache/jwst_pub/references/jwst/nirspec/jwst_nirspec_gain_0027.fits
 strun gain_scale $1_1_rampfitstep.fits --override_gain /Users/james/crds_cache/jwst_pub/references/jwst/nirspec/jwst_nirspec_gain_0027.fits
 rm $1_0_rampfitstep.fits
 rm $1_1_rampfitstep.fits
