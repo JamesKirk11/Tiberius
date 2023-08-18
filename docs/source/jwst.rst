@@ -38,7 +38,7 @@ Then in the relevant line in your ``stage1_`` file, you would have to change the
 
 .. code-block:: bash
 
-python $HOME/python/Tiberius/src/reduction_utils/JWST_utils/1overf_subtraction.py $1_darkcurrentstep.fits --trace_location /path-to-master_uncal.fits/pickled_objects/x_positions_1.pickle --extraction_input /path-to-master_uncal.fits/extraction_input.txt
+    python $HOME/python/Tiberius/src/reduction_utils/JWST_utils/1overf_subtraction.py $1_darkcurrentstep.fits --trace_location /path-to-master_uncal.fits/pickled_objects/x_positions_1.pickle --extraction_input /path-to-master_uncal.fits/extraction_input.txt
 
 Now you are ready to run stage 1, which is described in more detail below.
 
