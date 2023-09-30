@@ -125,12 +125,12 @@ for i in range(nints):
         f[extension].data[i][g] = image
 
 pickle.dump(np.array(one_over_f_noise),open("one_over_f_noise.pickle","wb"))
-pickle.dump(np.array(bias_bkg),open("bias_level.pickle","wb"))
+# pickle.dump(np.array(bias_bkg),open("bias_level.pickle","wb"))
 scale_factor = np.array(bias_bkg)/np.array(one_over_f_noise)
 scale_factor[~np.isfinite(scale_factor)] = 0
 scale_factor_time_series = scale_factor.mean(axis=1)
 scale_factor_time_series_standardized = (scale_factor_time_series-scale_factor_time_series.mean())/scale_factor_time_series.std()
-pickle.dump(scale_factor_time_series_standardized,open("bias_scale_factor.pickle","wb"))
+# pickle.dump(scale_factor_time_series_standardized,open("bias_scale_factor.pickle","wb"))
 
 # new_name = args.fits_file.split(".")[0]+"_1overf_JK.fits"
 new_name = args.fits_file
