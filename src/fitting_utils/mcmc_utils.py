@@ -310,9 +310,9 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
         while not_converged:
 
             if chain_number == 1:
-                sampler = advance_chain(sampler,p0,nsteps,burn,save_chain)
+                sampler = advance_chain(sampler,p0,nsteps,burn,save_chain,wavelength_bin)
             else:
-                sampler = advance_chain(sampler,sampler.get_last_sample(),nsteps,burn,save_chain)
+                sampler = advance_chain(sampler,sampler.get_last_sample(),nsteps,burn,save_chain,wavelength_bin)
 
             total_steps = chain_number*nsteps
 
@@ -349,7 +349,7 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
                     print("\n\n After %d steps the chains have not yet converged, running chain again"%(chain_number*nsteps))
                     chain_number += 1
     else:
-        sampler = advance_chain(sampler,p0,nsteps,burn,save_chain)
+        sampler = advance_chain(sampler,p0,nsteps,burn,save_chain,wavelength_bin)
 
     # save plots of chains
     if ndim > 1:
@@ -449,7 +449,7 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
     return med,up,low,fitted_model
 
 
-def advance_chain(sampler,p0,nsteps,burn,save_chain):
+def advance_chain(sampler,p0,nsteps,burn,save_chain,wavelength_bin):
     """The function that advances the emcee sampler chain with a progress bar
 
     Inputs:
@@ -458,6 +458,7 @@ def advance_chain(sampler,p0,nsteps,burn,save_chain):
     nsteps - the number of steps to advance the chain over
     burn - is this a burn chain? If so, don't save to file
     save_chain - True/False, do we want to save the chain to file?
+    wavelength_bin - the number of the wavelength bin we're fitting, so that we can save the output correctly
 
     Returns:
     sampler - the inputted emcee sampler advanced by nsteps"""
