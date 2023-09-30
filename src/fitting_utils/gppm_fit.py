@@ -43,9 +43,22 @@ show_plots = bool(int(input_dict['show_plots']))
 time = pickle.load(open(input_dict['time_file'],'rb'))
 time -= int(time[0]) # offset the time array to help with minimization
 
+try:
+    first_integration = int(input_dict["first_integration"])
+    print("\n...Clipping first %d integrations (%d minutes)"%(first_integration,24*60*(time[first_integration]-time[0])))
+except:
+    first_integration = 0
+try:
+    last_integration = int(input_dict["last_integration"])
+    print("\n...Clipping beyond integration %d (%d minutes)"%(last_integration,24*60*(time[-1]-time[last_integration])))
+except:
+    last_integration = len(time)
+
+time = time[first_integration:last_integration]
+
 if white_light_fit:
-    flux = pickle.load(open(input_dict['flux_file'],'rb'))
-    flux_error = pickle.load(open(input_dict['error_file'],'rb'))
+    flux = pickle.load(open(input_dict['flux_file'],'rb'))[first_integration:last_integration]
+    flux_error = pickle.load(open(input_dict['error_file'],'rb'))[first_integration:last_integration]
     wb = 0
     print('\n\n## RUNNING FIT TO WHITE LIGHT CURVE')
     single_fit = True
@@ -54,8 +67,8 @@ else:
 
     nfiles = pickle.load(open(input_dict['flux_file'],'rb')).shape[0]
 
-    flux = np.atleast_2d(pickle.load(open(input_dict['flux_file'],'rb')))[wb].astype(float)
-    flux_error = np.atleast_2d(pickle.load(open(input_dict['error_file'],'rb')))[wb].astype(float)
+    flux = np.atleast_2d(pickle.load(open(input_dict['flux_file'],'rb')))[wb].astype(float)[first_integration:last_integration]
+    flux_error = np.atleast_2d(pickle.load(open(input_dict['error_file'],'rb')))[wb].astype(float)[first_integration:last_integration]
 
     print('\n\n## RUNNING FIT TO WAVELENGTH BIN %d'%(wb+1))
 
@@ -64,7 +77,7 @@ model_input_files = [i.strip() for i in input_dict['model_input_files'].split(',
 
 model_inputs = []
 for i in model_input_files:
-    model_in = np.atleast_2d(pickle.load(open(i,'rb')))
+    model_in = np.atleast_2d(pickle.load(open(i,'rb')))[:,first_integration:last_integration]
     if model_in.shape[0] == 1:
         vector = model_in[0]
         # replace any nans
@@ -156,8 +169,8 @@ else:
 
 
 ### for GP optimisation and variance limits
-contact1 = int(input_dict['contact1'])
-contact4 = int(input_dict['contact4'])
+contact1 = int(input_dict['contact1']) - first_integration
+contact4 = int(input_dict['contact4']) - first_integration
 
 ## renormalise flux to out-of-transit median?
 if bool(int(input_dict['renorm_flux'])):
@@ -650,6 +663,7 @@ if optimise_model or clip_outliers and not median_clip:
         ### update photometric uncertainties given best-fit model
         print("\nRescaling photometric uncertainties to give rChi2 = 1")
         clipped_flux_error = clipped_flux_error*np.sqrt(fitted_clip_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error))
+        pickle.dump(clipped_flux_error,open('rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
 
     if clip_outliers and not median_clip: # use the above to clip outliers, if we've not already clipped them with the median clipping above
         residuals_1 = flux - fitted_clip_model.calc(time)
@@ -693,6 +707,7 @@ if not optimise_model and show_plots:
     print("plotting starting model")
     fig = pu.plot_single_model(starting_model,clipped_time,clipped_flux,clipped_flux_error,save_fig=False)
 
+
 ### Optionally fit all combinations of polynomials with a Nelder-Mead to determine the best orders and inputs to use
 if args.determine_best_polynomials > 0 and not GP_used:
     if not optimise_model:
@@ -732,6 +747,28 @@ if optimise_model and GP_used:
     print('\nPlotting optimised GP model....')
     if show_plots:
         fig = pu.plot_single_model(starting_model,clipped_time,clipped_flux,clipped_flux_error,rebin_data=rebin_data,save_fig=False)
+
+    if bool(int(input_dict["reset_kernel_priors"])):
+        print("\nUpdating kernel priors with optimised values...\n")
+        kp_counter = 0
+
+        if white_noise_kernel:
+            new_bounds_wn = (np.sqrt(np.exp(optimised_kernel_params[0]))*0.9,np.sqrt(np.exp(optimised_kernel_params[0]))*1.1)
+            starting_model.kernel_priors["min_WN_sigma"] = min(new_bounds_wn)
+            starting_model.kernel_priors["max_WN_sigma"] = max(new_bounds_wn)
+            kp_counter += 1
+
+        new_bounds_A = (0.9*optimised_kernel_params[kp_counter],1.1*optimised_kernel_params[kp_counter])
+        starting_model.kernel_priors["min_A"] = min(new_bounds_A)
+        starting_model.kernel_priors["max_A"] = max(new_bounds_A)
+        kp_counter += 1
+
+        for i in range(nkernels):
+            new_bounds_lniL = (0.9*optimised_kernel_params[kp_counter],1.1*optimised_kernel_params[kp_counter])
+            starting_model.kernel_priors["min_lniL_%d"%(i+1)] = min(new_bounds_lniL)
+            starting_model.kernel_priors["max_lniL_%d"%(i+1)] = max(new_bounds_lniL)
+            kp_counter += 1
+
 
 ### check that the prior likelihood is not minus infinity, otherwise the code will fail with no warning
 if not np.isfinite(starting_model.lnprior(sys_priors)) :
