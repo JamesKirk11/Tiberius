@@ -321,7 +321,7 @@ def interp_bad_pixels(frame,pixel_mask,return_nans=False):
 
 
 
-def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad=False,verbose=False,mf_box_width=3,left_col=0,right_col=-1,axis=None,std_box_width=0):
+def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad=False,verbose=False,mf_box_width=3,left_col=0,right_col=-1,axis=None,std_box_width=0,use_gaussian_filter=False):
     """A function that performs a row-by-row running median to locate bad pixels in a given frame.
 
     Inputs:
@@ -335,6 +335,8 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
     left_col - set the leftmost column to consider. Default = 0, i.e. column 0
     right_col - set the rightmost column to consider. Default = -1, i.e. last column
     axis - set whether to calculate one std/mad across the whole frame (axis=None) or calculae a std/mad for every row (axis=1). Default=None
+    std_box_width - set this to have a sliding standard deviation across the row, rather than a single standard deviation. Set this number equal to the number of points over which to calculate the sliding standard deviation. Default=0.
+    use_gaussian_filter - set this to True to use a Gaussian filter rather than running median to locate outliers. Default=False.
 
     Returns:
     pixel_flags - the boolean (nrows,ncols) array of flagged bad pixels"""
@@ -346,8 +348,12 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
 
     residuals = []
 
-    median = np.array([medfilt(row,mf_box_width) for row in frame[:,left_col:right_col]])
-    residuals = median - frame[:,left_col:right_col]
+    if use_gaussian_filter:
+        median = np.array([gaussian_filter(row, 3) for row in frame[:,left_col:right_col]])
+        residuals =  median - frame[:,left_col:right_col]
+    else:
+        median = np.array([medfilt(row,mf_box_width) for row in frame[:,left_col:right_col]])
+        residuals = median - frame[:,left_col:right_col]
 
     if use_mad:
         if std_box_width > 0:
