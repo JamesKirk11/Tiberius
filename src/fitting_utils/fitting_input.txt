@@ -18,7 +18,7 @@ model_input_files =  # paths that point to an arbitrary number of pickled arrays
 
 white_light_fit =  	# define whether we're fitting a white light curve or not. This determines whether inclination, a/Rs and t0 are fixed or fitted for. Set to 1 (on) or 0 (off).
 
-period =		# the orbital period of the planet in days. 
+period =		# the orbital period of the planet in days.
 period_prior = fixed # the prior to be placed on the period, if a fit parameter. If period is fixed, set this to 'fixed'. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'period' parameter.
 
 inclination =  # the inclination of the planet's orbit in degrees. If this is a white light curve fit, this parameter is fitted for otherwise it is held fixed.
@@ -34,7 +34,7 @@ ecc = 0
 ecc_prior = fixed # the prior to be placed on the orbital eccentricity. If eccentricity is fixed, set this to 'fixed'. If left blank, a wide uniform prior is used. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'ecc' parameter.
 
 omega = 90
-omega_prior = fixed # the prior to be placed on the longitude of periastron. If longitude of periastron is fixed, set this to 'fixed'. If left blank, a wide uniform prior is used. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'ecc' parameter. 
+omega_prior = fixed # the prior to be placed on the longitude of periastron. If longitude of periastron is fixed, set this to 'fixed'. If left blank, a wide uniform prior is used. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'ecc' parameter.
 
 
 t0 =			# the time of mid transit in days. If this is a white light curve fit, this parameter is fitted for otherwise it is held fixed.
@@ -42,6 +42,8 @@ t0 =			# the time of mid transit in days. If this is a white light curve fit, th
 contact1 = 		# position of the first contact point in frame numbers. Used to define the out of transit data, if wanting to optimise GP hyperparams to out of transit data and/or renormalising flux to out-of-transit data.
 contact4 = 		# position of the fourth contact point in frame numbers. Used to define the out of transit data, if wanting to optimise GP hyperparams to out of transit data and/or renormalising flux to out-of-transit data.
 
+first_integration = 0 # this allows you to clip the first N integrations from your light curves. This uses Python indexing.
+last_integration = -1 # this allows you to clip the last N integrations from your light curves. This uses Python indexing.
 
 ### PLANET PARAMETERS, NEEDED TO CALCULATE SCALE HEIGHT FOR TRANSMISSION SPECTRUM IN plot_output.py
 
@@ -111,7 +113,7 @@ polynomial_coefficients = 		# starting positions of polynomial coefficients. Can
 
 ## FOR GP MODELLING
 
-kernel_classes = 				# A list of kernel classes that we want to use, e.g. "ExpSquared,Matern32,..." If we don't want to use a GP (and only polynomials), leave this blank. This needs to be as long as the number of 'model_input_files' 
+kernel_classes = 				# A list of kernel classes that we want to use, e.g. "ExpSquared,Matern32,..." If we don't want to use a GP (and only polynomials), leave this blank. This needs to be as long as the number of 'model_input_files'
 white_noise_kernel = 1			# Use white noise kernel (1) or not (0)
 typeII_maximum_likelihood = 0	# run typeII maximum likelihood? i.e. hold GP hyperparameters fixed to optimized values and run MCMC over mean model parameters. Set to 1 (on) or 0 (off).
 
@@ -125,6 +127,7 @@ dy_min_multiplier = 1  # the lower bound on the GP lengthscale defined per model
 min_WN_sigma = 1e-7   # the lower bound on the white noise std dev
 max_WN_sigma = 1000e6  # the upper bound on the white noise std dev
 
+reset_kernel_priors = 0 # a boolean that allows you to reset the priors on the kernel hyperparameters using the results from the optimisation to the out of transit data. If true (=1), then the new kernel priors will be uniform between 0.9 and 1.1X the optimised values.
 
 ## Plotting
 
