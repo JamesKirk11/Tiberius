@@ -695,7 +695,7 @@ def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mas
             else:
                 rms = m[i].rms(x[i],y[i])
 
-            print('Wavelength bin %d: (Rp^2/Rs^2 error)/RMS = %.2f; (Rp^2/Rs^2 error)/photon noise = %.3f; sigma(Rp/Rs)/H = %.2f'%(i+1,transit_depth_err/rms,transit_depth_err/e[i].mean(),np.maximum(k_up_curr,k_low_curr)/H_Rs))
+            print('Wavelength bin %d: sigma(Rp/Rs)/H = %.2f'%(i+1,np.maximum(k_up_curr,k_low_curr)/H_Rs))
 
             if e_r is not None:
                 # ~ e_r = pickle.load(open(error_list_rescaled[counter],'rb'))
@@ -703,9 +703,6 @@ def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mas
                     rms_r = m[i].rms(x[i],y[i],e_r[i])
                 else:
                     rms_r = m[i].rms(x[i],y[i])
-                print('Wavelength bin %d: (Rp^2/Rs^2 error)/RMS = %.2f; (Rp^2/Rs^2 error)/photon noise [post rescaling] = %.3f'%(i+1,transit_depth_err/rms,transit_depth_err/e_r[i].mean()))
-
-            print("\n")
 
         if not bool(int(input_dict['fix_u1'])):
             u1_curr,u1_up_curr,u1_low_curr = mc.parseParam(best_dict['u1_%d'%(wb)])
