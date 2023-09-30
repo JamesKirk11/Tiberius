@@ -145,18 +145,13 @@ for i,model in enumerate(m):
                 model.pars["u4"].currVal = 0
 
         # now get transit only model
-        if not model.GP_used:
-            # get the transit model
-            red_noise_model = 1
-            if model.poly_used:
-                red_noise_model *= model.red_noise_poly(x[i])
-            if model.exp_ramp_used:
-                 red_noise_model *= model.exponential_ramp(x[i])
+        red_noise_model = 1
+        if model.poly_used:
+            red_noise_model *= model.red_noise_poly(x[i])
+        if model.exp_ramp_used:
+             red_noise_model *= model.exponential_ramp(x[i])
 
-            tm = model.calc(x[i])/red_noise_model
-
-        else:
-            tm = model.calc(x[i])
+        tm = model.calc(x[i])/red_noise_model
 
         # now determine where the transit depth first and last reaches maximum - these are contact points 2 and 3
         # calculate the depth
@@ -216,8 +211,9 @@ for plot_no in range(nplots):
         bin_size = []
         time_steps = []
         time_diff = np.diff(x[i]).min()*24*60 # in mins
-        # ~ max_points = int(np.round(30/time_diff)) # go up to maximum of 30 minute bins
-        max_points = contact2 - contact1 # go up to ingress duration as max points per bin
+        max_points = int(np.round(60/time_diff)) # go up to maximum of 30 minute bins
+        # max_points = contact2 - contact1 # go up to ingress duration as max points per bin
+        # max_points = 200
 
         npoints_per_bin = np.hstack((np.linspace(1,max_points,1000),max_points))
 
@@ -253,9 +249,6 @@ for plot_no in range(nplots):
         else:
             ax.plot(npoints_per_bin,rms/rms[0],'r',lw=2,zorder=1)
             ax.plot(npoints_per_bin,gaussian_white_noise/gaussian_white_noise[0],color='k',lw=2,zorder=0)
-
-
-
 
         ax.set_yscale('log')
         ax.set_xscale('log')
