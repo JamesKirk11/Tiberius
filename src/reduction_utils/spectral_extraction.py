@@ -301,7 +301,7 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
     return fitted_positions, delay, np.median(fwhm[np.isfinite(fwhm)]), np.array(gauss_std)
 
 
-def extract_trace_flux(frame,trace,aperture_width,background_offset,background_width,pre_flat_frame,poly_bg_order=1,am=1.3,exposure_time=60,verbose=False,star=None,mask=None,instrument='ACAM',row_min=None,gauss_std=None,readout_speed='fast',co_add_rows=0,rectify_frame=False,oversampling_factor=1,gain_file=None,readnoise_file=None):
+def extract_trace_flux(frame,trace,aperture_width,background_offset,background_width,pre_flat_frame,poly_bg_order,am,exposure_time,verbose,star,mask,instrument,row_min,gauss_std,readout_speed,co_add_rows,rectify_frame,oversampling_factor,gain_file,readnoise_file):
     """The function used to extract the flux of a single spectral trace, using normal extraction"""
 
     if verbose:
@@ -405,8 +405,13 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
 
 
     # Convert from ADU to electrons (multiply by the gain)
-    frame = frame*gain
-    pre_flat_frame = pre_flat_frame*gain # but we want to preserve a copy of the frame prior to flat field correction for error calculation
+    if "JWST" in instrument: # for JWST, this involves conerting from DN/s to e-
+        frame = frame*exposure_time*gain
+        error_frame = error_frame*exposure_time*gain
+        pre_flat_frame = pre_flat_frame*exposure_time*gain # but we want to preserve a copy of the frame prior to flat field correction for error calculation
+    else:
+        frame = frame*gain
+        pre_flat_frame = pre_flat_frame*gain # but we want to preserve a copy of the frame prior to flat field correction for error calculation
 
     nrows,ncols = np.shape(frame)
     x = np.arange(ncols)
@@ -991,7 +996,7 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                     exposure_time = fits_file[0].header['EXPTIME']
                 elif "JWST" in instrument:
                     mjd.append(fits_file["INT_TIMES"].data["int_mid_BJD_TDB"][jwst_index_counter])
-                    exposure_time = fits_file[0].header["TGROUP"] # note this may be the wrong header value for JWST exposure times
+                    exposure_time = fits_file[0].header["EFFINTTM"]
                 else:
                     mjd.append(0)
                     exposure_time = 0
