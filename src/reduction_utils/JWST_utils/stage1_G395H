@@ -44,12 +44,12 @@ python $HOME/python/Tiberius/src/reduction_utils/JWST_utils/1overf_subtraction.p
 echo ""
 echo "****running ramp_fit****"
 echo ""
-strun ramp_fit $1_darkcurrentstep.fits --override_readnoise $HOME/crds_cache/jwst_pub/references/jwst/nirspec/jwst_nirspec_readnoise_0048.fits --override_gain /Users/james/crds_cache/jwst_pub/references/jwst/nirspec/jwst_nirspec_gain_0027.fits
+strun ramp_fit $1_darkcurrentstep.fits --override_readnoise $HOME/crds_cache/jwst_pub/references/jwst/nirspec/jwst_nirspec_readnoise_0048.fits --override_gain $HOME/crds_cache/jwst_pub/references/jwst/nirspec/jwst_nirspec_gain_0027.fits
 rm $1_darkcurrentstep.fits
 echo ""
 echo "****running gain_scale****"
 echo ""
-strun gain_scale $1_1_rampfitstep.fits --override_gain /Users/james/crds_cache/jwst_pub/references/jwst/nirspec/jwst_nirspec_gain_0027.fits
+strun gain_scale $1_1_rampfitstep.fits --override_gain $HOME/crds_cache/jwst_pub/references/jwst/nirspec/jwst_nirspec_gain_0027.fits
 rm $1_0_rampfitstep.fits
 rm $1_1_rampfitstep.fits
 echo ""
