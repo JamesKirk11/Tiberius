@@ -18,10 +18,11 @@ try:
     import astroscrappy
 except:
     print("astroscrappy not imported, automatic cosmic ray detection can't be performed with lacosmic")
-
+import copy
 from cosmic_removal import interp_bad_pixels
 from wavelength_calibration import rebin_spec
 from astropy import units as u
+from Keck_utils import Keck_order_masking as KO
 
 # Prevent matplotlib plotting frames upside down
 plt.rcParams['image.origin'] = 'lower'
@@ -47,6 +48,12 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
     if "JWST" in instrument: # we need to extract only the first array since the frame is an array of (flux_frame,error_frame)
         frame = frame[0]
 
+    if instrument == "Keck/NIRSPEC":
+        search_frame = frame.copy()
+        search_frame[search_frame < 0] = 0
+    else:
+        search_frame = frame
+
     buffer_pixels = 5 # ignore edges of detector which might have abnormally high counts
 
     if guess_location-search_width < buffer_pixels:
@@ -54,12 +61,12 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
     else:
         search_left_edge = guess_location-search_width
 
-    if guess_location+search_width > np.shape(frame)[1] - buffer_pixels:
-        search_right_edge = np.shape(frame)[1] - buffer_pixels
+    if guess_location+search_width > np.shape(search_frame)[1] - buffer_pixels:
+        search_right_edge = np.shape(search_frame)[1] - buffer_pixels
     else:
         search_right_edge = guess_location+search_width
 
-    columns_of_interest = frame[:,search_left_edge:search_right_edge]
+    columns_of_interest = search_frame[:,search_left_edge:search_right_edge]
     nrows,ncols = np.shape(columns_of_interest)
 
     trace_centre = []
@@ -68,7 +75,7 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
 
     row_array = np.arange(nrows)
 
-    plot_row = nrows//2
+    plot_row = 1726 #nrows//2
 
     total_errors = [] # number of errors per frame
     force_verbose = False
@@ -217,8 +224,11 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
 
     if verbose or force_verbose and not override_force_verbose:
         plt.figure(figsize=(8,6))
-        vmin,vmax = np.nanpercentile(frame,[10,90])
-        plt.imshow(frame,vmin=vmin,vmax=vmax,aspect="auto")
+        if instrument == "Keck/NIRSPEC":
+            vmin,vmax = 0,500
+        else:
+            vmin,vmax = np.nanpercentile(search_frame,[10,90])
+        plt.imshow(search_frame,vmin=vmin,vmax=vmax,aspect="auto")
         plt.plot(trace_centre,row_array,'r',label="row-by-row centre")
         plt.plot(fitted_positions,y,'k',label="fitted centres")
         plt.legend(framealpha=1)
@@ -377,7 +387,10 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
         trace = trace.astype(int)
         if verbose:
             plt.figure()
-            vmin,vmax = np.nanpercentile(frame,[10,90])
+            if instrument == "Keck/NIRSPEC":
+                vmin,vmax = 0,500
+            else:
+                vmin,vmax = np.nanpercentile(frame,[10,90])
             plt.imshow(frame,vmin=vmin,vmax=vmax,aspect="auto")
             plt.axvline(np.nanmedian(trace),color='k',label="New trace")
             plt.xlabel("X pixel")
@@ -459,7 +472,10 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
         # plot the science frame with apertures overlaid
         plt.figure(figsize=(8,6))
 
-        vmin,vmax = np.nanpercentile(frame,[50,70])
+        if instrument == "Keck/NIRSPEC":
+            vmin,vmax = 0,500
+        else:
+            vmin,vmax = np.nanpercentile(frame,[50,70])
         plt.imshow(frame,vmin=vmin,vmax=vmax,aspect="auto")
 
         plt.plot(trace,np.arange(nrows),'k',label="fitted centre")
@@ -771,7 +787,10 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
         plt.figure(figsize=(12,8))
         plt.subplot(121)
 
-        vmin,vmax = np.nanpercentile(clipped_frame,[10,50])
+        if instrument == "Keck/NIRSPEC":
+            vmin,vmax = 0,500
+        else:
+            vmin,vmax = np.nanpercentile(clipped_frame,[10,50])
         plt.imshow(clipped_frame,vmin=vmin,vmax=vmax,aspect="auto")
         plt.title("Before background subtraction")
         plt.xlabel("Pixel column")
@@ -779,7 +798,10 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
 
         plt.subplot(122)
 
-        vmin,vmax = np.nanpercentile(clipped_frame-np.array(sky_poly),[10,50])
+        if instrument == "Keck/NIRSPEC":
+            vmin,vmax = -500,1000
+        else:
+            vmin,vmax = np.nanpercentile(clipped_frame-np.array(sky_poly),[10,50])
         plt.imshow(clipped_frame-np.array(sky_poly),vmin=vmin,vmax=vmax,aspect="auto")
         plt.title("After background subtraction")
         plt.xlabel("Pixel column")
@@ -910,9 +932,9 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
     nstars = extraction_dict['nstars']
     masks = extraction_dict['masks']
     try:
-        NIRSPEC_mask = extraction_dict["NIRSPEC_mask"]
+        NIRSPEC_order = extraction_dict["NIRSPEC_order"]
     except:
-        NIRSPEC_mask = None
+        NIRSPEC_order = None
     use_lacosmic = extraction_dict['use_lacosmic']
     ACAM_linearity_correction = extraction_dict['ACAM_linearity_correction']
     gaussian_defined_aperture = extraction_dict['gaussian_defined_aperture']
@@ -1073,6 +1095,8 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                     if "JWST" in instrument:
                         vmin,vmax = np.nanpercentile(original_frame[0],[10,70])
                         plt.imshow(original_frame[0],vmin=vmin,vmax=vmax,aspect="auto")
+                    # elif instrument == "Keck/NIRSPEC":
+                    #     vmin,vmax = 0,500
                     else:
                         vmin,vmax = np.nanpercentile(original_frame,[10,70])
                         plt.imshow(original_frame,vmin=vmin,vmax=vmax,aspect="auto")
@@ -1086,6 +1110,8 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                     if "JWST" in instrument:
                         vmin,vmax = np.nanpercentile(frame[0],[10,70])
                         plt.imshow(frame[0],vmin=vmin,vmax=vmax,aspect="auto")
+                    # elif instrument == "Keck/NIRSPEC":
+                    #     vmin,vmax = 0,500
                     else:
                         vmin,vmax = np.nanpercentile(frame,[10,70])
                         plt.imshow(frame,vmin=vmin,vmax=vmax,aspect="auto")
@@ -1105,23 +1131,29 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                 pixel_mask=None
 
 
-            if NIRSPEC_mask is not None:
+            if NIRSPEC_order is not None:
                 if i == 0 and verbose:
                     v = verbose
                 else:
                     v = False
 
-                frame = mask_NIRSPEC_data(frame,[NIRSPEC_mask[0],NIRSPEC_mask[1]],[NIRSPEC_mask[2],NIRSPEC_mask[3]],v)
+                frame = KO.mask_NIRSPEC_data(frame,NIRSPEC_order,v)
 
 
             #if use_lacosmic and instrument == 'ACAM':
                 #frame,_ = lacosmic.lacosmic(frame,0.5,15,15,effective_gain=1.9,readnoise=7)
             if use_lacosmic and instrument == "Keck/NIRSPEC" and cosmic_pixel_mask is None:
-                frame[~np.isfinite(frame)] = 0
-                cosmic_pixels,frame = astroscrappy.detect_cosmics(frame, gain=3.01,readnoise=11.56, \
-                                                          satlevel=np.inf, inmask=pixel_mask, sepmed=False, \
-                                                          cleantype='medmask', fsmode='median',verbose=True)
-                frame[frame == 0] = np.nan
+                cosmic_search_frame = copy.deepcopy(frame)
+                cosmic_search_frame[~np.isfinite(cosmic_search_frame)] = 0
+                cosmic_search_frame[cosmic_search_frame < 0] = 0
+
+                # frame[~np.isfinite(frame)] = 0
+                # frame[frame < 0] = 0
+                cosmic_pixels,_ = astroscrappy.detect_cosmics(cosmic_search_frame[row_min:row_max], gain=3.01,readnoise=11.56, \
+                                                          satlevel=np.inf, inmask=pixel_mask[row_min:row_max], sepmed=False, \
+                                                          cleantype='medmask', fsmode='median',verbose=True,sigclip=5,objlim=10,niter=8)
+                # frame[frame == 0] = np.nan
+                frame[row_min:row_max] = interp_bad_pixels(frame[row_min:row_max],cosmic_pixels)
 
                 if verbose != -1 and verbose != 0:
                     plt.figure(figsize=(4,12))
@@ -1324,13 +1356,26 @@ def main(input_file='extraction_input.txt'):
         oversampling_factor = int(oversampling_factor)
 
 
-    trace_guess_locations = [int(x)*oversampling_factor for x in input_dict['trace_guess_locations'].split(",")]
-    nstars = len(trace_guess_locations)
+    # order mask for Keck/NIRSPEC data
+    if input_dict['instrument'] == 'Keck/NIRSPEC':
+        NIRSPEC_order = input_dict["NIRSPEC_order"]
+        trace_guess_locations,trace_search_widths = KO.get_guess_locations(NIRSPEC_order)
+        nstars = 1
+        trace_guess_locations *= oversampling_factor
+        trace_search_widths *= oversampling_factor
+        print(trace_guess_locations,trace_search_widths)
+    else:
 
-    # Update, added ability to have different extraction parameters for each star
-    trace_search_widths = [int(x)*oversampling_factor for x in input_dict['trace_search_width'].split(",")]
-    if len(trace_search_widths) == 1:
-        trace_search_widths = trace_search_widths*nstars
+        NIRSPEC_order = None
+
+        trace_guess_locations = [int(x)*oversampling_factor for x in input_dict['trace_guess_locations'].split(",")]
+        nstars = len(trace_guess_locations)
+
+        # Update, added ability to have different extraction parameters for each star
+        trace_search_widths = [int(x)*oversampling_factor for x in input_dict['trace_search_width'].split(",")]
+
+        if len(trace_search_widths) == 1:
+            trace_search_widths = trace_search_widths*nstars
 
     polybg_orders = [int(x) for x in input_dict['poly_bg_order'].split(",")]
     if len(polybg_orders) == 1:
@@ -1377,17 +1422,6 @@ def main(input_file='extraction_input.txt'):
             masks['mask%d'%i] = None
 
 
-    # order mask for Keck/NIRSPEC data
-    if input_dict['instrument'] == 'Keck/NIRSPEC':
-        try:
-            NIRSPEC_mask = input_dict["NIRSPEC_mask"]
-        except:
-            NIRSPEC_mask = None
-        if NIRSPEC_mask is not None:
-            NIRSPEC_mask = [int(x) for x in input_dict['NIRSPEC_mask'].split(",") if x != '']
-    else:
-        NIRSPEC_mask = None
-
     if input_dict["instrument"] == "ACAM":
         ACAM_linearity_correction = bool(int(input_dict['ACAM_linearity_correction']))
     else:
@@ -1406,7 +1440,7 @@ def main(input_file='extraction_input.txt'):
     extraction_params_dict = {'aperture_width':aperture_widths,'background_offset':background_offsets,\
                                'background_width':background_widths,'poly_bg_order':polybg_orders,\
                                'nstars':nstars,'masks':masks,'ACAM_linearity_correction':ACAM_linearity_correction,'gaussian_defined_aperture':gaussian_defined_aperture,\
-                               "NIRSPEC_mask":NIRSPEC_mask,'use_lacosmic':bool(int(input_dict['use_lacosmic'])),"rectify_frame":bool(int(input_dict["rectify_data"]))}
+                               "NIRSPEC_order":NIRSPEC_order,'use_lacosmic':bool(int(input_dict['use_lacosmic'])),"rectify_frame":bool(int(input_dict["rectify_data"]))}
 
     v = int(input_dict['verbose'])
 
@@ -1474,46 +1508,46 @@ def create_masks(masked_region_list,nstars,mask_width):
     return masks
 
 
-def mask_NIRSPEC_data(frame,x_left_coords,x_right_coords,verbose=False):
-    """A function to mask all Keck/NIRSPEC orders other than the one if interest.
-
-    Inputs:
-    frame - the fits image
-    x_left_coords - list of the x coordinates that define the left hand edge of the order of interest, e.g. [1335,1390] in pixels
-    x_right_coords - list of the x coordinates that define the right hand edge of the order of interest, e.g. [1440,1510] in pixels
-    verbose - True/False - plot the frame with the selected order highlighted
-
-    Returns
-    f_masked - the frame (same shape as inputted) with all but the order of interest masked with zeros"""
-
-    masked_frame = np.zeros_like(frame)*np.nan
-    left_edge = np.poly1d(np.polyfit([0,2048],x_left_coords,1))(np.arange(2048))
-    right_edge = np.poly1d(np.polyfit([0,2048],x_right_coords,1))(np.arange(2048))
-
-    if verbose:
-        if verbose == -1:
-            verbose = False
-
-    for i in range(2048):
-        col_left = int(np.floor(left_edge[i]))
-        col_right = int(np.ceil(right_edge[i]))
-        masked_frame[i][col_left:col_right] = frame[i][col_left:col_right]
-
-    if verbose:
-        plt.figure()
-        vmin,vmax = np.nanpercentile(masked_frame,[10,90])
-        plt.imshow(masked_frame,vmin=vmin,vmax=vmax,aspect="auto")
-        plt.title("Order clipping")
-        plt.plot(left_edge,np.arange(2048),color='g')
-        plt.plot(right_edge,np.arange(2048),color='g')
-        if verbose == -2:
-            plt.show()
-        if verbose > 0:
-            plt.show(block=False)
-            plt.pause(verbose)
-            plt.close()
-
-    return masked_frame
+# def mask_NIRSPEC_data(frame,x_left_coords,x_right_coords,verbose=False):
+#     """A function to mask all Keck/NIRSPEC orders other than the one if interest.
+#
+#     Inputs:
+#     frame - the fits image
+#     x_left_coords - list of the x coordinates that define the left hand edge of the order of interest, e.g. [1335,1390] in pixels
+#     x_right_coords - list of the x coordinates that define the right hand edge of the order of interest, e.g. [1440,1510] in pixels
+#     verbose - True/False - plot the frame with the selected order highlighted
+#
+#     Returns
+#     f_masked - the frame (same shape as inputted) with all but the order of interest masked with zeros"""
+#
+#     masked_frame = np.zeros_like(frame)*np.nan
+#     left_edge = np.poly1d(np.polyfit([0,2048],x_left_coords,1))(np.arange(2048))
+#     right_edge = np.poly1d(np.polyfit([0,2048],x_right_coords,1))(np.arange(2048))
+#
+#     if verbose:
+#         if verbose == -1:
+#             verbose = False
+#
+#     for i in range(2048):
+#         col_left = int(np.floor(left_edge[i]))
+#         col_right = int(np.ceil(right_edge[i]))
+#         masked_frame[i][col_left:col_right] = frame[i][col_left:col_right]
+#
+#     if verbose:
+#         plt.figure()
+#         vmin,vmax = np.nanpercentile(masked_frame,[10,90])
+#         plt.imshow(masked_frame,vmin=vmin,vmax=vmax,aspect="auto")
+#         plt.title("Order clipping")
+#         plt.plot(left_edge,np.arange(2048),color='g')
+#         plt.plot(right_edge,np.arange(2048),color='g')
+#         if verbose == -2:
+#             plt.show()
+#         if verbose > 0:
+#             plt.show(block=False)
+#             plt.pause(verbose)
+#             plt.close()
+#
+#     return masked_frame
 
 
 def rectify_spatial(data, curve):
@@ -1568,10 +1602,11 @@ def resample_frame(data,oversampling=10,xmin=0,verbose=False):
 
     if verbose:
         plt.figure()
-        plt.plot(old_x,data[nrows//2],'ko',ms=10,mfc="white",label="Pre-oversampling")
+        plt.plot(old_x,data[nrows//2],'ko',ms=6,mfc="k",label="Pre-oversampling",zorder=10)
+        # plt.plot(old_x,data[nrows//2],'ko',ms=10,mfc="none",label="Pre-oversampling")
         plt.plot(new_x,data_resampled[nrows//2],'r.',label='Post-oversampling')
         plt.xlabel("X pixel")
-        plt.ylabel("Counts")
+        plt.ylabel("Counts (DN/s)")
         plt.title("Pixel resampling to deal with partial pixels")
         plt.legend()
         if verbose == -2:
