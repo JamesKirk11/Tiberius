@@ -1384,3 +1384,55 @@ def uniform_tophat_mean(newx,x, y, dy=None,nan=False):
 		out = out.dropna()
 
 	return out['bin_x'].values,out['bin_y'].values, out['bin_dy'].values, out['bin_n'].values
+
+
+def bin_wave_to_R(w, R):
+	"""Creates new wavelength axis at specified resolution
+
+	Parameters
+	----------
+	w : list of float or numpy array of float
+	    Wavelength axis to be rebinned
+	R : float or int
+	    Resolution to bin axis to
+
+	Returns
+	-------
+	list of float
+	    New wavelength axis at specified resolution
+
+	Examples
+	--------
+
+	>>> newwave = bin_wave_to_R(np.linspace(1,2,1000), 10)
+	>>> print((len(newwave)))
+	11
+	"""
+	wave = []
+	tracker = min(w)
+	i = 1
+	ind= 0
+	firsttime = True
+	while(tracker<max(w)):
+	    if i <len(w)-1:
+	        dlambda = w[i]-w[ind]
+	        newR = w[i]/dlambda
+	        if (newR < R) & (firsttime):
+	            tracker = w[ind]
+	            wave += [tracker]
+	            ind += 1
+	            i += 1
+	            firsttime = True
+	        elif newR < R:
+	            tracker = w[ind]+dlambda/2.0
+	            wave +=[tracker]
+	            ind = (np.abs(w-tracker)).argmin()
+	            i = ind+1
+	            firsttime = True
+	        else:
+	            firsttime = False
+	            i+=1
+	    else:
+	        tracker = max(w)
+	        wave += [tracker]
+	return wave
