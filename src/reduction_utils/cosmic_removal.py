@@ -28,8 +28,14 @@ def find_cosmic_frames(spectra,ref_frame,clip=3,mad=False,ignore_edges=0,mask=No
     """
 
     # normalise all spectra
-    spectra = np.array([s/np.nanmedian(s[ignore_edges:-ignore_edges]) for s in spectra])
-    ref_frame_norm = ref_frame/np.nanmedian(ref_frame[ignore_edges:-ignore_edges])
+    if ignore_edges == 0:
+        spectra = np.array([s/np.nanmedian(s) for s in spectra])
+        ref_frame_norm = ref_frame/np.nanmedian(ref_frame)
+
+    else:
+        spectra = np.array([s/np.nanmedian(s[ignore_edges:-ignore_edges]) for s in spectra])
+        ref_frame_norm = ref_frame/np.nanmedian(ref_frame[ignore_edges:-ignore_edges])
+
 
     if not np.any(np.isfinite(spectra)) and ignore_edges == 0:
         return ValueError("all normalised spectra are nans, try increasing the ignore edges parameter")
@@ -63,8 +69,9 @@ def find_cosmic_frames(spectra,ref_frame,clip=3,mad=False,ignore_edges=0,mask=No
         keep_index = ((residuals >= -clip*ref_std) & (residuals <= clip*ref_std))
 
         # and now ignore the edges by overwriting keep_index here
-        keep_index[:ignore_edges] = True
-        keep_index[-ignore_edges:] = True
+        if ignore_edges > 0:
+            keep_index[:ignore_edges] = True
+            keep_index[-ignore_edges:] = True
 
         if i == 0 and verbose:
             plt.figure()
