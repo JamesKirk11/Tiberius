@@ -556,7 +556,7 @@ def plot_and_fit_regions(stellar_spectrum,wvl_input,guess_dict,verbose=False,wor
         else:
             # Find argmax
             maximum = x[np.argmax(norm_y)]
-            star_centres_argmin.append(minimum)
+            star_centres_argmin.append(maximum)
             centre_guess = maximum
             amplitude_guess = norm_y.max()
 
@@ -586,7 +586,7 @@ def plot_and_fit_regions(stellar_spectrum,wvl_input,guess_dict,verbose=False,wor
             fwhm = 2*np.sqrt(2*np.log(2))*popt[2]
             R = l/fwhm
 
-            print("centre guess (argmin/argmax) = %d; Gauss mean = %.3f; Gauss std dev = %.4f; Argmin = %f; Spectral resolution = %d; Min bin width = %d"%(centre_guess,popt[1],popt[2],minimum,np.round(R),np.round(l/R)))
+            print("centre guess (argmin/argmax) = %d; Gauss mean = %.3f; Gauss std dev = %.4f; Spectral resolution = %d; Min bin width = %d"%(centre_guess,popt[1],popt[2],np.round(R),np.round(l/R)))
 
     return np.array(star_centres_gauss),np.array(star_centres_argmin)
 
@@ -659,7 +659,7 @@ def calc_wvl_solution(pixel_values,line_wvls,poly_order,stellar_spectrum,verbose
     model = poly(pixel_values)
     residuals = line_wvls - model
     npoints = len(pixel_values)
-
+    
     if refit_clip is not None:
 
         keep_index = ((residuals >= -refit_clip*median_absolute_deviation(residuals)) & (residuals <= refit_clip*median_absolute_deviation(residuals)))
@@ -674,7 +674,6 @@ def calc_wvl_solution(pixel_values,line_wvls,poly_order,stellar_spectrum,verbose
 
         model = poly(np.array(pixel_values)[keep_index])
         residuals = np.array(line_wvls)[keep_index] - model
-
         npoints = len(np.array(pixel_values)[keep_index])
 
         if verbose:
