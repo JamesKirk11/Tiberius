@@ -10,6 +10,9 @@ import numpy as np
 # TOI-1726b
 order_offset = 0
 
+# HAT-P-26b 
+order_offset = -30
+
 # order_edges = {'order84': np.array([[219, 176], [290, 265]])+order_offset,\
 # 'order83': np.array([[290, 265], [379, 349]])+order_offset,\
 # 'order82': np.array([[379, 349], [465, 430]])+order_offset,\
@@ -28,23 +31,23 @@ order_offset = 0
 # 'order69': np.array([[1599, 1680], [1711, 1791]])+order_offset,\
 # 'order68': np.array([[1715, 1801], [1807, 1905]])+order_offset}
 
-order_edges = {'order84': np.array([[253, 202], [324, 291]])+order_offset,\
- 'order83': np.array([[324, 291], [413, 375]])+order_offset,\
- 'order82': np.array([[413, 375], [499, 456]])+order_offset,\
- 'order81': np.array([[499, 456], [575, 558]])+order_offset,\
- 'order80': np.array([[575, 558], [662, 643]])+order_offset,\
- 'order79': np.array([[662, 643], [751, 748]])+order_offset,\
- 'order78': np.array([[751, 748], [838, 834]])+order_offset,\
- 'order77': np.array([[838, 834], [926, 935]])+order_offset,\
- 'order76': np.array([[926, 935], [1012, 1033]])+order_offset,\
- 'order75': np.array([[1012, 1033], [1109, 1135]])+order_offset,\
- 'order74': np.array([[1109, 1135], [1216, 1242]])+order_offset,\
- 'order73': np.array([[1216, 1242], [1318, 1355]])+order_offset,\
- 'order72': np.array([[1318, 1355], [1417, 1465]])+order_offset,\
- 'order71': np.array([[1417, 1465], [1531, 1584]])+order_offset,\
- 'order70': np.array([[1539, 1596], [1621, 1698]])+order_offset,\
- 'order69': np.array([[1633, 1706], [1745, 1817]])+order_offset,\
- 'order68': np.array([[1747, 1829], [1835, 1933]])+order_offset}
+order_edges = {'order83': np.array([[253, 202], [324, 291]])+order_offset,\
+ 'order82': np.array([[324, 291], [413, 375]])+order_offset,\
+ 'order81': np.array([[413, 375], [499, 456]])+order_offset,\
+ 'order80': np.array([[499, 456], [575, 558]])+order_offset,\
+ 'order79': np.array([[575, 558], [662, 643]])+order_offset,\
+ 'order78': np.array([[662, 643], [751, 748]])+order_offset,\
+ 'order77': np.array([[751, 748], [838, 834]])+order_offset,\
+ 'order76': np.array([[838, 834], [926, 935]])+order_offset,\
+ 'order75': np.array([[926, 935], [1012, 1033]])+order_offset,\
+ 'order74': np.array([[1012, 1033], [1109, 1135]])+order_offset,\
+ 'order73': np.array([[1109, 1135], [1216, 1242]])+order_offset,\
+ 'order72': np.array([[1216, 1242], [1318, 1355]])+order_offset,\
+ 'order71': np.array([[1318, 1355], [1417, 1465]])+order_offset,\
+ 'order70': np.array([[1417, 1465], [1531, 1584]])+order_offset,\
+ 'order69': np.array([[1539, 1596], [1621, 1698]])+order_offset,\
+ 'order68': np.array([[1633, 1706], [1745, 1817]])+order_offset,\
+ 'order67': np.array([[1747, 1829], [1835, 1933]])+order_offset}
 
 def mask_NIRSPEC_data(frame,order_number,verbose=False):
     """A function to mask all Keck/NIRSPEC orders other than the one if interest.
@@ -73,7 +76,7 @@ def mask_NIRSPEC_data(frame,order_number,verbose=False):
     if verbose:
         plt.figure()
         plt.subplot(211)
-        vmin,vmax = np.nanpercentile(masked_frame,[10,90])
+        vmin,vmax = np.nanpercentile(masked_frame,[10,99])
         plt.imshow(frame,vmin=vmin,vmax=vmax,aspect="auto")
         for k in order_edges.keys():
             t = plt.text(order_edges[k].mean(),1048,"%s"%k,rotation=90,color='k',fontsize=12)
