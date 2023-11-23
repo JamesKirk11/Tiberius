@@ -38,6 +38,7 @@ omega_prior = fixed # the prior to be placed on the longitude of periastron. If 
 
 
 t0 =			# the time of mid transit in days. If this is a white light curve fit, this parameter is fitted for otherwise it is held fixed.
+t0_prior = fixed # the prior to be placed on the time of mid transit in days, if a fit parameter. If t0 is fixed, set this to 'fixed'. If left blank, a wide uniform prior is used. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 't0' parameter.
 
 contact1 = 		# position of the first contact point in frame numbers. Used to define the out of transit data, if wanting to optimise GP hyperparams to out of transit data and/or renormalising flux to out-of-transit data.
 contact4 = 		# position of the fourth contact point in frame numbers. Used to define the out of transit data, if wanting to optimise GP hyperparams to out of transit data and/or renormalising flux to out-of-transit data.
@@ -109,7 +110,7 @@ optimise_model = 	1		# optimise the model parameters using a Nelder-Mead algorit
 
 polynomial_orders = 		 	# What order polynomials are being used to model the systematic model inputs? Can be left blank if not using a polynomial. Note the inputs are those defined in the above 'model_input_files' and so must have the same length. e.g. for 3 model input files, you could set polynomial_orders to 0,1,2 (which would be 0th order/ignored first model input, 1st order poly to second input, 2nd order poly to 3rd input)
 polynomial_coefficients = 		# starting positions of polynomial coefficients. Can be left blank, in which case the code makes a guess.
-
+exponential_ramp = 0 # do you want to use an exponential ramp in your fitting? If yes, set this to an integer >= 1, where the number sets the number of exponentials to use. If not wanting to use an exponential ramp, keep this as 0.
 
 ## FOR GP MODELLING
 

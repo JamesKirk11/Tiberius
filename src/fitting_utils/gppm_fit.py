@@ -254,7 +254,7 @@ if not white_light_fit:
     aRs = float(input_dict['aRs'])
     inclination = float(input_dict['inclination'])
     t0 = float(input_dict['t0'])
-    t0 -= int(t0)
+    # t0 -= int(t0)
     ecc = float(input_dict['ecc'])
     omega = float(input_dict['omega'])
     period = float(input_dict['period'])
@@ -328,7 +328,7 @@ else:
             sys_priors["omega_prior"] = None
 
     t0_guess = float(input_dict['t0'])
-    t0_guess -= int(t0_guess)
+    # t0_guess -= int(t0_guess)
     t0 = tmgp.Param(t0_guess)
 
     if input_dict['t0_prior'] is not None:

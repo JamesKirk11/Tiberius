@@ -2,7 +2,7 @@ import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
 import argparse
-from scipy.stats import median_absolute_deviation as mad
+from scipy.stats import median_abs_deviation as mad
 from scipy.ndimage import median_filter as MF
 import pickle
 
@@ -57,7 +57,7 @@ def save_fits(data,header,filename,clobber=False):
     hdu = fits.PrimaryHDU(data,header=header)
     hdu.writeto(filename,overwrite=clobber)
     return
-    
+
 def pixel_mask_tight(frame,clobber):
     """A tighter definition of a bad pixel mask using 5 median absolute devitations from the median, computed column by column (along dispersion direction)"""
     medians = np.median(frame,axis=0)
@@ -66,69 +66,69 @@ def pixel_mask_tight(frame,clobber):
 
     for i,row in enumerate(frame):
         good_pixels.append(((row >= medians-5*mads) & (row <= medians+5*mads)))
-    
+
     good_pixels = np.array(good_pixels)
     bad_pixels = ~good_pixels
-    
+
     plt.figure()
     plt.imshow(bad_pixels)
     plt.title("Bad pixel mask using medians and MADS")
     plt.show()
-    
+
     pickle.dump(good_pixels,open("good_pixel_mask_tight.pickle","wb"))
     pickle.dump(bad_pixels,open("bad_pixel_mask_tight.pickle","wb"))
     # ~ save_fits(good_pixels,"good_pixel_mask_tight.fits",clobber)
     # ~ save_fits(bad_pixels,"bad_pixel_mask_tight.fits",clobber)
-    
+
     return
-    
-    
+
+
 def pixel_mask_loose(frame,clobber):
     """A looser definition of the bad pixel mask using 5 standard deviations from the global mean"""
-    
+
     good_pixels = ((frame >= np.mean(frame)-5*np.std(frame)) & (frame <= np.mean(frame)+5*np.std(frame)))
     bad_pixels = ~good_pixels
-    
+
     plt.figure()
     plt.imshow(bad_pixels)
     plt.title("Bad pixel mask using means and stds")
     plt.show()
-    
+
     pickle.dump(good_pixels,open("good_pixel_mask_loose.pickle","wb"))
     pickle.dump(bad_pixels,open("bad_pixel_mask_loose.pickle","wb"))
     # ~ save_fits(good_pixels,"good_pixel_mask_loose.fits",clobber)
     # ~ save_fits(bad_pixels,"bad_pixel_mask_loose.fits",clobber)
-    
+
     return good_pixels,bad_pixels
-    
+
 def normalize_flat(frame):
-	
+
 	"""Not in use yet, needs more testing."""
-	
+
 	nrows,ncols = np.shape(frame)
-	
+
 	polynomial_fits = []
-	
+
 	for i in range(ncols):
 		poly = np.poly1d(np.polyfit(np.arange(100,nrows-100),frame[:,i][100:nrows-100],5))
 		polynomial_fits.append(poly(np.arange(nrows)))
-		
+
 	normalized_flat = frame/np.array(polynomial_fits).T
-	
+
 	return normalized_flat
-	
-	
+
+
 def mask_order_gaps(flat):
 	"""Replace gaps between orders in flat with np.nan. This replaces zeroes which when divided through give +inf in the science frames."""
 	masked_flat = flat.copy()
-	
+
 	for i in range(2048):
 		residuals = masked_flat[i] - MF(masked_flat[i],101)
 		outliers = (residuals <=  mad(residuals)*-10)
 		masked_flat[i][outliers] = np.nan
-	
+
 	return masked_flat
-		
+
 
 master_dark,dark_header = combine_frames(dark_list,verbose,None)
 master_flat,flat_header = combine_frames(flat_list,verbose,None)

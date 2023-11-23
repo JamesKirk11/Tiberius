@@ -28,8 +28,14 @@ def find_cosmic_frames(spectra,ref_frame,clip=3,mad=False,ignore_edges=0,mask=No
     """
 
     # normalise all spectra
-    spectra = np.array([s/np.nanmedian(s[ignore_edges:-ignore_edges]) for s in spectra])
-    ref_frame_norm = ref_frame/np.nanmedian(ref_frame[ignore_edges:-ignore_edges])
+    if ignore_edges == 0:
+        spectra = np.array([s/np.nanmedian(s) for s in spectra])
+        ref_frame_norm = ref_frame/np.nanmedian(ref_frame)
+
+    else:
+        spectra = np.array([s/np.nanmedian(s[ignore_edges:-ignore_edges]) for s in spectra])
+        ref_frame_norm = ref_frame/np.nanmedian(ref_frame[ignore_edges:-ignore_edges])
+
 
     if not np.any(np.isfinite(spectra)) and ignore_edges == 0:
         return ValueError("all normalised spectra are nans, try increasing the ignore edges parameter")
@@ -63,8 +69,9 @@ def find_cosmic_frames(spectra,ref_frame,clip=3,mad=False,ignore_edges=0,mask=No
         keep_index = ((residuals >= -clip*ref_std) & (residuals <= clip*ref_std))
 
         # and now ignore the edges by overwriting keep_index here
-        keep_index[:ignore_edges] = True
-        keep_index[-ignore_edges:] = True
+        if ignore_edges > 0:
+            keep_index[:ignore_edges] = True
+            keep_index[-ignore_edges:] = True
 
         if i == 0 and verbose:
             plt.figure()
@@ -560,3 +567,54 @@ def load_segments(file_type):
             combined_arrays = np.hstack((combined_arrays,pickle.load(open("%s/%s"%(i,file_type),"rb"))))
 
     return combined_arrays
+
+
+def extract_dq_flags(dq_cube, bits_to_mask=[0, 1, 10, 11]):
+
+    """This function locates given bad pixel flags within the 2D DQ arrays associated with JWST fits files.
+
+    This borrows from Lili Alderson's very helpful implementation of this in the ExoTiC-JEDI reduction pipeline.
+
+    The default behaviour is to mask the following DQ flags:
+        Bit = 0, bad pixel, do not use
+        Bit = 1, saturated pixel
+        Bit = 10, dead pixel
+        Bit = 11, hot pixel
+
+    The full set of flags can be found at https://jwst-pipeline.readthedocs.io/en/latest/jwst/references_general/references_general.html#:~:text=is%20strongly%20discouraged.-,Data%20Quality%20Flags,-Within%20science%20data)
+
+    Inputs:
+    dq_cube -- the ndarray of DQ flags from a JWST fits file (equivalent to the 'DQ' fits extentsion in said file)
+    bits_to_mask -- the pixel flags that you want to mask. Default = [0,1,10,11]
+
+    Returns:
+    new_dq_cube -- the new ndarray of pixel flags that only correspond to the bad pixels you're interested in.
+    """
+
+    flags_time = np.where(dq_cube!=0)[0] # finding where the pixels have a data quality flag
+    flags_y = np.where(dq_cube!=0)[1]
+    flags_x = np.where(dq_cube!=0)[2]
+
+    new_dq_cube = np.zeros_like(dq_cube)
+
+    counter=0
+
+    for i in range(len(flags_time)):
+
+        print("working on integration %d"%(i+1))
+
+        hiti = flags_time[i]
+        hity = flags_y[i]
+        hitx = flags_x[i]
+
+        binary_sum = dq_cube[flags_time[i] , flags_y[i] , flags_x[i]]
+
+        bit_array = np.flip(np.array(list(np.binary_repr(binary_sum, width=32))).astype(int))
+
+        if np.any(bit_array[bits_to_mask] == 1):
+
+            new_dq_cube[hiti, hity, hitx] = 1
+
+            counter+=1
+
+    return(new_dq_cube)
