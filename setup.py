@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='Tiberius',
-    version='0.1.0',
+    version='1.0.1',
     install_requires=[
     'argparse',
     'astropy',
