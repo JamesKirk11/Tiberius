@@ -122,7 +122,7 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
             row = row[keep_index_2]
 
         nerrors = 0 # running count of errors
-        
+
         centre_guess = peak_counts_location = x[np.argmax(row)]
         amplitude = np.nanmax(row)
         amplitude_offset = np.nanmin(row)
@@ -644,7 +644,7 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
 
         # Clip outliers (possible cosmics)
         keep_idx = (y <= np.nanmedian(y)+3*np.nanstd(y)) & (y >= np.nanmedian(y)-3*np.nanstd(y))
-        
+
         # Clip out-of-order background for Keck/NIRSPEC (defined as 0s)
         if instrument == "Keck/NIRSPEC":
             keep_idx_2 = ((np.isfinite(y)) & (abs(y) >= 1e-2))
@@ -1025,19 +1025,19 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                     exposure_time_array.append(fits_file[0].header['EXPTIME'])
                     am = fits_file[0].header['AIRMASS']
                     airmass.append(am)
-                    
+
                 elif instrument == "EFOSC":
                     obs_time_array.append(fits_file[0].header['MJD-OBS'])
                     exposure_time_array.append(fits_file[0].header['EXPTIME'])
                     am = fits_file[0].header['HIERARCH ESO TEL AIRM START']
                     airmass.append(am)
-                    
+
                 elif "JWST" in instrument:
                     obs_time_array.append(fits_file["INT_TIMES"].data["int_mid_BJD_TDB"][jwst_index_counter])
                     exposure_time_array.append(fits_file[0].header["EFFINTTM"])
                     am = 0
                     airmass.append(0)
-                    
+
                 elif instrument == "Keck/NIRSPEC":
                     exposure_time = fits_file[0].header["ITIME"] / 1e3
                     exposure_time_array.append(exposure_time)
@@ -1054,7 +1054,7 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                         new_tab = open("m1temp.txt","w")
                     new_tab.write("%f \n"%(m1temp))
                     new_tab.close()
-                    
+
                 else:
                     obs_time_array.append(0)
                     exposure_time_array.append(0)
@@ -1242,18 +1242,18 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                     force_verbose = verbose
 
                 if gaussian_defined_aperture:
-                    
+
                     # Smooth the FWHMs with a quadratic polynomial
                     gauss_std_poly = np.poly1d(np.polyfit(np.arange(0,row_max-row_min),gauss_std,trace_poly_order))
                     gauss_std_smooth = gauss_std_poly(np.arange(0,row_max-row_min))
-                    
+
                     # refit with outliers clipped
-                    gauss_std_residuals = gauss_std - gauss_std_poly(np.arange(0,row_max-row_min)) 
+                    gauss_std_residuals = gauss_std - gauss_std_poly(np.arange(0,row_max-row_min))
                     gauss_std_keep_idx = abs(gauss_std_residuals) <= 4*np.std(gauss_std_residuals)
-                    
+
                     gauss_std_poly = np.poly1d(np.polyfit(np.arange(0,row_max-row_min)[gauss_std_keep_idx],gauss_std[gauss_std_keep_idx],trace_poly_order))
                     gauss_std_smooth = gauss_std_poly(np.arange(0,row_max-row_min))
-                    
+
                     if verbose != -1 and verbose != 0:
                         plt.figure()
                         plt.plot(np.arange(row_min,row_max),gauss_std,label="Std dev of trace")
@@ -1268,7 +1268,7 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                             plt.show(block=False)
                             plt.pause(verbose)
                             plt.close()
-                            
+
                     trace_std = gauss_std_smooth*2*np.sqrt(2*np.log(2))
 
                 else:
@@ -1277,13 +1277,13 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                 if "JWST" in instrument: # only return the key arrays since the data files are so large and consume too much memory
                     flux,error,sky_avg = extract_trace_flux(frame,trace,aperture_width[star_number],background_offset[star_number],\
                                                                                                     background_width[star_number],uncorrected_frame[0],poly_bg_order[star_number],am,\
-                                                                                                    exposure_time,force_verbose,star_number,masks['mask%d'%(star_number+1)],instrument,row_min,trace_std,readout_speed,co_add_rows,rectify_frame,oversampling_factor,\
+                                                                                                    exposure_time_array,force_verbose,star_number,masks['mask%d'%(star_number+1)],instrument,row_min,trace_std,readout_speed,co_add_rows,rectify_frame,oversampling_factor,\
                                                                                                     gain_file,readnoise_file)
 
                 else:
                     flux,error,sky_avg,sky_left,sky_right,base_left,base_right,max_counts,rn_error,scin_error,pois_error,bkg_poly_order,raw_star_flux = extract_trace_flux(frame,trace,aperture_width[star_number],background_offset[star_number],\
                                                                                 background_width[star_number],uncorrected_frame,poly_bg_order[star_number],am,\
-                                                                                exposure_time,force_verbose,star_number,masks['mask%d'%(star_number+1)],instrument,row_min,trace_std,readout_speed,co_add_rows,rectify_frame,oversampling_factor,\
+                                                                                exposure_time_array,force_verbose,star_number,masks['mask%d'%(star_number+1)],instrument,row_min,trace_std,readout_speed,co_add_rows,rectify_frame,oversampling_factor,\
                                                                                 gain_file,readnoise_file)
 
                     plt.close("all")
@@ -1344,7 +1344,7 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
 
     if use_lacosmic and instrument == "Keck/NIRSPEC" and cosmic_pixel_mask is None:
         pickle.dump(np.array(cosmic_masked_pixels),open("pickled_objects/cosmic_masked_pixels.pickle","wb"))
-        
+
     if instrument == "Keck/NIRSPEC":
         os.rename("m1temp.txt", "pickled_objects/m1temp.txt")
 
@@ -1416,7 +1416,7 @@ def main(input_file='extraction_input.txt'):
 
     # order mask for Keck/NIRSPEC data
     if input_dict['instrument'] == 'Keck/NIRSPEC':
-        
+
         NIRSPEC_order = input_dict["NIRSPEC_order"]
         trace_guess_locations,trace_search_widths = KO.get_guess_locations(NIRSPEC_order)
         nstars = 1
