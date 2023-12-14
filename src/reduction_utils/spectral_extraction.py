@@ -790,43 +790,46 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
     if verbose:
 
         # background subtracted image
-        clipped_frame = np.array(clipped_frame)
-        plt.figure(figsize=(12,8))
-        plt.subplot(121)
+        try:
+            clipped_frame = np.array(clipped_frame)
+            plt.figure(figsize=(12,8))
+            plt.subplot(121)
 
-        if instrument == "Keck/NIRSPEC":
-            vmin,vmax = 0,500
-        else:
-            vmin,vmax = np.nanpercentile(clipped_frame,[10,50])
-        plt.imshow(clipped_frame,vmin=vmin,vmax=vmax,aspect="auto")
-        plt.title("Before background subtraction")
-        plt.xlabel("Pixel column")
-        plt.ylabel("Pixel row")
+            if instrument == "Keck/NIRSPEC":
+                vmin,vmax = 0,500
+            else:
+                vmin,vmax = np.nanpercentile(clipped_frame,[10,50])
+            plt.imshow(clipped_frame,vmin=vmin,vmax=vmax,aspect="auto")
+            plt.title("Before background subtraction")
+            plt.xlabel("Pixel column")
+            plt.ylabel("Pixel row")
 
-        plt.subplot(122)
+            plt.subplot(122)
 
-        if instrument == "Keck/NIRSPEC":
-            vmin,vmax = -500,1000
-        else:
-            vmin,vmax = np.nanpercentile(clipped_frame-np.array(sky_poly),[10,50])
-        plt.imshow(clipped_frame-np.array(sky_poly),vmin=vmin,vmax=vmax,aspect="auto")
-        plt.title("After background subtraction")
-        plt.xlabel("Pixel column")
-        # ~ ax2.set_ylabel("Pixel row")
+            if instrument == "Keck/NIRSPEC":
+                vmin,vmax = -500,1000
+            else:
+                vmin,vmax = np.nanpercentile(clipped_frame-np.array(sky_poly),[10,50])
+            plt.imshow(clipped_frame-np.array(sky_poly),vmin=vmin,vmax=vmax,aspect="auto")
+            plt.title("After background subtraction")
+            plt.xlabel("Pixel column")
+            # ~ ax2.set_ylabel("Pixel row")
 
-        if verbose == -2:
-            plt.show()
-        if verbose > 0:
-            plt.show(block=False)
-            plt.pause(verbose)
-            plt.close()
+            if verbose == -2:
+                plt.show()
+            if verbose > 0:
+                plt.show(block=False)
+                plt.pause(verbose)
+                plt.close()
+        except:
+            pass
 
 
         plt.figure(figsize=(8,6))
         plt.plot(flux)
         plt.show(block=False)
-        plt.ylabel('Integrated counts')
-        plt.xlabel('X pixel')
+        plt.ylabel('Integrated counts (DN/s)')
+        plt.xlabel('Y pixel')
         if verbose == -2:
             plt.show()
         if verbose > 0:
@@ -1022,19 +1025,22 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
 
                 if instrument == "ACAM":
                     obs_time_array.append(fits_file[0].header['MJD-OBS'])
-                    exposure_time_array.append(fits_file[0].header['EXPTIME'])
+                    exposure_time = fits_file[0].header['EXPTIME']
+                    exposure_time_array.append(exposure_time)
                     am = fits_file[0].header['AIRMASS']
                     airmass.append(am)
 
                 elif instrument == "EFOSC":
                     obs_time_array.append(fits_file[0].header['MJD-OBS'])
-                    exposure_time_array.append(fits_file[0].header['EXPTIME'])
+                    exposure_time = fits_file[0].header['EXPTIME']
+                    exposure_time_array.append(exposure_time)
                     am = fits_file[0].header['HIERARCH ESO TEL AIRM START']
                     airmass.append(am)
 
                 elif "JWST" in instrument:
                     obs_time_array.append(fits_file["INT_TIMES"].data["int_mid_BJD_TDB"][jwst_index_counter])
-                    exposure_time_array.append(fits_file[0].header["EFFINTTM"])
+                    exposure_time = fits_file[0].header["EFFINTTM"]
+                    exposure_time_array.append(exposure_time)
                     am = 0
                     airmass.append(0)
 
@@ -1057,6 +1063,7 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
 
                 else:
                     obs_time_array.append(0)
+                    exposure_time = 0
                     exposure_time_array.append(0)
                     am = 0
                     airmass.append(0)
@@ -1277,13 +1284,13 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                 if "JWST" in instrument: # only return the key arrays since the data files are so large and consume too much memory
                     flux,error,sky_avg = extract_trace_flux(frame,trace,aperture_width[star_number],background_offset[star_number],\
                                                                                                     background_width[star_number],uncorrected_frame[0],poly_bg_order[star_number],am,\
-                                                                                                    exposure_time_array,force_verbose,star_number,masks['mask%d'%(star_number+1)],instrument,row_min,trace_std,readout_speed,co_add_rows,rectify_frame,oversampling_factor,\
+                                                                                                    exposure_time,force_verbose,star_number,masks['mask%d'%(star_number+1)],instrument,row_min,trace_std,readout_speed,co_add_rows,rectify_frame,oversampling_factor,\
                                                                                                     gain_file,readnoise_file)
 
                 else:
                     flux,error,sky_avg,sky_left,sky_right,base_left,base_right,max_counts,rn_error,scin_error,pois_error,bkg_poly_order,raw_star_flux = extract_trace_flux(frame,trace,aperture_width[star_number],background_offset[star_number],\
                                                                                 background_width[star_number],uncorrected_frame,poly_bg_order[star_number],am,\
-                                                                                exposure_time_array,force_verbose,star_number,masks['mask%d'%(star_number+1)],instrument,row_min,trace_std,readout_speed,co_add_rows,rectify_frame,oversampling_factor,\
+                                                                                exposure_time,force_verbose,star_number,masks['mask%d'%(star_number+1)],instrument,row_min,trace_std,readout_speed,co_add_rows,rectify_frame,oversampling_factor,\
                                                                                 gain_file,readnoise_file)
 
                     plt.close("all")
