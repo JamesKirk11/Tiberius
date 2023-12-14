@@ -1436,3 +1436,25 @@ def bin_wave_to_R(w, R):
 	        tracker = max(w)
 	        wave += [tracker]
 	return wave
+
+
+def generate_wvls_at_R(starting_wvl,stopping_wvl,R):
+
+    """JK's function to generate a wavelength grid with a desired (constant) resolution.
+
+    Inputs:
+    starting_wvl -- the first wavelength to consider
+    stopping_wvl -- the final wavelength to consider
+    R -- the desired spectral resolution of the resulting wavelength axis
+
+    Returns:
+    wvls -- the wavelength grid at the specified resolution"""
+
+    wvls = []
+    i = starting_wvl
+    while i < stopping_wvl:
+        delta_lam = i/R
+        wvls.append(i+delta_lam)
+        i += delta_lam
+
+    return np.array(wvls)
