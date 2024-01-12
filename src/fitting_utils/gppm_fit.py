@@ -662,8 +662,13 @@ if optimise_model or clip_outliers and not median_clip:
 
         ### update photometric uncertainties given best-fit model
         print("\nRescaling photometric uncertainties to give rChi2 = 1")
-        clipped_flux_error = clipped_flux_error*np.sqrt(fitted_clip_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error))
-        pickle.dump(clipped_flux_error,open('rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+        if median_clip:
+            clipped_flux_error = clipped_flux_error*np.sqrt(fitted_clip_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error))
+            pickle.dump(clipped_flux_error,open('rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+        else:
+            flux_error = flux_error*np.sqrt(fitted_clip_model.reducedChisq(time,flux,flux_error))
+            pickle.dump(flux_error,open('rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+
 
     if clip_outliers and not median_clip: # use the above to clip outliers, if we've not already clipped them with the median clipping above
         residuals_1 = flux - fitted_clip_model.calc(time)
@@ -677,11 +682,8 @@ if optimise_model or clip_outliers and not median_clip:
 
         if show_plots:
             print("Plotting light curve after outlier clipping...")
-            if median_clip:
-                fig = pu.plot_single_model(fitted_clip_model,clipped_time,clipped_flux,clipped_flux_error,save_fig=False,plot_residual_std=sigma_clip)
-            else:
-                fig = pu.plot_single_model(fitted_clip_model,time,flux,flux_error,save_fig=False,plot_residual_std=sigma_clip)
-
+            fig = pu.plot_single_model(fitted_clip_model,clipped_time,clipped_flux,clipped_flux_error,save_fig=False,plot_residual_std=sigma_clip)
+            
 
 if not clip_outliers:
     keep_idx = np.ones_like(time).astype(bool)
