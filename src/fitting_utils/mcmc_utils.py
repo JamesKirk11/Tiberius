@@ -5,10 +5,11 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 import emcee
-from corner import corner
+from corner import corner,overplot_lines
 import sys
 from Tiberius.src.fitting_utils import TransitModelGPPM as tmgp
-
+import copy
+from scipy import stats
 
 def parseParam(parString):
     """Function to convert input_dicts / parameters saved as 'mean +err -err' to floats with upper and lower errors. Currently used by plotting_utils.
@@ -95,13 +96,14 @@ def save_LM_results(best_pars,uncertainties,namelist,bin_number,best_model,time,
     return
 
 
-def recover_quartiles_single(samples,namelist,bin_number,verbose=True,save_result=False,burn=False):
+def recover_quartiles_single(samples,namelist,highest_prob_pars,bin_number,verbose=True,save_result=False,burn=False):
     """
     Function that calculates the 16th, 50th and 84th percentiles from a numpy array / emcee chain and saves these to a table.
 
     Inputs:
     samples - the samples/chains from emcee
     namelist - the names of the parameters that were fit - needed for printing and saving to file
+    highest_prob_pars - the parameters associated with the single model that produces the highest log likelihood
     bin_number - the number of the wavelength bin we're considering. Necessary for printing and saving to file.
     verbose - True/False: do we want to print the results to screen?
     save_result - True/False: do we want to save the results to a table?
@@ -113,22 +115,37 @@ def recover_quartiles_single(samples,namelist,bin_number,verbose=True,save_resul
     lower = []
     median = []
     upper = []
+    mode = []
 
     ndim = np.shape(samples)[1] # this is equal to the number of params
 
     length_nl = len(namelist)
 
+    # generate dictionary of how many decimal places we want to round each parameter to before calculating the mode of the rounded distribution
+    namelist_decimal_places = {"t0":6,"period":6,"k":6,"aRs":2,"inc":2,"ecc":3,"omega":2,\
+                               "u1":2,"u2":2,"u3":2,"u4":2,"f":4,"s":3,"A":3}
+
+    # now pad the dictionray with the systematics coefficients which could be a large number of parameters (although much less than the 100 allowed for below)
+    for i in range(100):
+        namelist_decimal_places["r%s"%(i)] = 2
+        namelist_decimal_places["c%s"%(i)] = 6
+        namelist_decimal_places["lniL_%s"%(i)] = 2
+
     if save_result:
         if bin_number == 1:
             if burn:
                 new_tab = open('burn_parameters.txt','w')
+                # new_tab_2 = open('parameter_modes_burn.txt','w')
             else:
                 new_tab = open('best_fit_parameters.txt','w')
+                new_tab_2 = open('parameter_modes_prod.txt','w')
         else:
             if burn:
                 new_tab = open('burn_parameters.txt','a')
+                # new_tab_2 = open('parameter_modes_burn.txt','a')
             else:
                 new_tab = open('best_fit_parameters.txt','a')
+                new_tab_2 = open('parameter_modes_prod.txt','a')
 
     for i in range(ndim):
         par = samples[:,i]
@@ -137,27 +154,42 @@ def recover_quartiles_single(samples,namelist,bin_number,verbose=True,save_resul
         median.append(best)
         upper.append(uplim)
 
+        # calculate mode of rounded sample array
+        key = namelist[i].replace('$','').replace("\\",'')
+        rounded_par = np.round(par,namelist_decimal_places[key])
+        mode_value, mode_count = stats.mode(rounded_par,keepdims=True)
+        mode.append(mode_value[0])
+
         if save_result:
             new_tab.write("%s_%d = %f + %f - %f \n"%(namelist[i].replace('$','').replace("\\",''),bin_number,best,uplim-best,best-lolim))
+            if not burn:
+                new_tab_2.write("%s_%d = %f (%d counts = %d%%) \n"%(namelist[i].replace('$','').replace("\\",''),bin_number,mode_value[0],mode_count[0],100*mode_count[0]/len(par)))
 
         if verbose:
             print("%s_%d = %f + %f - %f"%(namelist[i].replace('$','').replace("\\",''),bin_number,best,uplim-best,best-lolim))
+            if not burn:
+                print("%s_%d (mode of posterior) = %f (%d counts = %.2f%%) \n"%(namelist[i].replace('$','').replace("\\",''),bin_number,mode_value[0],mode_count[0],100*mode_count[0]/len(par)))
 
     if save_result:
+        print('\nSaving best fit parameters to table...\n')
         new_tab.write('#------------------ \n')
-        print('Saving best fit parameters to table...')
         new_tab.close()
 
-    return np.array(median),np.array(upper),np.array(lower)
+        if not burn:
+            new_tab_2.write('#------------------ \n')
+            new_tab_2.close()
+
+    return np.array(median),np.array(upper),np.array(lower),np.array(mode)
 
 
-def make_corner_plot(sample_chains,bin_number,namelist,save_fig=False,title=None):
+def make_corner_plot(sample_chains,bin_number,namelist,parameter_modes,save_fig=False,title=None):
     """Use DFM's corner package to make a corner plot of the emcee chains.
 
     Input:
     sample_chains - the emcee chains
     bin_number - the wavelength bin number, needed for saving the plot to file
     namelist - a list of parameter names corresponding to the chain
+    parameter_modes - the modes of the parameter distributions
     save_fig - True/False: do we want to save the figure to file?
     title - set to a string if wanting to define where the plot is saved to, otherwise default is used. Default=None.
 
@@ -169,6 +201,7 @@ def make_corner_plot(sample_chains,bin_number,namelist,save_fig=False,title=None
     ndim = np.shape(sample_chains)[1]
 
     fig = corner(sample_chains,labels=namelist,quantiles=[0.16, 0.5, 0.84],verbose=False,show_titles=True)
+    overplot_lines(fig, parameter_modes)
 
     if save_fig:
         if title is not None:
@@ -201,10 +234,10 @@ def lnprob_emcee(pars,model,x,y,e,sys_model_inputs=None,sys_priors=None,typeII=F
 
     if typeII:
         for i in range(len(pars)):
-                model[i] = pars[i]
+            model[i] = pars[i]
     else:
         for i in range(model.npars):
-                model[i] = pars[i]
+            model[i] = pars[i]
 
     model_lnprob = model.lnprob(x,y,e,sys_model_inputs,sys_priors,typeII)
 
@@ -310,9 +343,9 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
         while not_converged:
 
             if chain_number == 1:
-                sampler = advance_chain(sampler,p0,nsteps,burn,save_chain,wavelength_bin)
+                sampler, highest_prob_pars, highest_prob = advance_chain(sampler,p0,nsteps,burn,save_chain,wavelength_bin)
             else:
-                sampler = advance_chain(sampler,sampler.get_last_sample(),nsteps,burn,save_chain,wavelength_bin)
+                sampler, highest_prob_pars, highest_prob = advance_chain(sampler,sampler.get_last_sample(),nsteps,burn,save_chain,wavelength_bin)
 
             total_steps = chain_number*nsteps
 
@@ -349,7 +382,7 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
                     print("\n\n After %d steps the chains have not yet converged, running chain again"%(chain_number*nsteps))
                     chain_number += 1
     else:
-        sampler = advance_chain(sampler,p0,nsteps,burn,save_chain,wavelength_bin)
+        sampler, highest_prob_pars, highest_prob = advance_chain(sampler,p0,nsteps,burn,save_chain,wavelength_bin)
 
     # save plots of chains
     if ndim > 1:
@@ -371,17 +404,17 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
         fig.savefig('prod_chain_wb%s.png'%(str(wavelength_bin+1).zfill(4)))
     plt.close()
 
-    if nsteps > 500:
+    if nsteps >= 500:
         if burn:
             samples = sampler.chain[:, int(nsteps/2):, :].reshape((-1, ndim))
         else:
-            samples = sampler.get_chain(discard=100, thin=10, flat=True)
+            samples = sampler.get_chain(discard=int(nsteps/4), thin=10, flat=True)
     else:
         samples = sampler.chain[:, -100:, :].reshape((-1, ndim))
 
     print('\n')
     # generate median, upper and lower bounds
-    med, up, low = recover_quartiles_single(samples,starting_model.namelist,bin_number=(wavelength_bin+1),verbose=True,save_result=True,burn=burn)
+    med, up, low, mode = recover_quartiles_single(samples,starting_model.namelist,highest_prob_pars,bin_number=(wavelength_bin+1),verbose=True,save_result=True,burn=burn)
 
     if not burn and ndim > 1:
         # pickle.dump(sampler,open('emcee_sampler_wb%s.pickle'%(str(wavelength_bin+1).zfill(2)),'wb'))
@@ -393,7 +426,7 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
         # ~ else:
             # ~ samples_corner = sampler.chain[:, int(nsteps/2):, :].reshape((-1, ndim))
 
-        make_corner_plot(samples_corner,bin_number=(wavelength_bin+1),save_fig=True,namelist=starting_model.namelist)
+        make_corner_plot(samples_corner,bin_number=(wavelength_bin+1),save_fig=True,namelist=starting_model.namelist,parameter_modes=mode)
 
     fitted_model = tmgp.update_model(starting_model,med)
 
@@ -401,28 +434,56 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
     fitted_reducedChi2 = fitted_model.reducedChisq(x,y,e)
     fitted_rms = fitted_model.rms(x,y,e)*1e6
     fitted_lnlike = fitted_model.lnlike(x,y,e)
+    fitted_lnprob = lnprob_emcee(med,fitted_model,x,y,e,None,sys_priors,typeII)
     fitted_BIC = fitted_model.BIC(x,y,e)
 
+    print("\n--- Using medians of posteriors ---")
     print('chi2 = %f' % fitted_chi2)
     print('Reduced chi2 = %f' % fitted_reducedChi2)
     print('Lnlikelihood = %f' % fitted_lnlike)
+    print('Lnprobability = %f' % fitted_lnprob)
     print('Residual RMS (ppm) = %f' % fitted_rms)
     print('BIC = %f' % fitted_BIC)
-    print('Acceptance fraction = %f'%(np.mean(sampler.acceptance_fraction)))
 
-    diagnostic_tab.write("\nBin %d \n" % (wavelength_bin+1))
+    diagnostic_tab.write("\n### Bin %d ###\n" % (wavelength_bin+1))
+    diagnostic_tab.write("\n--- Using medians of posteriors --- \n")
     diagnostic_tab.write('Chi2 = %f \n' % fitted_chi2)
     diagnostic_tab.write('Reduced chi2 = %f \n' % fitted_reducedChi2)
     diagnostic_tab.write('Lnlikelihood = %f \n' % fitted_lnlike)
+    diagnostic_tab.write('Lnprobability = %f \n' % fitted_lnprob)
     diagnostic_tab.write('Residual RMS (ppm) = %f \n' % fitted_rms)
     diagnostic_tab.write('BIC = %f \n' % fitted_BIC)
-    diagnostic_tab.write('Acceptance fraction = %f \n'%(np.mean(sampler.acceptance_fraction)))
-    diagnostic_tab.write('Total steps = %d \n'%(nsteps))
+
+    mode_model = copy.deepcopy(starting_model)
+    mode_model = tmgp.update_model(mode_model,mode)
+
+    mode_chi2 = mode_model.chisq(x,y,e)
+    mode_reducedChi2 = mode_model.reducedChisq(x,y,e)
+    mode_rms = mode_model.rms(x,y,e)*1e6
+    mode_lnlike = mode_model.lnlike(x,y,e)
+    mode_lnprob = lnprob_emcee(mode,mode_model,x,y,e,None,sys_priors,typeII)
+    mode_BIC = mode_model.BIC(x,y,e)
+
+    print("\n--- Using modes of posteriors ---")
+    print('chi2 = %f' % mode_chi2)
+    print('Reduced chi2 = %f' % mode_reducedChi2)
+    print('Lnlikelihood = %f' % mode_lnlike)
+    print('Lnprobability = %f' % mode_lnprob)
+    print('Residual RMS (ppm) = %f' % mode_rms)
+    print('BIC = %f' % mode_BIC)
+
+    diagnostic_tab.write("\n--- Using modes of posteriors --- \n")
+    diagnostic_tab.write('Chi2 = %f \n' % mode_chi2)
+    diagnostic_tab.write('Reduced chi2 = %f \n' % mode_reducedChi2)
+    diagnostic_tab.write('Lnlikelihood = %f \n' % mode_lnlike)
+    diagnostic_tab.write('Lnprobability = %f \n' % mode_lnprob)
+    diagnostic_tab.write('Residual RMS (ppm) = %f \n' % mode_rms)
+    diagnostic_tab.write('BIC = %f \n' % mode_BIC)
 
     try:
-        print('Autocorrelation time for each parameter = ',np.round(sampler.acor).astype(int))
+        print('\nAutocorrelation time for each parameter = ',np.round(sampler.acor).astype(int))
         # Alternatively something like: emcee.autocorr.integrated_time(sampler.chain, low=10, high=None, step=1, c=5, full_output=True,axis=0, fast=False)
-        diagnostic_tab.write('Autocorrelation time for each parameter = ')
+        diagnostic_tab.write('\nAutocorrelation time for each parameter = ')
         for ac in np.round(sampler.acor).astype(int):
             diagnostic_tab.write('%d '%ac)
         diagnostic_tab.write('\n')
@@ -430,14 +491,19 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
         print('nsamples/median(autocorrelation time) = %d'%np.round(nsteps/np.median(sampler.acor)))
         diagnostic_tab.write('nsamples/median(autocorrelation time) = %d \n'%(np.round(nsteps/np.median(sampler.acor))))
     except:
-        print("Autocorrelation time can't be calculated - chains likely too short")
-        diagnostic_tab.write("Autocorrelation time can't be calculated - chains likely too short \n")
+        print("\nAutocorrelation time can't be calculated - chains likely too short")
+        diagnostic_tab.write("\nAutocorrelation time can't be calculated - chains likely too short \n")
+
+    print('Acceptance fraction = %f'%(np.mean(sampler.acceptance_fraction)))
+
+    diagnostic_tab.write('Acceptance fraction = %f \n'%(np.mean(sampler.acceptance_fraction)))
+    diagnostic_tab.write('Total steps = %d \n'%(nsteps))
 
     diagnostic_tab.close()
 
-
     if not burn:
         pickle.dump(fitted_model,open('prod_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
+        pickle.dump(mode_model,open('parameter_modes_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
 
     if burn:
         print("...burn-in complete for bin %d"%(wavelength_bin+1))
@@ -464,11 +530,16 @@ def advance_chain(sampler,p0,nsteps,burn,save_chain,wavelength_bin):
     sampler - the inputted emcee sampler advanced by nsteps"""
 
     width = 100 # for progress bar
-
+    highest_prob = 0
     print('Progress:') # for progress bar
     for i,(pos, prob, state) in enumerate(sampler.sample(p0,iterations=nsteps,store=True)):
         n = int((width+1) * float(i) / nsteps)
         sys.stdout.write("\r[{0}{1}]".format('#' * n, ' ' * (width - n))) # for progress bar
+
+        if np.max(prob) > highest_prob:
+            highest_prob_pars = pos[np.argmax(prob)]
+            highest_prob = np.max(prob)
+
         if not burn and save_chain:
             f = open('prod_chain_wb%s.txt'%(str(wavelength_bin+1).zfill(4)),'a')
         for k in range(pos.shape[0]):
@@ -483,7 +554,7 @@ def advance_chain(sampler,p0,nsteps,burn,save_chain,wavelength_bin):
         if not burn and save_chain:
             f.close()
 
-    return sampler
+    return sampler, highest_prob_pars, highest_prob
 
 
 def beta_rescale_uncertainties(beta_factors,best_fit_tab,trans_spec_tab=None):
