@@ -41,7 +41,7 @@ show_plots = bool(int(input_dict['show_plots']))
 
 ### Load in various input arrays
 time = pickle.load(open(input_dict['time_file'],'rb'))
-time -= int(time[0]) # offset the time array to help with minimization
+# time -= int(time[0]) # offset the time array to help with minimization
 
 try:
     first_integration = int(input_dict["first_integration"])
@@ -683,7 +683,7 @@ if optimise_model or clip_outliers and not median_clip:
         if show_plots:
             print("Plotting light curve after outlier clipping...")
             fig = pu.plot_single_model(fitted_clip_model,clipped_time,clipped_flux,clipped_flux_error,save_fig=False,plot_residual_std=sigma_clip)
-            
+
 
 if not clip_outliers:
     keep_idx = np.ones_like(time).astype(bool)
