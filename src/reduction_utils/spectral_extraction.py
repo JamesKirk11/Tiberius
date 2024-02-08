@@ -56,7 +56,10 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
     else:
         search_frame = frame
 
-    buffer_pixels = 5 # ignore edges of detector which might have abnormally high counts
+    if "JWST" in instrument:
+        buffer_pixels = 0
+    else:
+        buffer_pixels = 5 # ignore edges of detector which might have abnormally high counts
 
     if guess_location-search_width < buffer_pixels:
         search_left_edge = buffer_pixels
@@ -77,7 +80,7 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
 
     row_array = np.arange(nrows)
 
-    plot_row = nrows//2
+    plot_row = 2000#nrows//2
 
     total_errors = [] # number of errors per frame
     force_verbose = False
@@ -1118,9 +1121,9 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
 
                 original_frame = frame.copy()
                 if "JWST" in instrument:
-                    frame = np.array([interp_bad_pixels(frame[0],pixel_mask),interp_bad_pixels(frame[1],pixel_mask)])
+                    frame = np.array([interp_bad_pixels(frame[0],pixel_mask,replace_with_medians=True),interp_bad_pixels(frame[1],pixel_mask,replace_with_medians=True)])
                 else:
-                    frame = interp_bad_pixels(frame,pixel_mask)
+                    frame = interp_bad_pixels(frame,pixel_mask,replace_with_medians=True)
 
                 if verbose != -1 and verbose != 0 and i == 0 or verbose != -1 and verbose != 0 and cosmic_pixel_mask is not None:
                     plt.figure()
@@ -1404,7 +1407,7 @@ def generate_wl_curve(stellar_fluxes,stellar_errors,time,nstars,overwrite=True):
     except:
         pass
 
-    pickle.dump(time-int(time[0]),open("./initial_WL_fit/initial_WL_time.pickle","wb"))
+    pickle.dump(time-time[0],open("./initial_WL_fit/initial_WL_time.pickle","wb"))
     pickle.dump(ratio,open("./initial_WL_fit/initial_WL_flux.pickle","wb"))
     pickle.dump(err_ratio,open("./initial_WL_fit/initial_WL_err.pickle","wb"))
 
