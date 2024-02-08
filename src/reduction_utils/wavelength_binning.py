@@ -605,13 +605,13 @@ def simple_bin(flux,flux_error,ancillary_data,wvl_solution,bin_edges,weighted=Tr
 
         else:
             print("N points in bin =",flux[:,index].shape)
-            bf = np.sum(flux[:,index],axis=1)
-            be = np.sqrt(np.sum(flux_error[:,index]**2,axis=1))#/npoints_in_bin
+            bf = np.nansum(flux[:,index],axis=1)
+            be = np.sqrt(np.nansum(flux_error[:,index]**2,axis=1))#/npoints_in_bin
 
             for k in ancillary_data.keys():
-                ba = np.sum(ancillary_data[k][:,index],axis=1)
+                ba = np.nansum(ancillary_data[k][:,index],axis=1)
                 if standardise_input:
-                    ba = (ba-ba.mean())/ba.std()
+                    ba = (ba-np.nanmean(ba))/np.nanstd(ba)
                 binned_ancillary[k].append(ba)
 
         binned_flux.append(bf)
