@@ -96,14 +96,13 @@ def save_LM_results(best_pars,uncertainties,namelist,bin_number,best_model,time,
     return
 
 
-def recover_quartiles_single(samples,namelist,highest_prob_pars,bin_number,verbose=True,save_result=False,burn=False):
+def recover_quartiles_single(samples,namelist,bin_number,verbose=True,save_result=False,burn=False):
     """
     Function that calculates the 16th, 50th and 84th percentiles from a numpy array / emcee chain and saves these to a table.
 
     Inputs:
     samples - the samples/chains from emcee
     namelist - the names of the parameters that were fit - needed for printing and saving to file
-    highest_prob_pars - the parameters associated with the single model that produces the highest log likelihood
     bin_number - the number of the wavelength bin we're considering. Necessary for printing and saving to file.
     verbose - True/False: do we want to print the results to screen?
     save_result - True/False: do we want to save the results to a table?
@@ -156,6 +155,7 @@ def recover_quartiles_single(samples,namelist,highest_prob_pars,bin_number,verbo
 
         # calculate mode of rounded sample array
         key = namelist[i].replace('$','').replace("\\",'')
+        key = key.split("_")[0]
         rounded_par = np.round(par,namelist_decimal_places[key])
         mode_value, mode_count = stats.mode(rounded_par,keepdims=True)
         mode.append(mode_value[0])
@@ -414,7 +414,7 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
 
     print('\n')
     # generate median, upper and lower bounds
-    med, up, low, mode = recover_quartiles_single(samples,starting_model.namelist,highest_prob_pars,bin_number=(wavelength_bin+1),verbose=True,save_result=True,burn=burn)
+    med, up, low, mode = recover_quartiles_single(samples,starting_model.namelist,bin_number=(wavelength_bin+1),verbose=True,save_result=True,burn=burn)
 
     if not burn and ndim > 1:
         # pickle.dump(sampler,open('emcee_sampler_wb%s.pickle'%(str(wavelength_bin+1).zfill(2)),'wb'))
