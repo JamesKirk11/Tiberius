@@ -359,7 +359,7 @@ def plot_models(model_list,time,flux_array,error_array,wvl_centre,rebin_data=Non
     return fig
 
 
-def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavelength_bin=None,deconstruct=True,plot_residual_std=0):
+def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavelength_bin=None,deconstruct=True,plot_residual_std=0,systematics_model_inputs=None):
     """
     Plot a single light curve with model.
 
@@ -373,6 +373,7 @@ def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavel
     wavelength_bin - the number of the wavelength bin being plotted, useful for saving to file. Default=None
     deconstruct_gp - True/False: use if wanting to plot the contributions of each kernel to the overall GP fit. Default=True. Note: this used to be more informative when not using a single amplitude for the GP. This could do with improving.
     plot_residual_std - This can be used to overplot the standard deviation on the residuals subplot, which is useful when clipping data based on this. Set this parameter to the number of standard deviations desired. Default=0
+    systematics_model_inputs - the model inputs to feed to the systematics model
 
     Returns:
     matplotlib figure object"""
@@ -406,9 +407,9 @@ def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavel
 
     if poly:# and not gp:
         if deconstruct:
-            oot,poly_components = model.red_noise_poly(time,deconstruct_polys=True)
+            oot,poly_components = model.red_noise_poly(time,systematics_model_inputs,deconstruct_polys=True)
         else:
-            oot = model.red_noise_poly(time)
+            oot = model.red_noise_poly(time,systematics_model_inputs)
 
     if exp:
         exp_ramp = model.exponential_ramp(time)
