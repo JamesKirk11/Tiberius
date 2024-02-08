@@ -36,6 +36,7 @@ parser.add_argument("-input","--input",help="second method to plot the scale hei
 parser.add_argument("-pickle","--pickle",help="use this if wanting to pickle the figure object",action="store_true")
 parser.add_argument("-colours","--colours",help="use this to define the plot colours",nargs='+')
 parser.add_argument("-symbols","--symbols",help="use this to define the plot symbols",nargs='+')
+parser.add_argument("-R","--resolution",help="use this to rebin the spectrum to a lower spectral resolution",type=int,default=0)
 args = parser.parse_args()
 
 
@@ -130,7 +131,7 @@ def find_nearest(array, value):
     return idx
 
 
-def get_all_transmission_spectra(direc_list,auto_offset,manual_offset,anchor_wvl):
+def get_all_transmission_spectra(direc_list,auto_offset,manual_offset,anchor_wvl,resolution):
 
     """If providing a list of directories"""
 
@@ -146,6 +147,11 @@ def get_all_transmission_spectra(direc_list,auto_offset,manual_offset,anchor_wvl
         print("\n## Statistics for %s..."%d)
 
         k,k_up,k_low,w,we,_ = pu.recover_transmission_spectrum(d,save_fig=False,plot_fig=False,bin_mask=None,save_to_tab=False,print_RpErr_over_RMS=False)
+
+        if resolution > 0:
+            binned_wvl = pu.bin_wave_to_R(w,resolution)
+            binned_spec = pu.bin_trans_spec(binned_wvl,w,k,k_up,k_low)
+            k,k_up,k_low,w,we = binned_spec["bin_y"],binned_spec["bin_dy"],binned_spec["bin_dy"],binned_spec["bin_x"],binned_spec["bin_dx"]
 
         w_all.append(w)
         we_all.append(we)
@@ -188,7 +194,7 @@ def get_all_transmission_spectra(direc_list,auto_offset,manual_offset,anchor_wvl
 
 
 
-def load_all_transmission_spectra(tspec_list,auto_offset,manual_offset,anchor_wvl):
+def load_all_transmission_spectra(tspec_list,auto_offset,manual_offset,anchor_wvl,resolution):
 
     """If providing a list of trans spec files"""
 
@@ -204,6 +210,11 @@ def load_all_transmission_spectra(tspec_list,auto_offset,manual_offset,anchor_wv
         print("\n## Statistics for %s..."%d)
 
         w,we,k,k_up,k_low = np.loadtxt(d,unpack=True,usecols=[0,1,2,3,4])
+
+        if resolution > 0:
+            binned_wvl = pu.bin_wave_to_R(w,resolution)
+            binned_spec = pu.bin_trans_spec(binned_wvl,w,k,k_up,k_low)
+            k,k_up,k_low,w,we = binned_spec["bin_y"],binned_spec["bin_dy"],binned_spec["bin_dy"],binned_spec["bin_x"],binned_spec["bin_dx"]
 
         print("\nMedian Rp/Rs = %f ;  Median Rp/Rs +ve error (ppm) = %d ; Median Rp/Rs -ve error (ppm) = %d ; Median R/Rs error (ppm) = %d "%(np.median(k),np.nanmedian(k_up)*1e6,np.nanmedian(k_low)*1e6,np.nanmedian(np.hstack((k_up,k_low)))*1e6))
 
@@ -247,11 +258,11 @@ def load_all_transmission_spectra(tspec_list,auto_offset,manual_offset,anchor_wv
 
 
 if args.directory_list is not None:
-    w_all,we_all,k_all,k_up_all,k_low_all = get_all_transmission_spectra(args.directory_list,args.auto_offset,args.manual_offset,args.anchor_wvl)
+    w_all,we_all,k_all,k_up_all,k_low_all = get_all_transmission_spectra(args.directory_list,args.auto_offset,args.manual_offset,args.anchor_wvl,args.resolution)
     in_list = args.directory_list
 
 if args.trans_spec is not None:
-    w_all,we_all,k_all,k_up_all,k_low_all = load_all_transmission_spectra(args.trans_spec,args.auto_offset,args.manual_offset,args.anchor_wvl)
+    w_all,we_all,k_all,k_up_all,k_low_all = load_all_transmission_spectra(args.trans_spec,args.auto_offset,args.manual_offset,args.anchor_wvl,args.resolution)
     in_list = args.trans_spec
 
 
