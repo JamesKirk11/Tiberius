@@ -73,7 +73,7 @@ if args.t0_offsets is not None:
 
 ntables = len(args.best_fit_tabs)
 
-fig = plt.figure()
+fig = plt.figure(figsize=(12,10))
 subplot_counter = 1
 
 for k in weighted_mean_dict.keys():
@@ -89,8 +89,9 @@ for k in weighted_mean_dict.keys():
     subplot_counter += 1
     ax.set_xticks(np.arange(1,ntables+2))
     if args.labels is None:
-        ax.set_xticklabels(["Table %s"%(i+1) for i in range(ntables)]+["Weighted mean"],fontsize=12)
+        ax.set_xticklabels(["Table %s"%(i+1) for i in range(ntables)]+["Weighted\nmean"],fontsize=12)
     else:
-        ax.set_xticklabels(["%s"%(i) for i in args.labels]+["Weighted mean"],fontsize=12)
+        ax.set_xticklabels(["%s"%(i) for i in args.labels]+["Weighted\nmean"],fontsize=12)
+    ax.tick_params(which='minor',bottom=False,top=False,left=True,right=True)#,direction="inout",length=2,width=1.)
 
 plt.show()
