@@ -331,7 +331,7 @@ else:
     # t0_guess -= int(t0_guess)
     t0 = tmgp.Param(t0_guess)
 
-    if input_dict['t0_prior'] is not None:
+    if input_dict['t0_prior'] is not None and input_dict['t0_prior'] != "fixed":
         sys_priors["t0_prior"] = float(input_dict['t0_prior'])
     else:
         sys_priors["t0_prior"] = None
@@ -682,7 +682,7 @@ if optimise_model or clip_outliers and not median_clip:
 
         if show_plots:
             print("Plotting light curve after outlier clipping...")
-            fig = pu.plot_single_model(fitted_clip_model,clipped_time,clipped_flux,clipped_flux_error,save_fig=False,plot_residual_std=sigma_clip)
+            fig = pu.plot_single_model(fitted_clip_model,clipped_time,clipped_flux,clipped_flux_error,save_fig=False,plot_residual_std=sigma_clip,systematics_model_inputs=clipped_model_input)
 
 
 if not clip_outliers:
