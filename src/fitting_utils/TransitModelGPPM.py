@@ -11,7 +11,7 @@ from Tiberius.src.fitting_utils import parametric_fitting_functions as pf
 from Tiberius.src.fitting_utils import plotting_utils as pu
 
 class TransitModelGPPM(object):
-    def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False,exp_ramp_components=0):
+    def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False,exp_ramp_components=0,step_func=False):
 
         """
         The GPPM transit model class, which uses batman to generate the analytic, quadratically limb-darkened transit light curves, and george to generate the GP red noise models.
@@ -32,6 +32,7 @@ class TransitModelGPPM(object):
         ld_law - the limb darkening law we want to use: linear/quadratic/nonlinear/squareroot
         exp_ramp - True/False. Do you want to additionally fit a 2 component expoential ramp model? Default = False
         exp_ramp_components (int) - The number of exponential ramp components to fit. Default=0, no ramp.
+        step_func - True/False. Do you want to additionally fit a step function model with arbitrary breakpoint? Default = False
 
         Returns:
         TransitModelGPPM object
@@ -49,6 +50,7 @@ class TransitModelGPPM(object):
         self.polynomial_orders = polynomial_orders
         self.exp_ramp_used = exp_ramp
         self.exp_ramp_components = exp_ramp_components
+        self.step_func_used = step_func
 
         # Acknowledge the fact that we're using a polynomial here
         if polynomial_orders is None:
@@ -275,7 +277,11 @@ class TransitModelGPPM(object):
             exponential_ramp_model = self.exponential_ramp(time)
             model *= exponential_ramp_model
 
-        if not self.poly_used and not self.exp_ramp_used: # we're using a normalization constant to offset the transit depth
+        if self.step_func_used:
+            step_model = self.step_function(time)
+            model *= step_model
+
+        if not self.poly_used and not self.exp_ramp_used and not self.step_func_used: # we're using a normalization constant to offset the transit depth
             model *= self.pars['f'].currVal
 
         return model
@@ -338,6 +344,35 @@ class TransitModelGPPM(object):
             return red_noise_trend
 
 
+    def step_function(self,time=None):
+
+        """The function that calculates a step function to help fit out mirror tilt events in JWST data
+
+        Inputs:
+        time - the array of times at which to evaluate the step function
+
+        Returns:
+        step_model - the evaluated step function
+        """
+
+        step_model = np.ones_like(time)
+
+        step_model[:int(self.pars["breakpoint"].currVal)] *= self.pars["step1"].currVal
+        step_model[int(self.pars["breakpoint"].currVal):] *= self.pars["step2"].currVal
+
+        ## If wanting to use two break points, use the below
+        # step_model[:int(self.pars["breakpoint1"].currVal)] *= self.pars["step1"].currVal
+        # step_model[int(self.pars["breakpoint2"].currVal):] *= self.pars["step2"].currVal
+        #
+        # x_break = np.array([int(self.pars["breakpoint1"].currVal),int(self.pars["breakpoint2"].currVal)])
+        # y_break = np.array([step_model[int(self.pars["breakpoint1"].currVal)],step_model[int(self.pars["breakpoint2"].currVal)]])
+        # break_poly = np.poly1d(np.polyfit(x_break,y_break,1))
+        #
+        # step_model[int(self.pars["breakpoint1"].currVal):int(self.pars["breakpoint2"].currVal)] = break_poly(np.arange(int(self.pars["breakpoint1"].currVal),int(self.pars["breakpoint2"].currVal)))
+
+        return step_model
+
+
     def lnprior(self,sys_priors=None):
         """The priors for the MCMC are handled here.
 
@@ -369,7 +404,7 @@ class TransitModelGPPM(object):
 
                 # inclination prior
                 if not self.inc_fixed:
-                    if self.pars['inc'].currVal > 100  or self.pars['inc'].currVal < self.pars['inc'].startVal - 5:
+                    if self.pars['inc'].currVal > 90  or self.pars['inc'].currVal < self.pars['inc'].startVal - 5:
                         return -np.inf
                     if sys_priors["inc_prior"] is not None:
                         retVal += stats.norm(scale=sys_priors["inc_prior"],loc=self.pars['inc'].startVal).pdf(self.pars['inc'].currVal)
@@ -893,7 +928,11 @@ class TransitModelGPPM(object):
                 # put priors on the polynomical parameters
                 bnds += [(-100,100)]*self.exp_ramp_components*2 # these are the coefficients of the expoential ramp
 
-        if full_model and not self.poly_used and not self.exp_ramp_used:
+        if full_model and self.step_func_used:
+            bnds += [(0.9,1.1)]*2 # these are the normalisation constants of the step function
+            bnds += [(0,len(time))] # this is the breakpoint of the step function
+
+        if full_model and not self.poly_used and not self.exp_ramp_used and not self.step_func_used:
             bnds += [(0.5,2)] # this is the bound on the normalization constant that we use if we don't have a polynomial
 
         # Now if we're fitting the full model (all parameters) or we're not using a GP we perform this step
