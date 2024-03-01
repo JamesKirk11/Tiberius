@@ -138,6 +138,12 @@ if bool(int(input_dict['exponential_ramp'])):
 else:
     exp_ramp_used = False
 
+# determine whether we're using a step function or not
+if bool(int(input_dict['step_function'])):
+    step_func_used = True
+else:
+    step_func_used = False
+
 
 # check whether the starting locations for the coefficients are given in fitting_input.txt, otherwise define these here
 if poly_used or exp_ramp_used:
@@ -491,9 +497,13 @@ if exp_ramp_used:
 else:
     exp_ramp_components = 0
 
+if step_func_used:
+    d["step1"] = tmgp.Param(1)
+    d["step2"] = tmgp.Param(1)
+    d["breakpoint"] = tmgp.Param(int(input_dict["step_breakpoint"]))
+    # d["breakpoint2"] = tmgp.Param(int(input_dict["step_breakpoint"])+1)
 
-
-if not poly_used and not exp_ramp_used:
+if not poly_used and not exp_ramp_used and not step_func_used:
     # if we're not using a polynomial, we're including a normalization factor to multiply the transit light curve by to account for imperfect normalisation of out-of-transit data
     d['f'] = tmgp.Param(1)
 
@@ -596,11 +606,19 @@ if optimise_model or clip_outliers and not median_clip:
             if i%2 == 1:
                 d_clip["r%d"%(i+1)] = tmgp.Param(-5) # the r2 parameter
 
+    if step_func_used:
+        d_clip["step1"] = tmgp.Param(1)
+        d_clip["step2"] = tmgp.Param(1)
+        d_clip["breakpoint"] = tmgp.Param(int(input_dict["step_breakpoint"]))
+        # d_clip["breakpoint2"] = tmgp.Param(int(input_dict["step_breakpoint"])+1)
+
+
+
     ### Generate starting model
     if median_clip:
-        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law,exp_ramp_used,exp_ramp_components)
+        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law,exp_ramp_used,exp_ramp_components,step_func_used)
     else:
-        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,flux_error,time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law,exp_ramp_used,exp_ramp_components)
+        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,flux_error,time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law,exp_ramp_used,exp_ramp_components,step_func_used)
 
     if not np.any(flux_error) > 0: # the errors are all zeroes, need to be replaced for sake of fit only
         print("using dummy flux errors for sigma clipping only")
@@ -628,6 +646,9 @@ if optimise_model or clip_outliers and not median_clip:
             initial_red_noise *= fitted_clip_model.red_noise_poly(time)
         if exp_ramp_used:
             initial_red_noise *= fitted_clip_model.exponential_ramp(time)
+        if step_func_used:
+            initial_red_noise *= fitted_clip_model.step_function(time)
+
 
         initial_transit_model = fitted_clip_model.calc(time)/initial_red_noise
 
@@ -703,7 +724,7 @@ pickle.dump(keep_idx,open('data_quality_flags_wb%s.pickle'%(str(wb+1).zfill(4)),
 if clip_outliers:
     print("\n %d data points (%.2f%%) clipped from fit"%(len(time)-len(clipped_time),100*(len(time)-len(clipped_time))/len(time)))
 
-starting_model = tmgp.TransitModelGPPM(d,clipped_model_input,kernel_classes,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders,ld_law,exp_ramp_used,exp_ramp_components)
+starting_model = tmgp.TransitModelGPPM(d,clipped_model_input,kernel_classes,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders,ld_law,exp_ramp_used,exp_ramp_components,step_func_used)
 
 if not optimise_model and show_plots:
     print("plotting starting model")
@@ -883,6 +904,9 @@ if not GP_used:
 
         if exp_ramp_used:
             red_noise_model *= prod_model.exponential_ramp(time)
+
+        if step_func_used:
+            red_noise_model *= prod_model.step_function(time)
 
         pickle.dump(red_noise_model,open('red_noise_model.pickle','wb'))
 
