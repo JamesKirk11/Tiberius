@@ -77,11 +77,11 @@ if not args.white_light_curve:
         fig = pu.plot_models(m,x,y,e,w,save_fig=False,rebin_data=args.rebin_data)
         if args.save_fig and not args.photon_noise:
             if args.rebin_data is None:
-                fig.savefig('fitted_models_wb%d-%d.pdf'%(args.sb+1,args.fb+1),bbox_inches='tight')
-                fig.savefig('fitted_models_wb%d-%d.png'%(args.sb+1,args.fb+1),bbox_inches='tight')
+                fig.savefig('fitted_models_wb%d-%d.pdf'%(args.start_bin+1,args.end_bin+1),bbox_inches='tight')
+                fig.savefig('fitted_models_wb%d-%d.png'%(args.start_bin+1,args.end_bin+1),bbox_inches='tight')
             else:
-                fig.savefig('fitted_models_wb%d-%d_rebin_%d.pdf'%(args.sb+1,args.fb+1,args.rebin_data),bbox_inches='tight')
-                fig.savefig('fitted_models_wb%d-%d_rebin_%d.png'%(args.sb+1,args.fb+1,args.rebin_data),bbox_inches='tight')
+                fig.savefig('fitted_models_wb%d-%d_rebin_%d.pdf'%(args.start_bin+1,args.end_bin+1,args.rebin_data),bbox_inches='tight')
+                fig.savefig('fitted_models_wb%d-%d_rebin_%d.png'%(args.start_bin+1,args.end_bin+1,args.rebin_data),bbox_inches='tight')
 
         fig.show()
         raise SystemExit
@@ -150,6 +150,8 @@ for i,model in enumerate(m):
             red_noise_model *= model.red_noise_poly(x[i])
         if model.exp_ramp_used:
              red_noise_model *= model.exponential_ramp(x[i])
+        if model.step_func_used:
+             red_noise_model *= model.step_function(x[i])
 
         tm = model.calc(x[i])/red_noise_model
 
