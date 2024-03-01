@@ -122,7 +122,7 @@ def recover_quartiles_single(samples,namelist,bin_number,verbose=True,save_resul
 
     # generate dictionary of how many decimal places we want to round each parameter to before calculating the mode of the rounded distribution
     namelist_decimal_places = {"t0":6,"period":6,"k":6,"aRs":2,"inc":2,"ecc":3,"omega":2,\
-                               "u1":2,"u2":2,"u3":2,"u4":2,"f":4,"s":3,"A":3}
+                               "u1":2,"u2":2,"u3":2,"u4":2,"f":4,"s":3,"A":3,"step1":3,"step2":3,"breakpoint":0}
 
     # now pad the dictionray with the systematics coefficients which could be a large number of parameters (although much less than the 100 allowed for below)
     for i in range(100):
