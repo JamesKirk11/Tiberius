@@ -9,7 +9,7 @@ import os
 import pandas as pd
 import pysynphot.binning as astrobin
 import warnings as warn
-from Tiberius.src.reduction_utils import wavelength_calibration as wc
+from reduction_utils import wavelength_calibration as wc
 
 ### define the alkali metal lines, air wavelengths
 sodium_d1 = 5890
@@ -1360,7 +1360,7 @@ def uniform_tophat_mean(newx,x, y, dy=None,nan=False):
 				bin_dy[i] = np.sqrt(np.sum(dy[loc]**2.0))/len(y[loc])
 			bin_n[i] = len(y[loc])
 		#if not give empty slice a nan
-		elif len(loc[0]) is 0 :
+		elif len(loc[0]) == 0 :
 			warn.warn(UserWarning("Empty slice exists within specified new x, replacing value with nan"))
 			ynew[i]=np.nan
 			bin_n[i] = np.nan
@@ -1372,7 +1372,7 @@ def uniform_tophat_mean(newx,x, y, dy=None,nan=False):
 		bin_n[0] = len(y[loc])
 		if dy is not None:
 			bin_dy[0] = np.sqrt(np.sum(dy[loc]**2.0))/len(y[loc])
-	elif len(loc[0]) is 0 :
+	elif len(loc[0]) == 0 :
 		ynew[0]=np.nan
 		bin_n[0] = np.nan
 		if dy is not None:
