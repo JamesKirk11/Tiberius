@@ -11,7 +11,7 @@ from Tiberius.src.fitting_utils import parametric_fitting_functions as pf
 from Tiberius.src.fitting_utils import plotting_utils as pu
 
 class TransitModelGPPM(object):
-    def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False,exp_ramp_components=0,step_func=False):
+    def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False,exp_ramp_components=0,step_func=False,use_spotrod=False):
 
         """
         The GPPM transit model class, which uses batman to generate the analytic, quadratically limb-darkened transit light curves, and george to generate the GP red noise models.
@@ -33,6 +33,7 @@ class TransitModelGPPM(object):
         exp_ramp - True/False. Do you want to additionally fit a 2 component expoential ramp model? Default = False
         exp_ramp_components (int) - The number of exponential ramp components to fit. Default=0, no ramp.
         step_func - True/False. Do you want to additionally fit a step function model with arbitrary breakpoint? Default = False
+        use_spotrod - True/False. Are we using spotrod (not batman) for our transit light curves?
 
         Returns:
         TransitModelGPPM object
@@ -51,6 +52,7 @@ class TransitModelGPPM(object):
         self.exp_ramp_used = exp_ramp
         self.exp_ramp_components = exp_ramp_components
         self.step_func_used = step_func
+        self.spotrod_used = use_spotrod
 
         # Acknowledge the fact that we're using a polynomial here
         if polynomial_orders is None:
@@ -118,7 +120,6 @@ class TransitModelGPPM(object):
             self.fix_u1 = self.fix_u2 = False
 
         ##### Batman initialisation - note this is first outside of model calculation as it is the fastest way
-
         self.batman_params = batman.TransitParams()
         if self.white_light_fit:
             self.batman_params.t0 = self.pars['t0'].currVal                       #time of inferior conjunction
@@ -266,7 +267,64 @@ class TransitModelGPPM(object):
             if np.any(time != self.time_array): # optionally recalculating batman model if the time array has changed
                 self.batman_model = batman.TransitModel(self.batman_params, time, nthreads=1)
 
-        transitShape = self.batman_model.light_curve(self.batman_params)
+        if not self.spotrod_used:
+            transitShape = self.batman_model.light_curve(self.batman_params)
+        else:
+           # Set transit parameters.
+            period = 4.5445697
+            periodhour = 24.0*period
+            semimajoraxis = 25.01
+            impactparam = 0.04
+
+            if self.white_light_fit:
+
+                t0 = self.pars['t0'].currVal                       #time of inferior conjunction
+
+                if not self.period_fixed:
+                    period = self.pars['period'].currVal                      #orbital period
+                else:
+                    period = self.pars["period"]
+                if not self.ars_fixed:
+                    aRs = self.pars['aRs'].currVal                       #semi-major axis (in units of stellar radii)
+                else:
+                    aRs = sef.pars["aRs"]
+                if not self.inc_fixed:
+                    inclination = self.pars['inc'].currVal                     #orbital inclination (in degrees)
+                else:
+                    inclination = self.pars["inc"]
+                if not self.ecc_fixed:   # eccentricity
+                    eccentricity = self.pars['ecc'].currVal
+                else:
+                    eccentricity = self.pars['ecc']
+                if not self.omega_fixed:   # longitude of periastron
+                    omega = self.pars['omega'].currVal
+                else:
+                    omega = self.pars['omega']
+
+            # work from here....
+
+            # Weights: 2.0 times limb darkening times width of integration annulii.
+            f = 2.0 * quadraticlimbdarkening(r, self.pars['u1'].currVal, self.pars['u2'].currVal) / 1000
+
+            if self.white_light_fit:
+                impactparam = self.pars['inc'].currval*np.cos(self.pars['inc'].currVal*np.pi/180.) # check this equation
+                phase = np.mod((time-self.pars['t0'].currVal)/self.period+0.5, 1.0)-0.5
+                # Calculate orbital elements.
+                if not
+                eta, xi = spotrod.elements(time-self.pars['t0'].currVal, self.period, self.pars['inc'].currval, k, h);
+                planetx = impactparam*eta/semimajoraxis;
+                planety = -xi;
+                z = np.sqrt(np.power(planetx,2) + np.power(planety,2));
+                # Calculate planetangle array.
+                planetangle = np.array([spotrod.circleangle(r, rp, z[i]) for i in xrange(z.shape[0])]);
+
+            else:
+                phase = self.phase
+
+
+
+            fit = spotrod.integratetransit(planetx, planety, z, rp, r, f, np.array([spotx,spotx2]), np.array([spoty,spoty2]), np.array([spotradius,spotradius2]), np.array([spotcontrast,spotcontrast2]), planetangle);
+
         model = transitShape
 
         if self.poly_used: # then we're using a polynomial to fit systematics
