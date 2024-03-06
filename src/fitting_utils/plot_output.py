@@ -9,8 +9,8 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 from global_utils import parseInput
-from Tiberius.src.fitting_utils import plotting_utils as pu
-from Tiberius.src.fitting_utils import mcmc_utils as mc
+from fitting_utils import plotting_utils as pu
+from fitting_utils import mcmc_utils as mc
 
 ### Define command line arguments with help
 
