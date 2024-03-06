@@ -7,8 +7,8 @@ import george
 from george import kernels
 from scipy import optimize,stats
 import matplotlib.pyplot as plt
-from Tiberius.src.fitting_utils import parametric_fitting_functions as pf
-from Tiberius.src.fitting_utils import plotting_utils as pu
+from fitting_utils import parametric_fitting_functions as pf
+from fitting_utils import plotting_utils as pu
 
 class TransitModelGPPM(object):
     def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False,exp_ramp_components=0,step_func=False):

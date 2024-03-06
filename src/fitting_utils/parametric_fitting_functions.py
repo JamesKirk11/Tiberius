@@ -8,8 +8,8 @@ import sys
 import os
 import copy
 from collections import OrderedDict
-from Tiberius.src.fitting_utils import TransitModelGPPM as tmgp
-from Tiberius.src.fitting_utils import plotting_utils as pu
+from fitting_utils import TransitModelGPPM as tmgp
+from fitting_utils import plotting_utils as pu
 
 def systematics_model(p0,model_inputs,poly_orders,normalise_inputs=False,deconstruct_polys=False):
 
