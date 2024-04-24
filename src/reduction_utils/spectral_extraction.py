@@ -110,6 +110,12 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
         x = np.arange(ncols)[np.isfinite(row)]+search_left_edge
         row = row[np.isfinite(row)]
 
+        if len(row) == 0:
+            trace_centre.append(0)
+            fwhm.append(np.nan)
+            gauss_std.append(np.nan)
+            continue
+
         if instrument == "Keck/NIRSPEC":
             # clip out negative frame from A-B
             row_residuals_1 = row - np.median(row)
@@ -125,7 +131,6 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
             row = row[keep_index_2]
 
         nerrors = 0 # running count of errors
-
         centre_guess = peak_counts_location = x[np.argmax(row)]
         amplitude = np.nanmax(row)
         amplitude_offset = np.nanmin(row)
