@@ -694,9 +694,16 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
             background_fit = poly_dict[chosen_order]
 
         else: # polynomial with user-defined order
-            poly = np.poly1d(np.polyfit(bkg_cols_keep,y_keep,poly_bg_order))
-            background_fit = poly(np.arange(left_bkg_left_hand_edge,right_bkg_right_hand_edge))
-            bkg_poly_orders_used.append(poly_bg_order)
+
+            if len(y_keep) > 0:
+                poly = np.poly1d(np.polyfit(bkg_cols_keep,y_keep,poly_bg_order))
+                background_fit = poly(np.arange(left_bkg_left_hand_edge,right_bkg_right_hand_edge))
+                bkg_poly_orders_used.append(poly_bg_order)
+
+            else: # if the array is empty, then eveything has been clipped due to NaNs so we'll set the background = 0
+                poly = np.poly1d(0)
+                background_fit = poly(np.arange(left_bkg_left_hand_edge,right_bkg_right_hand_edge))
+                bkg_poly_orders_used.append(0)
 
         # Now saving the clipped sky regions
         if "JWST" not in instrument:
