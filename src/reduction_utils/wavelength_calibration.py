@@ -551,7 +551,7 @@ def plot_and_fit_regions(stellar_spectrum,wvl_input,guess_dict,verbose=False,wor
             minimum = x[np.argmin(norm_y)]
             star_centres_argmin.append(minimum)
             centre_guess = minimum
-            amplitude_guess = norm_y.min()
+            amplitude_guess = 1-norm_y.min()
 
         else:
             # Find argmax
@@ -659,7 +659,7 @@ def calc_wvl_solution(pixel_values,line_wvls,poly_order,stellar_spectrum,verbose
     model = poly(pixel_values)
     residuals = line_wvls - model
     npoints = len(pixel_values)
-    
+
     if refit_clip is not None:
 
         keep_index = ((residuals >= -refit_clip*median_absolute_deviation(residuals)) & (residuals <= refit_clip*median_absolute_deviation(residuals)))
