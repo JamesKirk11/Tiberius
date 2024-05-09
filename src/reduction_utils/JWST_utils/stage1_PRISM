@@ -1,8 +1,8 @@
 #!/bin/bash
 # following steps as defined here: https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html#calwebb-detector1
 #conda activate JWST
-export CRDS_PATH=$HOME/crds_cache/jwst_pub
-export CRDS_SERVER_URL=https://jwst-crds-pub.stsci.edu
+export CRDS_PATH=$HOME/crds_cache/jwst
+export CRDS_SERVER_URL=https://jwst-crds.stsci.edu
 echo ""
 echo "****running group scale****"
 echo ""
