@@ -23,7 +23,7 @@ except:
     bias_name = f[0].header["R_SUPERB"]
 
 instrument = f[0].header["INSTRUME"].lower()
-super_bias = fits.open("%s/crds_cache/jwst_pub/references/jwst/%s/%s"%(home,instrument,bias_name))
+super_bias = fits.open("%s/crds_cache/jwst/references/jwst/%s/%s"%(home,instrument,bias_name))
 
 extension = 1
 nints,ngroups,nrows,ncols = f[extension].data.shape
