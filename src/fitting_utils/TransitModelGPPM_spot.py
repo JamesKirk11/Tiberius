@@ -206,38 +206,39 @@ class TransitModelGPPM(object):
             self.batman_params.limb_dark = self.ld_law
             
         ### star spot parameters
-        try:
-            self.inc_stellar = self.pars['inc_stellar'].currVal * u.deg
-            self.inc_stellar_fixed = False
-        except:
-            self.inc_stellar = self.pars['inc_stellar'] * u.deg          
-            self.inc_stellar_fixed = True
-        try:
-            self.spot_radius = np.array([[self.pars['spot_radius'].currVal]])
-            self.spot_radius_fixed = False
-        except:
-            self.spot_radius = np.array([[self.pars['spot_radius']]])     
-            self.spot_radius_fixed = True
-        try:
-            self.spot_lat = np.array([[self.pars['spot_lat'].currVal]]) * u.deg
-            self.spot_lat_fixed = False
-        except:
-            self.spot_lat = np.array([[self.pars['spot_lat']]]) * u.deg          
-            self.spot_lat_fixed = True
-        try:
-            self.spot_lon = np.array([[self.pars['spot_lon'].currVal]]) * u.deg
-            self.spot_lon_fixed = False
-        except:
-            self.spot_lon = np.array([[self.pars['spot_lon']]]) * u.deg          
-            self.spot_lon_fixed = True
-        try:
-            self.spot_contrast = self.pars['spot_contrast'].currVal
-            self.spot_contrast_fixed = False
-        except:
-            self.spot_contrast = self.pars['spot_contrast']     
-            self.spot_contrast_fixed = True
-
         if self.fit_spot_model:
+            try:
+                self.inc_stellar = self.pars['inc_stellar'].currVal * u.deg
+                self.inc_stellar_fixed = False
+            except:
+                self.inc_stellar = self.pars['inc_stellar'] * u.deg          
+                self.inc_stellar_fixed = True
+            try:
+                self.spot_radius = np.array([[self.pars['spot_radius'].currVal]])
+                self.spot_radius_fixed = False
+            except:
+                self.spot_radius = np.array([[self.pars['spot_radius']]])     
+                self.spot_radius_fixed = True
+            try:
+                self.spot_lat = np.array([[self.pars['spot_lat'].currVal]]) * u.deg
+                self.spot_lat_fixed = False
+            except:
+                self.spot_lat = np.array([[self.pars['spot_lat']]]) * u.deg          
+                self.spot_lat_fixed = True
+            try:
+                self.spot_lon = np.array([[self.pars['spot_lon'].currVal]]) * u.deg
+                self.spot_lon_fixed = False
+            except:
+                self.spot_lon = np.array([[self.pars['spot_lon']]]) * u.deg          
+                self.spot_lon_fixed = True
+            try:
+                self.spot_contrast = self.pars['spot_contrast'].currVal
+                self.spot_contrast_fixed = False
+            except:
+                self.spot_contrast = self.pars['spot_contrast']     
+                self.spot_contrast_fixed = True
+
+
             self.rotation_period = self.pars['stellar_rotation_period']   
             self.star = Star(spot_contrast=self.spot_contrast, u_ld=self.batman_params.u, rotation_period=self.rotation_period)
             self.transit_with_spot_lightcurve = self.star.light_curve(self.spot_lon, self.spot_lat, self.spot_radius,\
