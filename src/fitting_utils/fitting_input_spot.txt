@@ -22,10 +22,10 @@ period =	2.7347703	# the orbital period of the planet in days.
 period_prior = fixed # the prior to be placed on the period, if a fit parameter. If period is fixed, set this to 'fixed'. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'period' parameter.
 
 inclination = 83.8397 # the inclination of the planet's orbit in degrees. If this is a white light curve fit, this parameter is fitted for otherwise it is held fixed.
-inclination_prior =  fixed	# the prior to be placed on the inclination, if a fit parameter. If inclination is fixed, set this to 'fixed'. If left blank, a wide uniform prior is used. If inclination is fixed, set this to 'fixed'. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'inclination' parameter.
+inclination_prior =  0.001	# the prior to be placed on the inclination, if a fit parameter. If inclination is fixed, set this to 'fixed'. If left blank, a wide uniform prior is used. If inclination is fixed, set this to 'fixed'. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'inclination' parameter.
 
 aRs =   	5.5574		# the a/Rs of the system. If this is a white light curve fit, this parameter is fitted for otherwise it is held fixed.
-aRs_prior =  	fixed		# the prior to be placed on the a/Rs, if a fit parameter. If a/Rs is fixed, set this to 'fixed'. If left blank, a wide uniform prior is used. If a/Rs is fixed, set this to 'fixed'. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'aRs' parameter.
+aRs_prior =  	0.001		# the prior to be placed on the a/Rs, if a fit parameter. If a/Rs is fixed, set this to 'fixed'. If left blank, a wide uniform prior is used. If a/Rs is fixed, set this to 'fixed'. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'aRs' parameter.
 
 k =  0.0896		# the Rp/Rs of the system. This is just a starting value and is always fitted for.
 k_prior = 	0.01		# the prior to be placed on the Rp/Rs. If left blank, a wide uniform prior is used. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'k' parameter.
@@ -83,7 +83,8 @@ FeH_err = 	0.12	# error in Fe/H of star
 stellar_rotation_period = 25 # in days, only needed for stellar spot modelling
 
 # Spot parameters for spot modelling with fleck
-inc_stellar = 90 # in degrees
+inc_stellar = 90 # in degrees, the stellar inclination
+obl_lambda = 0.6 # in degrees, the obliquity of the planetary system
 spot_radius = 0.1 # in stellar radii percentage?
 spot_lat = -40 # in degrees
 spot_lon = 20 # in degrees

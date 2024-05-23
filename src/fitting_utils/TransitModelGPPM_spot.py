@@ -207,6 +207,7 @@ class TransitModelGPPM(object):
             
         ### star spot parameters
         if self.fit_spot_model:
+            self.batman_params.lam = self.pars['obl_lambda']
             try:
                 self.inc_stellar = self.pars['inc_stellar'].currVal * u.deg
                 self.inc_stellar_fixed = False

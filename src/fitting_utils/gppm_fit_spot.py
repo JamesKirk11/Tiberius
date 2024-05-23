@@ -412,6 +412,7 @@ if input_dict['spot_fitting'] is not None:
     fit_spot_model = True
     
     d['stellar_rotation_period'] = float(input_dict['stellar_rotation_period'])
+    d['obl_lambda'] = float(input_dict['obl_lambda'])
     
     spot_fits = np.array([int(i) for i in input_dict['spot_fitting'].split(',')])
     spot_parameters = ['inc_stellar','spot_radius','spot_lat','spot_lon','spot_contrast']
