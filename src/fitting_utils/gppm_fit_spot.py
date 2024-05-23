@@ -911,6 +911,10 @@ if not GP_used:
 
         common_noise_model = flux/transit_model
         pickle.dump(common_noise_model,open('common_noise_model.pickle','wb'))
+        
+        if fit_spot_model:
+            spot_model = prod_model.spot_model(time)
+            pickle.dump(spot_model,open('spot_model.pickle','wb'))
 
 else:
     fig = pu.plot_single_model(prod_model,clipped_time,clipped_flux,e,rebin_data=rebin_data,save_fig=True,wavelength_bin=wb,deconstruct=True)
@@ -928,6 +932,10 @@ else:
         tm = prod_model.calc(time,systematics_model_inputs)
         common_noise_model = flux/tm
         pickle.dump(common_noise_model,open("common_noise_model.pickle","wb"))
+        
+        if fit_spot_model:
+            spot_model = prod_model.spot_model(time)
+            pickle.dump(spot_model,open('spot_model.pickle','wb'))
 
 
 if white_light_fit: # make plot of rms vs bins and expected vs calculated LDCs for white light curve. If wb fits, this is handled elsewhere
