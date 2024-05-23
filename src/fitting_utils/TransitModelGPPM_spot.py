@@ -394,14 +394,14 @@ class TransitModelGPPM(object):
             times = np.array(self.time_array)
             
         
-        self.star = Star(spot_contrast=self.spot_contrast, u_ld=self.batman_params.u, rotation_period=rotation_period)
-        overall_model = self.star.light_curve(self.spot_lon, self.spot_lat, self.spot_radius,\
+        star = Star(spot_contrast=self.spot_contrast, u_ld=self.batman_params.u, rotation_period=self.rotation_period)
+        overall_model = star.light_curve(self.spot_lon, self.spot_lat, self.spot_radius,\
                                                  self.inc_stellar,planet=self.batman_params,times=times)
         overall_model = overall_model.flatten()
         # star without spot
-        self.star_without_spot = Star(spot_contrast=self.zero_spot_contrast, u_ld=self.batman_params.u, \
+        star_without_spot = Star(spot_contrast=self.zero_spot_contrast, u_ld=self.batman_params.u, \
                                       rotation_period=self.rotation_period)
-        transitShape = self.star_without_spot.light_curve(self.zero_spot_lon, self.zero_spot_lat, self.zero_spot_radius,\
+        transitShape = star_without_spot.light_curve(self.zero_spot_lon, self.zero_spot_lat, self.zero_spot_radius,\
                                                           self.inc_stellar,planet=self.batman_params,times=times)
         transitShape = transitShape.flatten()
         
