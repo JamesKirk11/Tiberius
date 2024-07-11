@@ -122,7 +122,7 @@ def recover_quartiles_single(samples,namelist,bin_number,verbose=True,save_resul
 
     # generate dictionary of how many decimal places we want to round each parameter to before calculating the mode of the rounded distribution
     namelist_decimal_places = {"t0":6,"period":6,"k":6,"aRs":2,"inc":2,"ecc":3,"omega":2,\
-                               "u1":2,"u2":2,"u3":2,"u4":2,"f":4,"s":3,"A":3,"step1":3,"step2":3,"breakpoint":0}
+                               "u1":2,"u2":2,"u3":2,"u4":2,"f":4,"s":3,"A":3,"step1":3,"step2":3,"breakpoint":0,"lniL":2}
 
     # now pad the dictionray with the systematics coefficients which could be a large number of parameters (although much less than the 100 allowed for below)
     for i in range(100):
@@ -503,7 +503,10 @@ def run_emcee(starting_model,x,y,e,nwalk,nsteps,nthreads,burn=False,wavelength_b
 
     if not burn:
         pickle.dump(fitted_model,open('prod_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
-        pickle.dump(mode_model,open('parameter_modes_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
+        try:
+            pickle.dump(mode_model,open('parameter_modes_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
+        except:
+            pass
 
     if burn:
         print("...burn-in complete for bin %d"%(wavelength_bin+1))
