@@ -500,7 +500,10 @@ else:
 if step_func_used:
     d["step1"] = tmgp.Param(1)
     d["step2"] = tmgp.Param(1)
-    d["breakpoint"] = tmgp.Param(int(input_dict["step_breakpoint"]))
+    if white_light_fit:
+        d["breakpoint"] = tmgp.Param(float(input_dict["step_breakpoint"]))
+    else:
+        d["breakpoint"] = float(input_dict["step_breakpoint"])
     # d["breakpoint2"] = tmgp.Param(int(input_dict["step_breakpoint"])+1)
 
 if not poly_used and not exp_ramp_used and not step_func_used:
@@ -609,7 +612,10 @@ if optimise_model or clip_outliers and not median_clip:
     if step_func_used:
         d_clip["step1"] = tmgp.Param(1)
         d_clip["step2"] = tmgp.Param(1)
-        d_clip["breakpoint"] = tmgp.Param(int(input_dict["step_breakpoint"]))
+        if white_light_fit:
+            d_clip["breakpoint"] = tmgp.Param(float(input_dict["step_breakpoint"]))
+        else:
+            d_clip["breakpoint"] = float(input_dict["step_breakpoint"])
         # d_clip["breakpoint2"] = tmgp.Param(int(input_dict["step_breakpoint"])+1)
 
 
