@@ -13,7 +13,7 @@ from fitting_utils import plotting_utils as pu
 from fitting_utils import priors
 
 class CatwomanModel(object):
-    def __init__(self,pars_dict,flux,flux_error,time_array,prior_dict,nested_parameters,k_m_e_equal=False,ld_law="quadratic"):
+    def __init__(self,pars_dict,flux,flux_error,time_array,prior_dict,nested_parameters,k_m_e_equal=False,ld_law="quadratic",cw_fac=None):
 
         """
         
@@ -25,8 +25,9 @@ class CatwomanModel(object):
         time_array        - the array of time
         prior_dict        - dictionary with all the information needed to set up the priors (see fitting_input)
         nested_parameters - parameters needed for dynesty; array of live points per dimension and precision criterion
-        ld_law            - the limb darkening law we want to use: linear/quadratic/nonlinear/squareroot, default = quadratic
         k_m_e_equal       - if morning and evening limb are forced to have the same radius (True or False), default=False
+        ld_law            - the limb darkening law we want to use: linear/quadratic/nonlinear/squareroot, default = quadratic
+        cw_fac            - scaling factor for catwoman to make it run faster
         
         
 
@@ -45,6 +46,7 @@ class CatwomanModel(object):
         self.k_m_e_equal = k_m_e_equal
         self.nDims_dict = []
         self.live_points, self.precision_criterion = nested_parameters
+        self.catwoman_fac = cw_fac
 
 
         self.namelist = [k for k in self.pars.keys() if self.pars[k] is not None and not isinstance(self.pars[k],float)]
@@ -83,7 +85,7 @@ class CatwomanModel(object):
         self.catwoman_params.inc = self.pars['inc']            #orbital inclination (in degrees)
         self.catwoman_params.ecc = self.pars['ecc']            #eccentricity
         self.catwoman_params.w = self.pars['w']                #longitude of periastron (in degrees)
-        self.catwoman_params.phi = 0.                          #angle of rotation of top semi-circle (in degrees)
+        self.catwoman_params.phi = 90.                          #angle of rotation of top semi-circle (in degrees)
 
         if self.k_m_e_equal:
             self.catwoman_params.rp = self.pars['k'].currVal   #if morning = evening we only have one radius
@@ -130,7 +132,7 @@ class CatwomanModel(object):
         else:
             self.catwoman_params.limb_dark = self.ld_law
 
-        self.catwoman_model = catwoman.TransitModel(self.catwoman_params, time_array)    #initializes model
+        self.catwoman_model = catwoman.TransitModel(self.catwoman_params, time_array,fac=self.catwoman_fac)    #initializes model
 
         self.nDims_dict.append('infl_err') # add for error inflation
 
@@ -185,7 +187,7 @@ class CatwomanModel(object):
 
         if time is not None:
             if np.any(time != self.time_array): # optionally recalculating catwoman model if the time array has changed
-                self.catwoman_model = catwoman.TransitModel(self.catwoman_params, time, nthreads=1)
+                self.catwoman_model = catwoman.TransitModel(self.catwoman_params, time, fac=self.catwoman_fac)
 
         model = self.catwoman_model.light_curve(self.catwoman_params)
         return model
@@ -262,7 +264,7 @@ class CatwomanModel(object):
         else:
             #add exit here 
             print('Choose either normal or uniform prior for err_inflation')
-            
+
         return theta
 
 
@@ -279,7 +281,6 @@ class CatwomanModel(object):
 
 
     def loglikelihood(self,theta):
-
         self.update_model(theta)
         
         model_values = self.calc(self.time_array)
@@ -291,11 +292,12 @@ class CatwomanModel(object):
         N = len(self.flux_array)
         logL = -N/2. *  np.log(2*np.pi)
         logL += - np.sum(np.log(new_noise)) - np.sum(residuals**2 / (2 * new_noise**2))
+
         return logL
 
 
     def run_dynesty(self):
-
+        
         sampler = dynesty.NestedSampler(self.loglikelihood, self.prior_setup, self.nDims,nlive=self.live_points*self.nDims)
         sampler.run_nested(dlogz=self.precision_criterion, print_progress=True) 
         results = sampler.results
