@@ -141,9 +141,8 @@ d['infl_err'] = cwm.Param(1.)
 
 print(d)
 model = cwm.CatwomanModel(d,flux,flux_error,time,prior_dict,nested_parameters,k_m_e_equal,ld_law) #,cw_fac=0.0001
-print(model.calc(time))
 print(model.return_curr_parameters())
-print(model.loglikelihood([10560,10560,1.0]))
+
 result = model.run_dynesty()
 
 pickle.dump(result, open('result_wb%s.pickle'%(str(wb+1).zfill(2)),'wb'))
