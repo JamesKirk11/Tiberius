@@ -114,8 +114,8 @@ d['w'] = float(input_dict['omega'])
 if k_m_e_equal:
     d['k'] = cwm.Param(float(input_dict['k']))
 else:
-    d['k1'] = cwm.Param(float(input_dict['k']))
-    d['k2'] = cwm.Param(float(input_dict['k']))
+    d['k_e'] = cwm.Param(float(input_dict['k']))
+    d['k_m'] = cwm.Param(float(input_dict['k']))
 
 if FIX_U1:
     d['u1'] = u1

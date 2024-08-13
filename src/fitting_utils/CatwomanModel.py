@@ -92,10 +92,10 @@ class CatwomanModel(object):
             self.catwoman_params.rp2 = self.pars['k'].currVal
             self.nDims_dict.append('k')
         else:
-            self.catwoman_params.rp = self.pars['k1'].currVal  #top semi-circle radius (in units of stellar radii)
-            self.catwoman_params.rp2 = self.pars['k2'].currVal #bottom semi-circle radius (in units of stellar radii)
-            self.nDims_dict.append('k1')
-            self.nDims_dict.append('k2')
+            self.catwoman_params.rp = self.pars['k_e'].currVal  #top semi-circle radius (in units of stellar radii), if 90 degrees, that's evening
+            self.catwoman_params.rp2 = self.pars['k_m'].currVal #bottom semi-circle radius (in units of stellar radii), if 90 degrees that's morning
+            self.nDims_dict.append('k_e')
+            self.nDims_dict.append('k_m')
             
         # limb-darkening 
         gamma = []
@@ -155,8 +155,8 @@ class CatwomanModel(object):
             self.catwoman_params.rp = self.pars['k'].currVal   #if morning = evening we only have one radius
             self.catwoman_params.rp2 = self.pars['k'].currVal  
         else:
-            self.catwoman_params.rp = self.pars['k1'].currVal  #top semi-circle radius (in units of stellar radii)
-            self.catwoman_params.rp2 = self.pars['k2'].currVal #bottom semi-circle radius (in units of stellar radii)
+            self.catwoman_params.rp = self.pars['k_e'].currVal  #top semi-circle radius (in units of stellar radii)
+            self.catwoman_params.rp2 = self.pars['k_m'].currVal #bottom semi-circle radius (in units of stellar radii)
 
         # set up limb darkening coefficients
         gamma = []
@@ -206,26 +206,16 @@ class CatwomanModel(object):
         
         index_run = 0
         if self.k_m_e_equal:
-            if self.prior_dict['k_m_prior'] == 'N':
-                theta[index_run] = priors.GaussianPrior(self.prior_dict['k_m_1'],self.prior_dict['k_m_2'])(np.array(x[index_run]))
+            if self.prior_dict['k_e_prior'] == 'N':
+                theta[index_run] = priors.GaussianPrior(self.prior_dict['k_e_1'],self.prior_dict['k_e_2'])(np.array(x[index_run]))
                 index_run += 1
-            elif self.prior_dict['k_m_prior'] == 'U':
-                theta[index_run] = priors.UniformPrior(self.prior_dict['k_m_1'],self.prior_dict['k_m_2'])(np.array(x[index_run]))
+            elif self.prior_dict['k_e_prior'] == 'U':
+                theta[index_run] = priors.UniformPrior(self.prior_dict['k_e_1'],self.prior_dict['k_e_2'])(np.array(x[index_run]))
                 index_run += 1
             else:
                 #add exit here 
                 print('Choose either normal or uniform prior') 
         else:
-            if self.prior_dict['k_m_prior'] == 'N':
-                theta[index_run] = priors.GaussianPrior(self.prior_dict['k_m_1'],self.prior_dict['k_m_2'])(np.array(x[index_run]))
-                index_run += 1
-            elif self.prior_dict['k_m_prior'] == 'U':
-                theta[index_run] = priors.UniformPrior(self.prior_dict['k_m_1'],self.prior_dict['k_m_2'])(np.array(x[index_run]))
-                index_run += 1
-            else:
-                #add exit here 
-                print('Choose either normal or uniform prior for k_m')
-                
             if self.prior_dict['k_e_prior'] == 'N':
                 theta[index_run] = priors.GaussianPrior(self.prior_dict['k_e_1'],self.prior_dict['k_e_2'])(np.array(x[index_run]))
                 index_run += 1
@@ -235,6 +225,17 @@ class CatwomanModel(object):
             else:
                 #add exit here 
                 print('Choose either normal or uniform prior for k_e')
+            
+            if self.prior_dict['k_m_prior'] == 'N':
+                theta[index_run] = priors.GaussianPrior(self.prior_dict['k_m_1'],self.prior_dict['k_m_2'])(np.array(x[index_run]))
+                index_run += 1
+            elif self.prior_dict['k_m_prior'] == 'U':
+                theta[index_run] = priors.UniformPrior(self.prior_dict['k_m_1'],self.prior_dict['k_m_2'])(np.array(x[index_run]))
+                index_run += 1
+            else:
+                #add exit here 
+                print('Choose either normal or uniform prior for k_m')
+            
 
         if not self.fix_u1:
             theta[index_run] = priors.GaussianPrior(self.prior_dict['u1'],
