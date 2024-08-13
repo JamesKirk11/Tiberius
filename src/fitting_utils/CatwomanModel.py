@@ -291,14 +291,13 @@ class CatwomanModel(object):
         
         N = len(self.flux_array)
         logL = -N/2. *  np.log(2*np.pi)
-        logL += - np.sum(np.log(new_noise)) - np.sum(residuals**2 / (2 * new_noise**2))
+        logL += - np.nansum(np.log(new_noise)) - np.nansum(residuals**2 / (2 * new_noise**2))
 
         return logL
 
 
     def run_dynesty(self):
-        
-        sampler = dynesty.NestedSampler(self.loglikelihood, self.prior_setup, self.nDims,nlive=self.live_points*self.nDims)
+        sampler = dynesty.NestedSampler(self.loglikelihood, self.prior_setup, self.nDims,nlive=self.live_points*self.nDims)#,sample='rslice')
         sampler.run_nested(dlogz=self.precision_criterion, print_progress=True) 
         results = sampler.results
 
