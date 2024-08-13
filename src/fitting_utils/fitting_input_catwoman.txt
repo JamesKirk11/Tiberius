@@ -8,20 +8,20 @@
 # Note that the flux file should be a clean transit light curve with all systematics models removed!
 
 time_file =  ./time.pickle 
-flux_file =	 ./flux.pickle 
-error_file = ./err.pickle 
+flux_file =	 ./W94Ab_light_curves_without_polynom.pickle 
+error_file = ./W94Ab_light_curves_without_polynom_err.pickle 
 
 
 ### System parameters
 # here we assume that all system parameters are fixed
 
-period =	  2.8531054	    # the orbital period of the planet in days.
-inclination = 86.937        # the inclination of the planet's orbit in degrees. 
-aRs =   	  13.01	        # the a/Rs of the system. 
-ecc =         0.15          # eccentricity of the system.
-omega =       137           # argument of periastron of the system.
-t0 =	      60495.478814	# the time of mid transit in days.
-k =           0.1           # Rp/Rs, this is always fitted for (see further down).
+period =	  3.9501907	    # the orbital period of the planet in days.
+inclination = 88.70        # the inclination of the planet's orbit in degrees. 
+aRs =   	  7.279	        # the a/Rs of the system. 
+ecc =         0.          # eccentricity of the system.
+omega =       90           # argument of periastron of the system.
+t0 =	      60468.808671	# the time of mid transit in days.
+k =           0.10560          # Rp/Rs, this is always fitted for (see further down).
 
 first_integration = 0       # this allows you to clip the first N integrations from your light curves. This uses Python indexing.
 last_integration = -1       # this allows you to clip the last N integrations from your light curves. This uses Python indexing.
@@ -42,12 +42,12 @@ wvl_centres =
 wvl_bin_full_width = 
 
 # stellar parameters for limb-darkening generating codes
-Teff = 	3556	       # Stellar effective temperature in K
-Teff_err = 	70         # Error in stellar effective temperature, in K
-logg_star = 4.727      # log(g) of star
-logg_star_err = 0.029  # error in  log(g) of star
-FeH = 	-0.06          # Fe/H of star
-FeH_err = 	0.12       # error in Fe/H of star
+Teff = 	6112	       # Stellar effective temperature in K
+Teff_err = 	6         # Error in stellar effective temperature, in K
+logg_star = 4.300      # log(g) of star
+logg_star_err = 0.015  # error in  log(g) of star
+FeH = 	0.305          # Fe/H of star
+FeH_err = 	0.003       # error in Fe/H of star
 
 
 
@@ -55,24 +55,24 @@ FeH_err = 	0.12       # error in Fe/H of star
 
 k_m_e_equal = 0         # Run the case where evening and morning radii are equal (e.g. to do model comparison), 1 = on, 0 = off, k_m defines prior
 
-# morning (m) and evening (e) radii 
-k_m_prior = N           # Gaussian/Normal (N) or uniform (U) prior 
-k_m_1 = 0.0379		    # If k_prior = N, this is the centre of the Gaussian prior, if k_prior = U this is the lower boundary
-k_m_2 = 0.01		    # If k_prior = N, this is the std of the Gaussian prior, if k_prior = U this is the upper boundary
-
+# evening (e) and morning (m) radii 
 k_e_prior = N           # Gaussian/Normal (N) or uniform (U) prior 
-k_e_1 = 0.0379		    # If k_prior = N, this is the centre of the Gaussian prior, if k_prior = U this is the lower boundary
-k_e_2 = 0.01		    # If k_prior = N, this is the std of the Gaussian prior, if k_prior = U this is the upper boundary
+k_e_1 = 0.10560		    # If k_prior = N, this is the centre of the Gaussian prior, if k_prior = U this is the lower boundary
+k_e_2 = 0.001		    # If k_prior = N, this is the std of the Gaussian prior, if k_prior = U this is the upper boundary
+
+k_m_prior = N           # Gaussian/Normal (N) or uniform (U) prior 
+k_m_1 = 0.10560 		    # If k_prior = N, this is the centre of the Gaussian prior, if k_prior = U this is the lower boundary
+k_m_2 = 0.001		    # If k_prior = N, this is the std of the Gaussian prior, if k_prior = U this is the upper boundary
 
 # inflate error bars
 error_infl_prior = N    # Gaussian/Normal (N) or uniform (U) prior 
-err_1 = 0.0379		    # If error_infl_prior = N, this is the centre of the Gaussian prior, if error_infl_prior = U this is the lower boundary
+err_1 = 1.0		    # If error_infl_prior = N, this is the centre of the Gaussian prior, if error_infl_prior = U this is the lower boundary
 err_2 = 0.01		    # If error_infl_prior = N, this is the std of the Gaussian prior, if error_infl_prior = U this is the upper boundary
 
 # If you choose to fit the limb-darkening parameters, a Gaussian prior will be placed on the ones that aren't fixed here
 ld_law = quadratic      # choose between linear/quadratic/squareroot/nonlinear/
 fix_u1 = 1 	            # Do we want to fix the first ld coefficient? Set to 1 (on) or 0 (off).
-fix_u2 = 0              # Do we want to fix the second ld coefficient? Set to 1 (on) or 0 (off).
+fix_u2 = 1              # Do we want to fix the second ld coefficient? Set to 1 (on) or 0 (off).
 fix_u3 =  0             # Do we want to fix the first ld coefficient? Set to 1 (on) or 0 (off).
 fix_u4 = 0              # Do we want to fix the second ld coefficient? Set to 1 (on) or 0 (off).
 ld_unc_multiplier = 3 	# If wanting to inflate the std on the Gaussian priors for the LDCs, set this to a factor. e.g. setting to 3, inflates errors by a factor of 3.
@@ -81,15 +81,15 @@ ld_unc_multiplier = 3 	# If wanting to inflate the std on the Gaussian priors fo
 
 ### Nested sampling parameters
 
-nLive_pdim = 10              # will be multiplied by the number of parameters, so the 'real' live points = nLive_pdim * nDims
-precision_criterion = 1e-1    # ratio between prior and posterior space where the nested sampling 'converged'
+nLive_pdim = 1000              # will be multiplied by the number of parameters, so the 'real' live points = nLive_pdim * nDims
+precision_criterion = 1e-9    # ratio between prior and posterior space where the nested sampling 'converged'
 
 
 
 ###  Other parameters, needed for plotting
 
-rp = 0.19	# planet's radius in Jupiter radii
-rs = 0.52	# star's radius in solar radii
+rp = 1.66	# planet's radius in Jupiter radii
+rs = 1.62	# star's radius in solar radii
 logg =  # logg of the planet OR can define:
 g = 7.2 # surface gravity of planet (in m/s^2)
-Teq = 700 # equilibrium temperature of planet in K
+Teq = 1600 # equilibrium temperature of planet in K
