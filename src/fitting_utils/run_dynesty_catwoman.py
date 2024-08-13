@@ -45,8 +45,8 @@ except:
     last_integration = len(time)
 
 time = time[first_integration:last_integration]
-flux = pickle.load(open(input_dict['flux_file'],'rb'))[first_integration:last_integration]
-flux_error = pickle.load(open(input_dict['error_file'],'rb'))[first_integration:last_integration]
+flux = pickle.load(open(input_dict['flux_file'],'rb'))[wb][first_integration:last_integration]
+flux_error = pickle.load(open(input_dict['error_file'],'rb'))[wb][first_integration:last_integration]
 
 ### Nested sampling parameters
 
@@ -59,7 +59,7 @@ if input_dict['use_ld_file'] is not None:
 else:
     ld_file_name = 'LD_coefficients.txt'
 try:
-    wc,we,u1,u1_err,u2,u2_err,u3,u3_err,u4,u4_err = np.loadtxt(ld_file_name,unpack=True)
+    wc,we,u1,u1_err,u2,u2_err,u3,u3_err,u4,u4_err = np.loadtxt(ld_file_name,unpack=True)[:,wb]
 except:
     raise SystemError('Need limb-darkening input!')
 
@@ -76,14 +76,14 @@ prior_dict['k_e_prior'] = input_dict['k_e_prior']
 prior_dict['k_e_1'] = float(input_dict['k_e_1'])
 prior_dict['k_e_2'] = float(input_dict['k_e_2'])
 
-prior_dict['u1'] = np.atleast_1d(u1)[wb]
-prior_dict['u1_err'] = np.atleast_1d(u1_err)[wb]
-prior_dict['u2'] = np.atleast_1d(u2)[wb]
-prior_dict['u2_err'] = np.atleast_1d(u2_err)[wb]
-prior_dict['u3'] = np.atleast_1d(u3)[wb]
-prior_dict['u3_err'] = np.atleast_1d(u3_err)[wb]
-prior_dict['u4'] = np.atleast_1d(u4)[wb]
-prior_dict['u4_err'] = np.atleast_1d(u4_err)[wb]
+prior_dict['u1'] = np.atleast_1d(u1)
+prior_dict['u1_err'] = np.atleast_1d(u1_err)
+prior_dict['u2'] = np.atleast_1d(u2)
+prior_dict['u2_err'] = np.atleast_1d(u2_err)
+prior_dict['u3'] = np.atleast_1d(u3)
+prior_dict['u3_err'] = np.atleast_1d(u3_err)
+prior_dict['u4'] = np.atleast_1d(u4)
+prior_dict['u4_err'] = np.atleast_1d(u4_err)
 
 prior_dict['ld_unc_multiplier'] = float(input_dict['ld_unc_multiplier'])
 
@@ -140,7 +140,42 @@ if ld_law == "nonlinear":
 d['infl_err'] = cwm.Param(1.)
 
 print(d)
-model = cwm.CatwomanModel(d,flux,flux_error,time,prior_dict,nested_parameters,k_m_e_equal,ld_law)
+model = cwm.CatwomanModel(d,flux,flux_error,time,prior_dict,nested_parameters,k_m_e_equal,ld_law) #,cw_fac=0.0001
 print(model.calc(time))
 print(model.return_curr_parameters())
-print(model.run_dynesty())
+print(model.loglikelihood([10560,10560,1.0]))
+result = model.run_dynesty()
+
+pickle.dump(result, open('result_wb%s.pickle'%(str(wb+1).zfill(2)),'wb'))
+
+result.summary()
+
+from dynesty import utils as dyfunc
+samples, weights = result.samples, result.importance_weights()
+mean, cov = dyfunc.mean_and_cov(samples, weights)
+equal_weights_samples = result.samples_equal()
+
+pickle.dump(samples, open('samples_wb%s.pickle'%(str(wb+1).zfill(2)),'wb'))
+pickle.dump(weights, open('weights_wb%s.pickle'%(str(wb+1).zfill(2)),'wb'))
+pickle.dump(equal_weights_samples, open('equal_weights_samples_wb%s.pickle'%(str(wb+1).zfill(2)),'wb'))
+
+
+
+## plotting
+from dynesty import plotting as dyplot
+
+# plot run
+fig, ax = dyplot.cornerplot(result, color='dodgerblue', truths=np.zeros(model.nDims),
+                           truth_color='black', show_titles=True,
+                           quantiles=None, max_n_ticks=3)
+
+plt.savefig('result_corner_plot_wb%s.pdf'%(str(wb+1).zfill(2)))
+
+
+fig, axes = dyplot.traceplot(result, truths=np.zeros(model.nDims),
+                             truth_color='black', show_titles=True,
+                             trace_cmap='viridis', connect=True,
+                             connect_highlight=range(5))
+
+plt.savefig('result_trace_plot_wb%s.pdf'%(str(wb+1).zfill(2)))
+
