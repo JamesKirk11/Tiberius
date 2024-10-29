@@ -10,6 +10,7 @@ If you use conda environments, I recommend first making a new conda environment:
    conda create -n Tiberius python=3.8
    conda activate Tiberius
 
+
 Next you'll need to download the repository from GitHub, cd into the directory and pip install within the ``Tiberius`` directory. In a terminal, this would look like:
 
 .. code-block:: bash
@@ -17,6 +18,17 @@ Next you'll need to download the repository from GitHub, cd into the directory a
    git clone https://github.com/JamesKirk11/Tiberius.git
    cd Tiberius
    pip install -e .
+
+
+.. note::
+
+       You may encounter an issue with installing ``george'' (the Gaussian Process package). If so, install ``george'' before trying to install ``Tiberius'', by doing the following
+
+       .. code-block:: bash
+
+           conda install -c conda-forge george
+
+      Then you can try again with the above installation.
 
 After this, you'll want to add the following to your ``~/.bashrc`` file (or equivalent):
 
