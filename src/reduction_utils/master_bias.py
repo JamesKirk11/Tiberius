@@ -142,7 +142,7 @@ def combine_biases_2windows(bias_list,verbose=False):
 	                plt.xlabel("X pixel")
 	                plt.ylabel("Y pixel")
 	            else:
-					plt.yticks(visible=False)
+                    plt.yticks(visible=False)
 
             print('File = %s ; Mean (window %d) = %f ; Shape (window %d) = %s'%(f,level,np.mean(data_frame),level,(np.shape(data_frame))))
 
