@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import argparse
-from Tiberius.src.fitting_utils import plotting_utils as pu
+from fitting_utils import plotting_utils as pu
 from global_utils import parseInput
 
 parser = argparse.ArgumentParser(description='Generate .dat table of time, flux, err and transit and gp models and residuals')

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import emcee
 from corner import corner,overplot_lines
 import sys
-from Tiberius.src.fitting_utils import TransitModelGPPM as tmgp
+from fitting_utils import TransitModelGPPM as tmgp
 import copy
 from scipy import stats
 

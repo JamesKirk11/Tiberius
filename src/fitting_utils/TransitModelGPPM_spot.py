@@ -7,11 +7,15 @@ import george
 from george import kernels
 from scipy import optimize,stats
 import matplotlib.pyplot as plt
+# from Tiberius.src.fitting_utils import parametric_fitting_functions as pf
+# from Tiberius.src.fitting_utils import plotting_utils as pu
 from fitting_utils import parametric_fitting_functions as pf
 from fitting_utils import plotting_utils as pu
+from fleck import Star
+import astropy.units as u
 
 class TransitModelGPPM(object):
-    def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False,exp_ramp_components=0,step_func=False):
+    def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False,exp_ramp_components=0,fit_spot_model=False):
 
         """
         The GPPM transit model class, which uses batman to generate the analytic, quadratically limb-darkened transit light curves, and george to generate the GP red noise models.
@@ -32,7 +36,7 @@ class TransitModelGPPM(object):
         ld_law - the limb darkening law we want to use: linear/quadratic/nonlinear/squareroot
         exp_ramp - True/False. Do you want to additionally fit a 2 component expoential ramp model? Default = False
         exp_ramp_components (int) - The number of exponential ramp components to fit. Default=0, no ramp.
-        step_func - True/False. Do you want to additionally fit a step function model with arbitrary breakpoint? Default = False
+        fit_spot_model - True/False. Do you want to fit a fleck spot model? (adds 4 parameters)
 
         Returns:
         TransitModelGPPM object
@@ -50,7 +54,7 @@ class TransitModelGPPM(object):
         self.polynomial_orders = polynomial_orders
         self.exp_ramp_used = exp_ramp
         self.exp_ramp_components = exp_ramp_components
-        self.step_func_used = step_func
+        self.fit_spot_model = fit_spot_model
 
         # Acknowledge the fact that we're using a polynomial here
         if polynomial_orders is None:
@@ -151,7 +155,8 @@ class TransitModelGPPM(object):
                 self.omega_fixed = False
             except:
                 self.batman_params.w = self.pars['omega']                     #longitude of periastron (in degrees), fix to 90 if ecc==0
-                self.omega_fixed = True
+                self.omega_fixed = True     
+                
         else:
             self.batman_params.t0 = self.pars['t0']                       #time of inferior conjunction
             self.batman_params.per = self.pars['period']                     #orbital period
@@ -199,8 +204,56 @@ class TransitModelGPPM(object):
             self.batman_params.limb_dark = "square-root"       #limb darkening model
         else:
             self.batman_params.limb_dark = self.ld_law
+            
+        ### star spot parameters
+        if self.fit_spot_model:
+            self.batman_params.lam = self.pars['obl_lambda']
+            try:
+                self.inc_stellar = self.pars['inc_stellar'].currVal * u.deg
+                self.inc_stellar_fixed = False
+            except:
+                self.inc_stellar = self.pars['inc_stellar'] * u.deg          
+                self.inc_stellar_fixed = True
+            try:
+                self.spot_radius = np.array([[self.pars['spot_radius'].currVal]])
+                self.spot_radius_fixed = False
+            except:
+                self.spot_radius = np.array([[self.pars['spot_radius']]])     
+                self.spot_radius_fixed = True
+            try:
+                self.spot_lat = np.array([[self.pars['spot_lat'].currVal]]) * u.deg
+                self.spot_lat_fixed = False
+            except:
+                self.spot_lat = np.array([[self.pars['spot_lat']]]) * u.deg          
+                self.spot_lat_fixed = True
+            try:
+                self.spot_lon = np.array([[self.pars['spot_lon'].currVal]]) * u.deg
+                self.spot_lon_fixed = False
+            except:
+                self.spot_lon = np.array([[self.pars['spot_lon']]]) * u.deg          
+                self.spot_lon_fixed = True
+            try:
+                self.spot_contrast = self.pars['spot_contrast'].currVal
+                self.spot_contrast_fixed = False
+            except:
+                self.spot_contrast = self.pars['spot_contrast']     
+                self.spot_contrast_fixed = True
 
-        self.batman_model = batman.TransitModel(self.batman_params, time_array, nthreads=1)    #initializes model
+
+            self.rotation_period = self.pars['stellar_rotation_period']   
+            self.star = Star(spot_contrast=self.spot_contrast, u_ld=self.batman_params.u, rotation_period=self.rotation_period)
+            self.transit_with_spot_lightcurve = self.star.light_curve(self.spot_lon, self.spot_lat, self.spot_radius,\
+                                                                      self.inc_stellar,planet=self.batman_params,\
+                                                                      times=time_array)
+            #calculate star without spot
+            self.zero_spot_radius = np.array([[0]])
+            self.zero_spot_lat = np.array([[0]]) * u.deg
+            self.zero_spot_lon = np.array([[0]]) * u.deg
+            self.zero_spot_contrast = 0
+            self.star_without_spot = Star(spot_contrast=self.zero_spot_contrast, u_ld=self.batman_params.u, \
+                                          rotation_period=self.rotation_period)
+        else:
+            self.batman_model = batman.TransitModel(self.batman_params, time_array, nthreads=1)    #initializes model
 
     def calc(self,time=None,sys_model_inputs=None):
 
@@ -265,9 +318,30 @@ class TransitModelGPPM(object):
         if time is not None:
             if np.any(time != self.time_array): # optionally recalculating batman model if the time array has changed
                 self.batman_model = batman.TransitModel(self.batman_params, time, nthreads=1)
-
-        transitShape = self.batman_model.light_curve(self.batman_params)
-        model = transitShape
+        
+        if self.fit_spot_model:
+            if not self.inc_stellar_fixed:
+                self.inc_stellar = self.pars['inc_stellar'].currVal  * u.deg
+            if not self.spot_radius_fixed:
+                self.spot_radius = np.array([[self.pars['spot_radius'].currVal]])  
+            if not self.spot_lat_fixed:
+                self.spot_lat = np.array([[self.pars['spot_lat'].currVal]]) * u.deg
+            if not self.spot_lon_fixed:
+                self.spot_lon = np.array([[self.pars['spot_lon'].currVal]]) * u.deg
+            if not self.spot_contrast_fixed:
+                self.spot_contrast = self.pars['spot_contrast'].currVal
+            self.star = Star(spot_contrast=self.spot_contrast, u_ld=self.batman_params.u, rotation_period=self.rotation_period)
+            if time is not None:
+                model = self.star.light_curve(self.spot_lon, self.spot_lat, self.spot_radius,\
+                                                 self.inc_stellar,planet=self.batman_params,times=time)
+            else:
+                model = self.star.light_curve(self.spot_lon, self.spot_lat, self.spot_radius,\
+                                                 self.inc_stellar,planet=self.batman_params,times=self._time_array)
+            model = model.flatten()
+            
+        else:
+            transitShape = self.batman_model.light_curve(self.batman_params)
+            model = transitShape
 
         if self.poly_used: # then we're using a polynomial to fit systematics
             red_noise_poly_model = self.red_noise_poly(time,sys_model_inputs)
@@ -277,11 +351,7 @@ class TransitModelGPPM(object):
             exponential_ramp_model = self.exponential_ramp(time)
             model *= exponential_ramp_model
 
-        if self.step_func_used:
-            step_model = self.step_function(time)
-            model *= step_model
-
-        if not self.poly_used and not self.exp_ramp_used and not self.step_func_used: # we're using a normalization constant to offset the transit depth
+        if not self.poly_used and not self.exp_ramp_used: # we're using a normalization constant to offset the transit depth
             model *= self.pars['f'].currVal
 
         return model
@@ -308,7 +378,36 @@ class TransitModelGPPM(object):
                 exp_ramp_model += self.pars['r%d'%(i+1)].currVal*np.exp(self.pars['r%d'%(i+2)].currVal*time)
 
         return exp_ramp_model
+    
+    def spot_model(self, time=None):
+        """The function that calculates the spot model. 
 
+        Inputs:
+        time - the array of times at which to evaluate the polynomial. Can be blank if these haven't changed from the initial init call.
+
+        Returns:
+        spot_model - the evaluated spot model
+        """
+        if time is not None:
+            times = np.array(time)
+        else:
+            times = np.array(self.time_array)
+            
+        
+        star = Star(spot_contrast=self.spot_contrast, u_ld=self.batman_params.u, rotation_period=self.rotation_period)
+        overall_model = star.light_curve(self.spot_lon, self.spot_lat, self.spot_radius,\
+                                                 self.inc_stellar,planet=self.batman_params,times=times)
+        overall_model = overall_model.flatten()
+        # star without spot
+        star_without_spot = Star(spot_contrast=self.zero_spot_contrast, u_ld=self.batman_params.u, \
+                                      rotation_period=self.rotation_period)
+        transitShape = star_without_spot.light_curve(self.zero_spot_lon, self.zero_spot_lat, self.zero_spot_radius,\
+                                                          self.inc_stellar,planet=self.batman_params,times=times)
+        transitShape = transitShape.flatten()
+        
+        spot_model = overall_model - transitShape
+        
+        return spot_model
 
     def red_noise_poly(self,time=None,sys_model_inputs=None,deconstruct_polys=False):
 
@@ -344,39 +443,6 @@ class TransitModelGPPM(object):
             return red_noise_trend
 
 
-    def step_function(self,time=None):
-
-        """The function that calculates a step function to help fit out mirror tilt events in JWST data
-
-        Inputs:
-        time - the array of times at which to evaluate the step function
-
-        Returns:
-        step_model - the evaluated step function
-        """
-
-        step_model = np.ones_like(time)
-
-        if self.white_light_fit:
-            step_model[:int(self.pars["breakpoint"].currVal)] *= self.pars["step1"].currVal
-            step_model[int(self.pars["breakpoint"].currVal):] *= self.pars["step2"].currVal
-        else:
-            step_model[:int(self.pars["breakpoint"])] *= self.pars["step1"].currVal
-            step_model[int(self.pars["breakpoint"]):] *= self.pars["step2"].currVal
-
-        ## If wanting to use two break points, use the below
-        # step_model[:int(self.pars["breakpoint1"].currVal)] *= self.pars["step1"].currVal
-        # step_model[int(self.pars["breakpoint2"].currVal):] *= self.pars["step2"].currVal
-        #
-        # x_break = np.array([int(self.pars["breakpoint1"].currVal),int(self.pars["breakpoint2"].currVal)])
-        # y_break = np.array([step_model[int(self.pars["breakpoint1"].currVal)],step_model[int(self.pars["breakpoint2"].currVal)]])
-        # break_poly = np.poly1d(np.polyfit(x_break,y_break,1))
-        #
-        # step_model[int(self.pars["breakpoint1"].currVal):int(self.pars["breakpoint2"].currVal)] = break_poly(np.arange(int(self.pars["breakpoint1"].currVal),int(self.pars["breakpoint2"].currVal)))
-
-        return step_model
-
-
     def lnprior(self,sys_priors=None):
         """The priors for the MCMC are handled here.
 
@@ -408,7 +474,7 @@ class TransitModelGPPM(object):
 
                 # inclination prior
                 if not self.inc_fixed:
-                    if self.pars['inc'].currVal > 90  or self.pars['inc'].currVal < self.pars['inc'].startVal - 5:
+                    if self.pars['inc'].currVal > 100  or self.pars['inc'].currVal < self.pars['inc'].startVal - 5:
                         return -np.inf
                     if sys_priors["inc_prior"] is not None:
                         retVal += stats.norm(scale=sys_priors["inc_prior"],loc=self.pars['inc'].startVal).pdf(self.pars['inc'].currVal)
@@ -471,15 +537,6 @@ class TransitModelGPPM(object):
                 for i in range(0,self.exp_ramp_components*2):
                     if self.pars['r%d'%(i+1)].currVal > 1e2 or self.pars['r%d'%(i+1)].currVal < -1e2:
                         return -np.inf
-
-        if self.step_func_used:
-            if self.pars['step1'].currVal > 1.5 or self.pars['step1'].currVal < 0.5:
-                return -np.inf
-            if self.pars['step2'].currVal > 1.5 or self.pars['step2'].currVal < 0.5:
-                return -np.inf
-            if self.white_light_fit:
-                if self.pars['breakpoint'].currVal > len(self.time_array) or self.pars['breakpoint'].currVal < 0:
-                    return -np.inf
 
         if not self.poly_used and not self.exp_ramp_used: # if not using a polynomial, this is the prior on the normalization constant
             if self.pars['f'].currVal > 1.5 or self.pars['f'].currVal < 0.5:
@@ -941,12 +998,7 @@ class TransitModelGPPM(object):
                 # put priors on the polynomical parameters
                 bnds += [(-100,100)]*self.exp_ramp_components*2 # these are the coefficients of the expoential ramp
 
-        if full_model and self.step_func_used:
-            bnds += [(0.9,1.1)]*2 # these are the normalisation constants of the step function
-            if self.white_light_fit:
-                bnds += [(0,len(time))] # this is the breakpoint of the step function
-
-        if full_model and not self.poly_used and not self.exp_ramp_used and not self.step_func_used:
+        if full_model and not self.poly_used and not self.exp_ramp_used:
             bnds += [(0.5,2)] # this is the bound on the normalization constant that we use if we don't have a polynomial
 
         # Now if we're fitting the full model (all parameters) or we're not using a GP we perform this step

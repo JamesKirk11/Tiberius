@@ -9,9 +9,11 @@ from scipy import optimize,stats
 import matplotlib.pyplot as plt
 from fitting_utils import parametric_fitting_functions as pf
 from fitting_utils import plotting_utils as pu
+# from Tiberius.src.fitting_utils import parametric_fitting_functions as pf
+# from Tiberius.src.fitting_utils import plotting_utils as pu
 
 class TransitModelGPPM(object):
-    def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False,exp_ramp_components=0,step_func=False):
+    def __init__(self,pars_dict,pars_dict2,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False,exp_ramp_components=0):
 
         """
         The GPPM transit model class, which uses batman to generate the analytic, quadratically limb-darkened transit light curves, and george to generate the GP red noise models.
@@ -32,13 +34,13 @@ class TransitModelGPPM(object):
         ld_law - the limb darkening law we want to use: linear/quadratic/nonlinear/squareroot
         exp_ramp - True/False. Do you want to additionally fit a 2 component expoential ramp model? Default = False
         exp_ramp_components (int) - The number of exponential ramp components to fit. Default=0, no ramp.
-        step_func - True/False. Do you want to additionally fit a step function model with arbitrary breakpoint? Default = False
 
         Returns:
         TransitModelGPPM object
         """
 
         self.pars = pars_dict
+        self.pars2 = pars_dict2
         self.systematics_model_inputs = systematics_model_inputs
         self.time_array = time_array
         self.kernel_classes = kernel_classes
@@ -50,7 +52,6 @@ class TransitModelGPPM(object):
         self.polynomial_orders = polynomial_orders
         self.exp_ramp_used = exp_ramp
         self.exp_ramp_components = exp_ramp_components
-        self.step_func_used = step_func
 
         # Acknowledge the fact that we're using a polynomial here
         if polynomial_orders is None:
@@ -83,7 +84,11 @@ class TransitModelGPPM(object):
             self.white_light_fit = True
 
         self.namelist = [k for k in self.pars.keys() if self.pars[k] is not None and not isinstance(self.pars[k],float)]
+        self.namelist2 = [k for k in self.pars2.keys() if self.pars2[k] is not None and not isinstance(self.pars2[k],float)]
+        self.namelist = np.concatenate([self.namelist, self.namelist2])
         self.data = [v for v in self.pars.values() if v is not None and not isinstance(v,float)]
+        self.data2 = [v for v in self.pars2.values() if v is not None and not isinstance(v,float)]
+        self.data = np.concatenate([self.data2,self.data])
 
         if self.GP_used:
             self.gp_ndim = len([c for c in kernel_classes if c is not None])
@@ -120,37 +125,49 @@ class TransitModelGPPM(object):
         ##### Batman initialisation - note this is first outside of model calculation as it is the fastest way
 
         self.batman_params = batman.TransitParams()
+        self.batman_params2 = batman.TransitParams()
         if self.white_light_fit:
-            self.batman_params.t0 = self.pars['t0'].currVal                       #time of inferior conjunction
+            self.batman_params.t0 = self.pars['t0'].currVal
+            self.batman_params2.t0 = self.pars2['t02'].currVal     #time of inferior conjunction
             try:
-                self.batman_params.per = self.pars['period'].currVal       #orbital period
+                self.batman_params.per = self.pars2['period'].currVal       #orbital period
                 self.period_fixed = False
+                self.batman_params2.per = self.pars2['period2'].currVal       #orbital period
             except:
-                self.batman_params.per = self.pars['period']                     #orbital inclination (in degrees)
+                self.batman_params.per = self.pars['period']
+                self.batman_params2.per = self.pars2['period2']
                 self.period_fixed = True
             try:
-                self.batman_params.a = self.pars['aRs'].currVal                       #semi-major axis (in units of stellar radii)
+                self.batman_params.a = self.pars['aRs'].currVal
+                self.batman_params2.a = self.pars2['aRs2'].currVal                       #semi-major axis (in units of stellar radii)
                 self.ars_fixed = False
             except:
                 self.batman_params.a = self.pars['aRs']
+                self.batman_params2.a = self.pars2['aRs2']
                 self.ars_fixed = True
             try:
-                self.batman_params.inc = self.pars['inc'].currVal                     #orbital inclination (in degrees)
+                self.batman_params.inc = self.pars['inc'].currVal 
+                self.batman_params2.inc = self.pars2['inc2'].currVal#orbital inclination (in degrees)
                 self.inc_fixed = False
             except:
-                self.batman_params.inc = self.pars['inc']                     #orbital inclination (in degrees)
+                self.batman_params.inc = self.pars['inc']
+                self.batman_params2.inc = self.pars2['inc2'] #orbital inclination (in degrees)
                 self.inc_fixed = True
             try:
-                self.batman_params.ecc = self.pars['ecc'].currVal                     #orbital inclination (in degrees)
+                self.batman_params.ecc = self.pars['ecc'].currVal
+                self.batman_params2.ecc = self.pars2['ecc2'].currVal#orbital inclination (in degrees)
                 self.ecc_fixed = False
             except:
-                self.batman_params.ecc = self.pars['ecc']                     #orbital inclination (in degrees)
+                self.batman_params.ecc = self.pars['ecc']
+                self.batman_params2.ecc = self.pars2['ecc2']#orbital inclination (in degrees)
                 self.ecc_fixed = True
             try:
-                self.batman_params.w = self.pars['omega'].currVal                     #longitude of periastron (in degrees), fix to 90 if ecc==0
+                self.batman_params.w = self.pars['omega'].currVal
+                self.batman_params2.w = self.pars2['omega2'].currVal #longitude of periastron (in degrees), fix to 90 if ecc==0
                 self.omega_fixed = False
             except:
-                self.batman_params.w = self.pars['omega']                     #longitude of periastron (in degrees), fix to 90 if ecc==0
+                self.batman_params.w = self.pars['omega']
+                self.batman_params2.w = self.pars2['omega2']#longitude of periastron (in degrees), fix to 90 if ecc==0
                 self.omega_fixed = True
         else:
             self.batman_params.t0 = self.pars['t0']                       #time of inferior conjunction
@@ -159,9 +176,22 @@ class TransitModelGPPM(object):
             self.batman_params.inc = self.pars['inc']                     #orbital inclination (in degrees)
             self.batman_params.ecc = self.pars['ecc']                      #eccentricity
             self.batman_params.w = self.pars['omega']                       #longitude of periastron (in degrees), fix to 90 if ecc==0
+            
+            self.batman_params2.t0 = self.pars2['t02']                       #time of inferior conjunction
+            self.batman_params2.per = self.pars2['period2']                     #orbital period
+            self.batman_params2.a = self.pars2['aRs2']                       #semi-major axis (in units of stellar radii)
+            self.batman_params2.inc = self.pars2['inc2']                     #orbital inclination (in degrees)
+            self.batman_params2.ecc = self.pars2['ecc2']                      #eccentricity
+            self.batman_params2.w = self.pars2['omega2']                       #longitude of periastron (in degrees), fix to 90 if ecc==0
 
         self.batman_params.rp = self.pars['k'].currVal                      #planet radius (in units of stellar radii)
-
+        try:
+            self.batman_params2.rp = self.pars2['k2'].currVal
+            self.fix_k2 = False #planet radius (in units of stellar radii)
+        except:
+            self.batman_params2.rp = self.pars2['k2']
+            self.fix_k2 = True
+        
         if not self.use_kipping:
             gamma = []
             if self.fix_u1:
@@ -194,13 +224,17 @@ class TransitModelGPPM(object):
             gamma = [u1,u2]
 
         self.batman_params.u = gamma                #limb darkening coefficients [u1, u2, ..,]
+        self.batman_params2.u = gamma                #limb darkening coefficients [u1, u2, ..,]
 
         if self.ld_law == "squareroot": # change to match Batman's naming
             self.batman_params.limb_dark = "square-root"       #limb darkening model
+            self.batman_params2.limb_dark = "square-root"       #limb darkening model
         else:
             self.batman_params.limb_dark = self.ld_law
+            self.batman_params2.limb_dark = self.ld_law
 
         self.batman_model = batman.TransitModel(self.batman_params, time_array, nthreads=1)    #initializes model
+        self.batman_model2 = batman.TransitModel(self.batman_params2, time_array, nthreads=1)    #initializes model
 
     def calc(self,time=None,sys_model_inputs=None):
 
@@ -228,6 +262,24 @@ class TransitModelGPPM(object):
 
         self.batman_params.rp = self.pars['k'].currVal                      #planet radius (in units of stellar radii)
 
+        if self.white_light_fit:
+            self.batman_params2.t0 = self.pars2['t02'].currVal                       #time of inferior conjunction
+            if not self.period_fixed:
+                self.batman_params2.per = self.pars2['period2'].currVal                      #orbital period
+            if not self.ars_fixed:
+                self.batman_params2.a = self.pars2['aRs2'].currVal                       #semi-major axis (in units of stellar radii)
+            if not self.inc_fixed:
+                self.batman_params2.inc = self.pars2['inc2'].currVal                     #orbital inclination (in degrees)
+            if not self.ecc_fixed:   # eccentricity
+                self.batman_params2.ecc = self.pars2['ecc2'].currVal
+            if not self.omega_fixed:   # longitude of periastron
+                self.batman_params2.w = self.pars2['omega2'].currVal
+        if self.fix_k2:
+            self.batman_params2.rp = self.pars2['k2']                     #planet radius (in units of stellar radii)
+        else:
+            self.batman_params2.rp = self.pars2['k2'].currVal
+            
+            
         # set up limb darkening coefficients
         if not self.use_kipping:
             gamma = []
@@ -261,13 +313,16 @@ class TransitModelGPPM(object):
             gamma = [u1,u2]
 
         self.batman_params.u = gamma                #limb darkening coefficients [u1, u2]
+        self.batman_params2.u = gamma                #limb darkening coefficients [u1, u2]
 
         if time is not None:
             if np.any(time != self.time_array): # optionally recalculating batman model if the time array has changed
                 self.batman_model = batman.TransitModel(self.batman_params, time, nthreads=1)
+                self.batman_modelw = batman.TransitModel(self.batman_params2, time, nthreads=1)
 
         transitShape = self.batman_model.light_curve(self.batman_params)
-        model = transitShape
+        transitShape2 = self.batman_model2.light_curve(self.batman_params2)
+        model = transitShape*transitShape2
 
         if self.poly_used: # then we're using a polynomial to fit systematics
             red_noise_poly_model = self.red_noise_poly(time,sys_model_inputs)
@@ -277,11 +332,7 @@ class TransitModelGPPM(object):
             exponential_ramp_model = self.exponential_ramp(time)
             model *= exponential_ramp_model
 
-        if self.step_func_used:
-            step_model = self.step_function(time)
-            model *= step_model
-
-        if not self.poly_used and not self.exp_ramp_used and not self.step_func_used: # we're using a normalization constant to offset the transit depth
+        if not self.poly_used and not self.exp_ramp_used: # we're using a normalization constant to offset the transit depth
             model *= self.pars['f'].currVal
 
         return model
@@ -344,39 +395,6 @@ class TransitModelGPPM(object):
             return red_noise_trend
 
 
-    def step_function(self,time=None):
-
-        """The function that calculates a step function to help fit out mirror tilt events in JWST data
-
-        Inputs:
-        time - the array of times at which to evaluate the step function
-
-        Returns:
-        step_model - the evaluated step function
-        """
-
-        step_model = np.ones_like(time)
-
-        if self.white_light_fit:
-            step_model[:int(self.pars["breakpoint"].currVal)] *= self.pars["step1"].currVal
-            step_model[int(self.pars["breakpoint"].currVal):] *= self.pars["step2"].currVal
-        else:
-            step_model[:int(self.pars["breakpoint"])] *= self.pars["step1"].currVal
-            step_model[int(self.pars["breakpoint"]):] *= self.pars["step2"].currVal
-
-        ## If wanting to use two break points, use the below
-        # step_model[:int(self.pars["breakpoint1"].currVal)] *= self.pars["step1"].currVal
-        # step_model[int(self.pars["breakpoint2"].currVal):] *= self.pars["step2"].currVal
-        #
-        # x_break = np.array([int(self.pars["breakpoint1"].currVal),int(self.pars["breakpoint2"].currVal)])
-        # y_break = np.array([step_model[int(self.pars["breakpoint1"].currVal)],step_model[int(self.pars["breakpoint2"].currVal)]])
-        # break_poly = np.poly1d(np.polyfit(x_break,y_break,1))
-        #
-        # step_model[int(self.pars["breakpoint1"].currVal):int(self.pars["breakpoint2"].currVal)] = break_poly(np.arange(int(self.pars["breakpoint1"].currVal),int(self.pars["breakpoint2"].currVal)))
-
-        return step_model
-
-
     def lnprior(self,sys_priors=None):
         """The priors for the MCMC are handled here.
 
@@ -408,7 +426,7 @@ class TransitModelGPPM(object):
 
                 # inclination prior
                 if not self.inc_fixed:
-                    if self.pars['inc'].currVal > 90  or self.pars['inc'].currVal < self.pars['inc'].startVal - 5:
+                    if self.pars['inc'].currVal > 100  or self.pars['inc'].currVal < self.pars['inc'].startVal - 5:
                         return -np.inf
                     if sys_priors["inc_prior"] is not None:
                         retVal += stats.norm(scale=sys_priors["inc_prior"],loc=self.pars['inc'].startVal).pdf(self.pars['inc'].currVal)
@@ -444,6 +462,59 @@ class TransitModelGPPM(object):
         if self.pars['k'].currVal < 0. or self.pars['k'].currVal > 0.5: # reject non-physical and non-sensical values
             return -np.inf
 
+        if sys_priors is not None or self.white_light_fit:
+            # Rp/Rs prior
+            if sys_priors["k_prior2"] is not None:
+                if self.pars2['k2'].currVal < self.pars2['k2'].startVal-10*sys_priors["k_prior2"] or self.pars2['k2'].currVal > self.pars2['k2'].startVal+10*sys_priors["k_prior2"]:
+                    return -np.inf
+                retVal += stats.norm(scale=sys_priors["k_prior2"],loc=self.pars2['k2'].startVal).pdf(self.pars2['k2'].currVal)
+
+            if self.white_light_fit:
+                # period prior
+                if not self.period_fixed:
+                    if self.pars2['period2'].currVal < 0:
+                        return -np.inf
+                    if sys_priors["period_prior2"] is not None:
+                        retVal += stats.norm(scale=sys_priors["period_prior2"],loc=self.pars2['period2'].startVal).pdf(self.pars2['period2'].currVal)
+
+                # inclination prior
+                if not self.inc_fixed:
+                    if self.pars2['inc2'].currVal > 100  or self.pars2['inc2'].currVal < self.pars2['inc2'].startVal - 5:
+                        return -np.inf
+                    if sys_priors["inc_prior2"] is not None:
+                        retVal += stats.norm(scale=sys_priors["inc_prior2"],loc=self.pars2['inc2'].startVal).pdf(self.pars2['inc2'].currVal)
+
+                # a/Rs prior
+                if not self.ars_fixed:
+                    if self.pars2['aRs2'].currVal <= 1:
+                        return -np.inf
+                    if sys_priors["aRs_prior2"] is not None:
+                        retVal += stats.norm(scale=sys_priors["aRs_prior2"],loc=self.pars2['aRs2'].startVal).pdf(self.pars2['aRs2'].currVal)
+
+                # ecc prior
+                if not self.ecc_fixed:
+                    if self.pars2['ecc2'].currVal > 1 or self.pars2['ecc2'].currVal < 0:
+                        return -np.inf
+                    if sys_priors["ecc_prior2"] is not None:
+                        retVal += stats.norm(scale=sys_priors["ecc_prior2"],loc=self.pars2['ecc2'].startVal).pdf(self.pars2['ecc2'].currVal)
+
+                # omega / longitude of periastron prior
+                if not self.omega_fixed:
+                    if self.pars2['omega2'].currVal > 360 or self.pars2['ecc2'].currVal < 0:
+                        return -np.inf
+                    if sys_priors["omega_prior2"] is not None:
+                        retVal += stats.norm(scale=sys_priors["omega_prior2"],loc=self.pars2['omega2'].startVal).pdf(self.pars2['omega2'].currVal)
+
+                # t0 prior
+                if self.pars2['t02'].currVal < self.pars2['t02'].startVal-0.1 or self.pars2['t02'].currVal > self.pars2['t02'].startVal+0.1:
+                    return -np.inf
+                if sys_priors["t0_prior2"] is not None:
+                    retVal += stats.norm(scale=sys_priors["t0_prior2"],loc=self.pars2['t02'].startVal).pdf(self.pars2['t02'].currVal)
+
+
+        if self.pars2['k2'].currVal < 0. or self.pars2['k2'].currVal > 0.5: # reject non-physical and non-sensical values
+            return -np.inf
+
         if self.GP_used:
 
             # white noise kernel priors
@@ -471,15 +542,6 @@ class TransitModelGPPM(object):
                 for i in range(0,self.exp_ramp_components*2):
                     if self.pars['r%d'%(i+1)].currVal > 1e2 or self.pars['r%d'%(i+1)].currVal < -1e2:
                         return -np.inf
-
-        if self.step_func_used:
-            if self.pars['step1'].currVal > 1.5 or self.pars['step1'].currVal < 0.5:
-                return -np.inf
-            if self.pars['step2'].currVal > 1.5 or self.pars['step2'].currVal < 0.5:
-                return -np.inf
-            if self.white_light_fit:
-                if self.pars['breakpoint'].currVal > len(self.time_array) or self.pars['breakpoint'].currVal < 0:
-                    return -np.inf
 
         if not self.poly_used and not self.exp_ramp_used: # if not using a polynomial, this is the prior on the normalization constant
             if self.pars['f'].currVal > 1.5 or self.pars['f'].currVal < 0.5:
@@ -941,12 +1003,7 @@ class TransitModelGPPM(object):
                 # put priors on the polynomical parameters
                 bnds += [(-100,100)]*self.exp_ramp_components*2 # these are the coefficients of the expoential ramp
 
-        if full_model and self.step_func_used:
-            bnds += [(0.9,1.1)]*2 # these are the normalisation constants of the step function
-            if self.white_light_fit:
-                bnds += [(0,len(time))] # this is the breakpoint of the step function
-
-        if full_model and not self.poly_used and not self.exp_ramp_used and not self.step_func_used:
+        if full_model and not self.poly_used and not self.exp_ramp_used:
             bnds += [(0.5,2)] # this is the bound on the normalization constant that we use if we don't have a polynomial
 
         # Now if we're fitting the full model (all parameters) or we're not using a GP we perform this step

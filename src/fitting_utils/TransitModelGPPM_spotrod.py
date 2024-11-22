@@ -4,14 +4,16 @@
 import numpy as np
 import batman
 import george
+import spotrod
 from george import kernels
 from scipy import optimize,stats
+import astropy.units as u
 import matplotlib.pyplot as plt
 from fitting_utils import parametric_fitting_functions as pf
 from fitting_utils import plotting_utils as pu
 
 class TransitModelGPPM(object):
-    def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False,exp_ramp_components=0,step_func=False):
+    def __init__(self,pars_dict,systematics_model_inputs,kernel_classes,flux_error,time_array,kernel_priors=None,wn_kernel=True,use_kipping=False,ld_std_priors=None,polynomial_orders=None,ld_law="quadratic",exp_ramp=False,exp_ramp_components=0,step_func=False, use_spot_model=False, integration_rings=False):
 
         """
         The GPPM transit model class, which uses batman to generate the analytic, quadratically limb-darkened transit light curves, and george to generate the GP red noise models.
@@ -33,7 +35,8 @@ class TransitModelGPPM(object):
         exp_ramp - True/False. Do you want to additionally fit a 2 component expoential ramp model? Default = False
         exp_ramp_components (int) - The number of exponential ramp components to fit. Default=0, no ramp.
         step_func - True/False. Do you want to additionally fit a step function model with arbitrary breakpoint? Default = False
-
+        fit_spot_model - True/False. Do you want to fit a spot model? (adds 4 parameters)
+        
         Returns:
         TransitModelGPPM object
         """
@@ -51,6 +54,8 @@ class TransitModelGPPM(object):
         self.exp_ramp_used = exp_ramp
         self.exp_ramp_components = exp_ramp_components
         self.step_func_used = step_func
+        self.use_spot_model = use_spot_model
+        self.n_r = integration_rings
 
         # Acknowledge the fact that we're using a polynomial here
         if polynomial_orders is None:
@@ -200,7 +205,86 @@ class TransitModelGPPM(object):
         else:
             self.batman_params.limb_dark = self.ld_law
 
-        self.batman_model = batman.TransitModel(self.batman_params, time_array, nthreads=1)    #initializes model
+
+        ### Spotrod Model Initialisation
+        if self.use_spot_model: 
+            ### star spot parameters
+            try:
+                self.spot_radius = np.array([self.pars['spot_radius'].currVal])
+                self.spot_radius_fixed = False
+            except:
+                self.spot_radius = np.array([self.pars['spot_radius']])     
+                self.spot_radius_fixed = True
+            try:
+                self.spot_y = np.array([self.pars['spot_y'].currVal])
+                self.spot_y_fixed = False
+            except:
+                self.spot_y = np.array([self.pars['spot_y']])          
+                self.spot_y_fixed = True
+            try:
+                self.spot_x = np.array([self.pars['spot_x'].currVal])
+                self.spot_x_fixed = False
+            except:
+                self.spot_x = np.array([self.pars['spot_x']])      
+                self.spot_x_fixed = True
+            try:
+                self.spot_contrast = np.array([self.pars['spot_contrast'].currVal])
+                self.spot_contrast_fixed = False
+            except:
+                self.spot_contrast = np.array([self.pars['spot_contrast']])     
+                self.spot_contrast_fixed = True 
+
+            self.spotrod_model = self.spotrod_model_function(time_array)
+            
+        else: 
+            self.batman_model = batman.TransitModel(self.batman_params, time_array, nthreads=1)    #initializes model
+
+    def spotrod_model_function(self, time=None):
+        """The function that calculates the spot model. 
+        Inputs:
+        time - the array of times at which to evaluate the polynomial. Can be blank if these haven't changed from the initial init call.
+        Returns:
+        spot_model - the evaluated spot model
+        """
+        if time is not None:
+            times = time
+        else: 
+            times = self.time_array        #print(self.spot_x)
+        #print(self.spot_y)
+        #print(self.spot_contrast)
+        #print(self.spot_radius)
+        # Calculate supplementary parameters for spotrod
+        self.n_r = 1500
+        deltaT = times - self.batman_params.t0
+        k = self.batman_params.ecc*np.cos(self.batman_params.w*np.pi/180.)
+        h = self.batman_params.ecc*np.sin(self.batman_params.w*np.pi/180.)
+        # Midpoint rule for integration
+        r = np.linspace(1/(2*self.n_r),1-1/(2*self.n_r), self.n_r)
+        f = 2 * self.quadratic_ld(r)/self.n_r
+        # Calculaate orbital elements
+        if h==0. and k==0.:
+            M = deltaT * (2 * np.pi) / self.batman_params.per
+            lam = M + self.batman_params.w*np.pi/180.
+            eta0, xi0 = self.batman_params.a * np.cos(lam), self.batman_params.a * np.sin(lam)
+            eta, xi = eta0 * np.cos(self.batman_params.w*np.pi/180.) - xi0 * np.sin(self.batman_params.w*np.pi/180.), \
+                 eta0 * np.sin(self.batman_params.w*np.pi/180.) + xi0 * np.cos(self.batman_params.w*np.pi/180.)
+        else:    
+            eta, xi = spotrod.elements(deltaT, self.batman_params.per, self.batman_params.a, k, h)
+        b = self.batman_params.a * np.cos(self.batman_params.inc*np.pi/180.)
+        planetx = b * eta / self.batman_params.a
+        planety = -xi
+        z = np.sqrt(planetx**2 + planety**2)
+        # Calculate planetangle array
+        planetangle = np.array([spotrod.circleangle(r, self.batman_params.rp, z[i]) for i in range(z.shape[0])])
+        #Calculate the Light Curve
+        fitlightcurve = spotrod.integratetransit(planetx, planety, z, self.batman_params.rp, r, f, self.spot_x, self.spot_y, self.spot_radius, self.spot_contrast, planetangle)
+        return fitlightcurve
+
+    def quadratic_ld(self, r):
+        # Calculate the quadratic limb darkening function for spot modelnp.array([spotx]),
+        oneminusmu = 1 - np.sqrt(1-r**2)
+        result = 1 - self.batman_params.u[0]* oneminusmu - self.batman_params.u[1]*oneminusmu**2
+        return result
 
     def calc(self,time=None,sys_model_inputs=None):
 
@@ -262,12 +346,28 @@ class TransitModelGPPM(object):
 
         self.batman_params.u = gamma                #limb darkening coefficients [u1, u2]
 
-        if time is not None:
-            if np.any(time != self.time_array): # optionally recalculating batman model if the time array has changed
-                self.batman_model = batman.TransitModel(self.batman_params, time, nthreads=1)
-
-        transitShape = self.batman_model.light_curve(self.batman_params)
-        model = transitShape
+        if self.use_spot_model:
+            if not self.spot_radius_fixed:
+                self.spot_radius = np.array([self.pars['spot_radius'].currVal])  
+            if not self.spot_x_fixed:
+                self.spot_x = np.array([self.pars['spot_x'].currVal]) 
+            if not self.spot_y_fixed:
+                self.spot_y = np.array([self.pars['spot_y'].currVal]) 
+            if not self.spot_contrast_fixed:
+                self.spot_contrast = np.array([self.pars['spot_contrast'].currVal])    
+            
+            if time is not None:
+                model = self.spotrod_model_function(time=time)
+            else: 
+                model = self.spotrod_model_function()
+        
+        else:
+            if time is not None:
+                if np.any(time != self.time_array): # optionally recalculating batman model if the time array has changed
+                    self.batman_model = batman.TransitModel(self.batman_params, time, nthreads=1)
+            
+            transitShape = self.batman_model.light_curve(self.batman_params)
+            model = transitShape
 
         if self.poly_used: # then we're using a polynomial to fit systematics
             red_noise_poly_model = self.red_noise_poly(time,sys_model_inputs)
@@ -357,12 +457,8 @@ class TransitModelGPPM(object):
 
         step_model = np.ones_like(time)
 
-        if self.white_light_fit:
-            step_model[:int(self.pars["breakpoint"].currVal)] *= self.pars["step1"].currVal
-            step_model[int(self.pars["breakpoint"].currVal):] *= self.pars["step2"].currVal
-        else:
-            step_model[:int(self.pars["breakpoint"])] *= self.pars["step1"].currVal
-            step_model[int(self.pars["breakpoint"]):] *= self.pars["step2"].currVal
+        step_model[:int(self.pars["breakpoint"].currVal)] *= self.pars["step1"].currVal
+        step_model[int(self.pars["breakpoint"].currVal):] *= self.pars["step2"].currVal
 
         ## If wanting to use two break points, use the below
         # step_model[:int(self.pars["breakpoint1"].currVal)] *= self.pars["step1"].currVal
@@ -471,15 +567,6 @@ class TransitModelGPPM(object):
                 for i in range(0,self.exp_ramp_components*2):
                     if self.pars['r%d'%(i+1)].currVal > 1e2 or self.pars['r%d'%(i+1)].currVal < -1e2:
                         return -np.inf
-
-        if self.step_func_used:
-            if self.pars['step1'].currVal > 1.5 or self.pars['step1'].currVal < 0.5:
-                return -np.inf
-            if self.pars['step2'].currVal > 1.5 or self.pars['step2'].currVal < 0.5:
-                return -np.inf
-            if self.white_light_fit:
-                if self.pars['breakpoint'].currVal > len(self.time_array) or self.pars['breakpoint'].currVal < 0:
-                    return -np.inf
 
         if not self.poly_used and not self.exp_ramp_used: # if not using a polynomial, this is the prior on the normalization constant
             if self.pars['f'].currVal > 1.5 or self.pars['f'].currVal < 0.5:
@@ -943,8 +1030,7 @@ class TransitModelGPPM(object):
 
         if full_model and self.step_func_used:
             bnds += [(0.9,1.1)]*2 # these are the normalisation constants of the step function
-            if self.white_light_fit:
-                bnds += [(0,len(time))] # this is the breakpoint of the step function
+            bnds += [(0,len(time))] # this is the breakpoint of the step function
 
         if full_model and not self.poly_used and not self.exp_ramp_used and not self.step_func_used:
             bnds += [(0.5,2)] # this is the bound on the normalization constant that we use if we don't have a polynomial

@@ -9,7 +9,7 @@ import pickle
 import glob
 from matplotlib.ticker import AutoMinorLocator
 from global_utils import parseInput
-from Tiberius.src.fitting_utils import mcmc_utils as mc
+from fitting_utils import mcmc_utils as mc
 from scipy.stats import chi2 as c2
 from scipy.special import erfinv
 
