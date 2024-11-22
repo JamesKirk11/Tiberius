@@ -399,7 +399,10 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
             infinite_pixels = ~finite_pixels
             finite_medians = np.isfinite(median[i])
             infinite_medians = ~finite_pixels
-            median[i] = np.interp(np.arange(ncols),np.arange(ncols)[finite_medians],median[i][finite_medians])
+            if np.any(finite_pixels):
+                median[i] = np.interp(np.arange(ncols),np.arange(ncols)[finite_medians],median[i][finite_medians])
+            else:
+                median[i] = np.nan*finite_medians
 
         residuals =  median - frame[:,left_col:right_col]
 
@@ -453,6 +456,7 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
         pixel_flags[i] = bad_pixels[i]
 
         if plot_rows is not None:
+
             if i in plot_rows:
 
                 plt.figure()

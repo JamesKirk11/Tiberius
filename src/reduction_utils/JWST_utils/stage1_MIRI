@@ -1,8 +1,8 @@
 #!/bin/bash
 # following steps as defined here: https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html#calwebb-detector1
 #conda activate JWST
-export CRDS_PATH=$HOME/crds_cache/jwst_pub
-export CRDS_SERVER_URL=https://jwst-crds-pub.stsci.edu
+export CRDS_PATH=$HOME/crds_cache/jwst
+export CRDS_SERVER_URL=https://jwst-crds.stsci.edu
 echo ""
 echo "****running group scale****"
 echo ""
@@ -14,19 +14,19 @@ strun dq_init $1_groupscalestep.fits
 echo ""
 echo "****running saturation****"
 echo ""
-strun saturation $1_dqinitstep.fits --override_saturation $HOME/crds_cache/jwst_pub/references/jwst/miri/jwst_miri_saturation_0034.fits
+strun saturation $1_dqinitstep.fits
 echo ""
 echo "****running reset****"
 echo ""
-strun reset $1_saturationstep.fits --override_reset $HOME/crds_cache/jwst_pub/references/jwst/miri/jwst_miri_reset_0080.fits
+strun reset $1_saturationstep.fits
 echo ""
 echo "****running linearity****"
 echo ""
-strun linearity $1_resetstep.fits --override_linearity $HOME/crds_cache/jwst_pub/references/jwst/miri/jwst_miri_linearity_0032.fits
+strun linearity $1_resetstep.fits
 echo ""
 echo "****running dark_current****"
 echo ""
-strun dark_current $1_linearitystep.fits --override_dark $HOME/crds_cache/jwst_pub/references/jwst/miri/jwst_miri_dark_0096.fits
+strun dark_current $1_linearitystep.fits
 echo ""
 echo "****running refpix****"
 echo ""
@@ -34,7 +34,7 @@ strun refpix $1_darkcurrentstep.fits --odd_even_rows True
 echo ""
 echo "****running ramp_fit****"
 echo ""
-strun ramp_fit $1_refpixstep.fits --override_readnoise $HOME/crds_cache/jwst_pub/references/jwst/miri/jwst_miri_readnoise_0085.fits
+strun ramp_fit $1_refpixstep.fits
 echo ""
 echo "****running gain_scale****"
 echo ""

@@ -357,8 +357,12 @@ class TransitModelGPPM(object):
 
         step_model = np.ones_like(time)
 
-        step_model[:int(self.pars["breakpoint"].currVal)] *= self.pars["step1"].currVal
-        step_model[int(self.pars["breakpoint"].currVal):] *= self.pars["step2"].currVal
+        if self.white_light_fit:
+            step_model[:int(self.pars["breakpoint"].currVal)] *= self.pars["step1"].currVal
+            step_model[int(self.pars["breakpoint"].currVal):] *= self.pars["step2"].currVal
+        else:
+            step_model[:int(self.pars["breakpoint"])] *= self.pars["step1"].currVal
+            step_model[int(self.pars["breakpoint"]):] *= self.pars["step2"].currVal
 
         ## If wanting to use two break points, use the below
         # step_model[:int(self.pars["breakpoint1"].currVal)] *= self.pars["step1"].currVal
@@ -467,6 +471,15 @@ class TransitModelGPPM(object):
                 for i in range(0,self.exp_ramp_components*2):
                     if self.pars['r%d'%(i+1)].currVal > 1e2 or self.pars['r%d'%(i+1)].currVal < -1e2:
                         return -np.inf
+
+        if self.step_func_used:
+            if self.pars['step1'].currVal > 1.5 or self.pars['step1'].currVal < 0.5:
+                return -np.inf
+            if self.pars['step2'].currVal > 1.5 or self.pars['step2'].currVal < 0.5:
+                return -np.inf
+            if self.white_light_fit:
+                if self.pars['breakpoint'].currVal > len(self.time_array) or self.pars['breakpoint'].currVal < 0:
+                    return -np.inf
 
         if not self.poly_used and not self.exp_ramp_used: # if not using a polynomial, this is the prior on the normalization constant
             if self.pars['f'].currVal > 1.5 or self.pars['f'].currVal < 0.5:
@@ -930,7 +943,8 @@ class TransitModelGPPM(object):
 
         if full_model and self.step_func_used:
             bnds += [(0.9,1.1)]*2 # these are the normalisation constants of the step function
-            bnds += [(0,len(time))] # this is the breakpoint of the step function
+            if self.white_light_fit:
+                bnds += [(0,len(time))] # this is the breakpoint of the step function
 
         if full_model and not self.poly_used and not self.exp_ramp_used and not self.step_func_used:
             bnds += [(0.5,2)] # this is the bound on the normalization constant that we use if we don't have a polynomial

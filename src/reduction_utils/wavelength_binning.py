@@ -1386,6 +1386,7 @@ def uniform_tophat_mean(newx,x, y, dy=None,nan=False):
 	return out['bin_x'].values,out['bin_y'].values, out['bin_dy'].values, out['bin_n'].values
 
 
+
 def bin_wave_to_R(w, R):
 	"""Creates new wavelength axis at specified resolution
 

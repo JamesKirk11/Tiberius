@@ -500,7 +500,10 @@ else:
 if step_func_used:
     d["step1"] = tmgp.Param(1)
     d["step2"] = tmgp.Param(1)
-    d["breakpoint"] = tmgp.Param(int(input_dict["step_breakpoint"]))
+    if white_light_fit:
+        d["breakpoint"] = tmgp.Param(float(input_dict["step_breakpoint"]))
+    else:
+        d["breakpoint"] = float(input_dict["step_breakpoint"])
     # d["breakpoint2"] = tmgp.Param(int(input_dict["step_breakpoint"])+1)
 
 if not poly_used and not exp_ramp_used and not step_func_used:
@@ -609,7 +612,10 @@ if optimise_model or clip_outliers and not median_clip:
     if step_func_used:
         d_clip["step1"] = tmgp.Param(1)
         d_clip["step2"] = tmgp.Param(1)
-        d_clip["breakpoint"] = tmgp.Param(int(input_dict["step_breakpoint"]))
+        if white_light_fit:
+            d_clip["breakpoint"] = tmgp.Param(float(input_dict["step_breakpoint"]))
+        else:
+            d_clip["breakpoint"] = float(input_dict["step_breakpoint"])
         # d_clip["breakpoint2"] = tmgp.Param(int(input_dict["step_breakpoint"])+1)
 
 
@@ -682,11 +688,12 @@ if optimise_model or clip_outliers and not median_clip:
                 d[k] = v
 
         ### update photometric uncertainties given best-fit model
-        print("\nRescaling photometric uncertainties to give rChi2 = 1")
         if median_clip:
+            print("\nRescaling photometric uncertainties by %.3f to give rChi2 = 1"%np.sqrt(fitted_clip_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error)))
             clipped_flux_error = clipped_flux_error*np.sqrt(fitted_clip_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error))
             pickle.dump(clipped_flux_error,open('rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
         else:
+            print("\nRescaling photometric uncertainties by %.3f to give rChi2 = 1"%np.sqrt(fitted_clip_model.reducedChisq(time,flux,flux_error)))
             flux_error = flux_error*np.sqrt(fitted_clip_model.reducedChisq(time,flux,flux_error))
             pickle.dump(flux_error,open('rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
 
@@ -859,7 +866,7 @@ else: # we're not running an MCMC at all here, we're just using a Levenberg-Marq
     burn_model,median_burn,uncertainties_burn = starting_model.optimise_params(clipped_time,clipped_flux,clipped_flux_error,reset_starting_gp=False,contact1=contact1,contact4=contact4,full_model=True,sys_priors=sys_priors,LM_fit=True)
 
     # we need to rescale the photometric uncertainties to give reduced chi2 = 1
-    print("\nRescaling photometric uncertainties to give rChi2 = 1")
+    print("\nRescaling photometric uncertainties by %.3f to give rChi2 = 1"%np.sqrt(burn_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error)))
     clipped_flux_error = clipped_flux_error*np.sqrt(burn_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error))
     if show_plots:
         fig = pu.plot_single_model(burn_model,clipped_time,clipped_flux,clipped_flux_error,rebin_data=rebin_data,save_fig=False)

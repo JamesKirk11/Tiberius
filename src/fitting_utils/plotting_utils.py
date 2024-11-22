@@ -1423,11 +1423,14 @@ def bin_trans_spec(bin_edges,x,y,e1,e2=None):
     binned_e = []
 
     for i in range(1,len(bin_edges)):
+        if len(y[digitized==i]) == 0:
+            continue
+
         if e2 is not None:
             mean_y,mean_e = weighted_mean_uneven_errors(y[digitized==i],e1[digitized==i],e2[digitized==i])
         else:
-	        mean_y,weights = np.average(y[digitized==i],weights=1/e1[digitized==i]**2,returned=True)
-	        mean_e = np.sqrt(1/weights)
+            mean_y,weights = np.average(y[digitized==i],weights=1/e1[digitized==i]**2,returned=True)
+            mean_e = np.sqrt(1/weights)
 
         binned_x.append(x[digitized==i].mean())
         binned_xe.append(x[digitized==i].max()-x[digitized==i].min())

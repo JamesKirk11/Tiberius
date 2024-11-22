@@ -110,6 +110,12 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
         x = np.arange(ncols)[np.isfinite(row)]+search_left_edge
         row = row[np.isfinite(row)]
 
+        if len(row) == 0:
+            trace_centre.append(0)
+            fwhm.append(np.nan)
+            gauss_std.append(np.nan)
+            continue
+
         if instrument == "Keck/NIRSPEC":
             # clip out negative frame from A-B
             row_residuals_1 = row - np.median(row)
@@ -125,7 +131,6 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
             row = row[keep_index_2]
 
         nerrors = 0 # running count of errors
-
         centre_guess = peak_counts_location = x[np.argmax(row)]
         amplitude = np.nanmax(row)
         amplitude_offset = np.nanmin(row)
@@ -689,9 +694,16 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
             background_fit = poly_dict[chosen_order]
 
         else: # polynomial with user-defined order
-            poly = np.poly1d(np.polyfit(bkg_cols_keep,y_keep,poly_bg_order))
-            background_fit = poly(np.arange(left_bkg_left_hand_edge,right_bkg_right_hand_edge))
-            bkg_poly_orders_used.append(poly_bg_order)
+
+            if len(y_keep) > 0:
+                poly = np.poly1d(np.polyfit(bkg_cols_keep,y_keep,poly_bg_order))
+                background_fit = poly(np.arange(left_bkg_left_hand_edge,right_bkg_right_hand_edge))
+                bkg_poly_orders_used.append(poly_bg_order)
+
+            else: # if the array is empty, then eveything has been clipped due to NaNs so we'll set the background = 0
+                poly = np.poly1d(0)
+                background_fit = poly(np.arange(left_bkg_left_hand_edge,right_bkg_right_hand_edge))
+                bkg_poly_orders_used.append(0)
 
         # Now saving the clipped sky regions
         if "JWST" not in instrument:
