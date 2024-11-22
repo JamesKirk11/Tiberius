@@ -1319,11 +1319,11 @@ def uniform_tophat_mean(newx,x, y, dy=None,nan=False):
     Parameters
     ----------
     newx : list of float or numpy array of float
-        New wavelength grid to rebin to
+    New wavelength grid to rebin to
     x : list of float or numpy array of float
-        Old wavelength grid to get rid of
+    Old wavelength grid to get rid of
     y : list of float or numpy array of float
-        New rebinned y axis
+    New rebinned y axis
 
     Returns
     -------
@@ -1351,27 +1351,27 @@ def uniform_tophat_mean(newx,x, y, dy=None,nan=False):
     delta[szmod-1]=delta[szmod-2]
 
     for i in range(szmod-1):
-	    i=i+1
-	    loc=np.where((x >= newx[i]-0.5*delta[i-1]) & (x < newx[i]+0.5*delta[i]))
-	    #make sure there are values within the slice
-	    if len(loc[0]) > 0:
-		    ynew[i]=np.mean(y[loc])
-	        if dy is not None:
-			    bin_dy[i] = np.sqrt(np.sum(dy[loc]**2.0))/len(y[loc])
-		    bin_n[i] = len(y[loc])
-	    #if not give empty slice a nan
+        i=i+1
+        loc=np.where((x >= newx[i]-0.5*delta[i-1]) & (x < newx[i]+0.5*delta[i]))
+        #make sure there are values within the slice
+        if len(loc[0]) > 0:
+            ynew[i]=np.mean(y[loc])
+            if dy is not None:
+                bin_dy[i] = np.sqrt(np.sum(dy[loc]**2.0))/len(y[loc])
+                bin_n[i] = len(y[loc])
+                #if not give empty slice a nan
         elif len(loc[0]) == 0 :
-	        warn.warn(UserWarning("Empty slice exists within specified new x, replacing value with nan"))
-		    ynew[i]=np.nan
-		    bin_n[i] = np.nan
+            warn.warn(UserWarning("Empty slice exists within specified new x, replacing value with nan"))
+            ynew[i]=np.nan
+            bin_n[i] = np.nan
 
     #fill in zeroth entry
     loc=np.where((x > newx[0]-0.5*delta[0]) & (x < newx[0]+0.5*delta[0]))
     if len(loc[0]) > 0:
-	    ynew[0]=np.mean(y[loc])
-	    bin_n[0] = len(y[loc])
-	    if dy is not None:
-		    bin_dy[0] = np.sqrt(np.sum(dy[loc]**2.0))/len(y[loc])
+        ynew[0]=np.mean(y[loc])
+        bin_n[0] = len(y[loc])
+        if dy is not None:
+            bin_dy[0] = np.sqrt(np.sum(dy[loc]**2.0))/len(y[loc])
     elif len(loc[0]) is 0 :
         ynew[0]=np.nan
         bin_n[0] = np.nan
