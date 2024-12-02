@@ -909,9 +909,10 @@ class TransitModelGPPM(object):
             if not self.fix_u1:
                 bnds += [(self.pars['u1'].currVal-0.2,self.pars['u1'].currVal+0.2)] # uncomment this line when not running on test PRISM data!
                 # bnds += [(-2,2)] # comment this line when not running on test PRISM data!
-            if not self.fix_u2:
-                bnds += [(self.pars['u2'].currVal-0.2,self.pars['u2'].currVal+0.2)] # uncomment this line when not running on test PRISM data!
-                # bnds += [(-2,2)] # comment this line when not running on test PRISM data!
+            if self.ld_law != "linear":
+                if not self.fix_u2:
+                    bnds += [(self.pars['u2'].currVal-0.2,self.pars['u2'].currVal+0.2)] # uncomment this line when not running on test PRISM data!
+                    # bnds += [(-2,2)] # comment this line when not running on test PRISM data!
             if self.ld_law == 'nonlinear':
                 if not self.fix_u3:
                     bnds += [(self.pars['u3'].currVal-0.2,self.pars['u3'].currVal+0.2)]
