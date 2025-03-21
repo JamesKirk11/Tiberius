@@ -7,21 +7,21 @@
 # paths that point to pickled numpy arrays of time, flux(es) and their errors! 
 # Note that the flux file should be a clean transit light curve with all systematics models removed!
 
-time_file =  ./time.pickle 
-flux_file =	 ./W94Ab_light_curves_without_polynom.pickle 
-error_file = ./W94Ab_light_curves_without_polynom_err.pickle 
+time_file =  ../time.pickle 
+flux_file =	 ../W94Ab_light_curves_without_polynom.pickle 
+error_file = ../W94Ab_light_curves_without_polynom_err.pickle 
 
 
 ### System parameters
 # here we assume that all system parameters are fixed
 
 period =	  3.9501907	    # the orbital period of the planet in days.
-inclination = 88.70        # the inclination of the planet's orbit in degrees. 
-aRs =   	  7.279	        # the a/Rs of the system. 
+inclination = 88.42        # the inclination of the planet's orbit in degrees. 
+aRs =   	  7.235	        # the a/Rs of the system. 
 ecc =         0.          # eccentricity of the system.
 omega =       90           # argument of periastron of the system.
-t0 =	      60468.808671	# the time of mid transit in days.
-k =           0.10560          # Rp/Rs, this is always fitted for (see further down).
+t0 =	      60468.808647	# the time of mid transit in days. Can be fitted for (see further down).
+k =           0.10608          # Rp/Rs, this is always fitted for (see further down).
 
 first_integration = 0       # this allows you to clip the first N integrations from your light curves. This uses Python indexing.
 last_integration = -1       # this allows you to clip the last N integrations from your light curves. This uses Python indexing.
@@ -53,15 +53,20 @@ FeH_err = 	0.003       # error in Fe/H of star
 
 ### Define fitted parameters
 
+fit_t0 =      1         # do we want to fit for t0? 1=Yes, 0=No 
+t0_prior =    N         # Gaussian/Normal (N) or uniform (U) prior 
+t0_1 = 60468.808647     # If k_prior = N, this is the centre of the Gaussian prior, if k_prior = U this is the lower boundary 
+t0_2 = 0.000019         # If k_prior = N, this is the std of the Gaussian prior, if k_prior = U this is the upper boundary
+
 k_m_e_equal = 0         # Run the case where evening and morning radii are equal (e.g. to do model comparison), 1 = on, 0 = off, k_m defines prior
 
 # evening (e) and morning (m) radii 
 k_e_prior = N           # Gaussian/Normal (N) or uniform (U) prior 
-k_e_1 = 0.10560		    # If k_prior = N, this is the centre of the Gaussian prior, if k_prior = U this is the lower boundary
+k_e_1 = 0.10608		    # If k_prior = N, this is the centre of the Gaussian prior, if k_prior = U this is the lower boundary
 k_e_2 = 0.001		    # If k_prior = N, this is the std of the Gaussian prior, if k_prior = U this is the upper boundary
 
 k_m_prior = N           # Gaussian/Normal (N) or uniform (U) prior 
-k_m_1 = 0.10560 		    # If k_prior = N, this is the centre of the Gaussian prior, if k_prior = U this is the lower boundary
+k_m_1 = 0.10608 		# If k_prior = N, this is the centre of the Gaussian prior, if k_prior = U this is the lower boundary
 k_m_2 = 0.001		    # If k_prior = N, this is the std of the Gaussian prior, if k_prior = U this is the upper boundary
 
 # inflate error bars
@@ -81,8 +86,8 @@ ld_unc_multiplier = 3 	# If wanting to inflate the std on the Gaussian priors fo
 
 ### Nested sampling parameters
 
-nLive_pdim = 1000              # will be multiplied by the number of parameters, so the 'real' live points = nLive_pdim * nDims
-precision_criterion = 1e-9    # ratio between prior and posterior space where the nested sampling 'converged'
+nLive_pdim = 100              # will be multiplied by the number of parameters, so the 'real' live points = nLive_pdim * nDims
+precision_criterion = 1e+0    # ratio between prior and posterior space where the nested sampling 'converged'
 
 
 

@@ -68,6 +68,10 @@ except:
 nDims = 0 
 prior_dict = {}
 
+prior_dict['t0_prior'] = input_dict['t0_prior']
+prior_dict['t0_1'] = float(input_dict['t0_1'])
+prior_dict['t0_2'] = float(input_dict['t0_2'])
+
 prior_dict['k_m_prior'] = input_dict['k_m_prior']
 prior_dict['k_m_1'] = float(input_dict['k_m_1'])
 prior_dict['k_m_2'] = float(input_dict['k_m_2'])
@@ -104,7 +108,12 @@ k_m_e_equal = bool(int(input_dict['k_m_e_equal']))
 ### Initiate dictionaries with parameters to set up model
 d = OrderedDict()
 
-d['t0'] = float(input_dict['t0'])
+if bool(int(input_dict['fit_t0'])):
+    d['t0'] = cwm.Param(float(input_dict['t0']))
+else:
+    d['t0'] = float(input_dict['t0'])
+
+
 d['inc'] = float(input_dict['inclination'])
 d['aRs'] = float(input_dict['aRs'])
 d['period'] = float(input_dict['period'])
@@ -141,8 +150,9 @@ d['infl_err'] = cwm.Param(1.)
 
 print(d)
 model = cwm.CatwomanModel(d,flux,flux_error,time,prior_dict,nested_parameters,k_m_e_equal,ld_law) #,cw_fac=0.0001
+print(model.calc(time))
 print(model.return_curr_parameters())
-
+print(model.loglikelihood([10560,10560,1.0]))
 result = model.run_dynesty()
 
 pickle.dump(result, open('result_wb%s.pickle'%(str(wb+1).zfill(2)),'wb'))
