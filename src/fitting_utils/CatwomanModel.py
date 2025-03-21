@@ -52,6 +52,10 @@ class CatwomanModel(object):
         self.namelist = [k for k in self.pars.keys() if self.pars[k] is not None and not isinstance(self.pars[k],float)]
         self.data = [v for v in self.pars.values() if v is not None and not isinstance(v,float)]
 
+        if isinstance(self.pars['t0'],float):
+            self.fix_t0 = True
+        else:
+            self.fix_t0 = False
 
         if isinstance(self.pars['u1'],float):
             self.fix_u1 = True
@@ -79,7 +83,12 @@ class CatwomanModel(object):
 
         self.catwoman_params = catwoman.TransitParams()
 
-        self.catwoman_params.t0 = self.pars['t0']              #time of inferior conjuction (in days)
+        if self.fix_t0:
+            self.catwoman_params.t0 = self.pars['t0']              #time of inferior conjuction (in days)
+        else:
+            self.catwoman_params.t0 = self.pars['t0'].currVal   #time of inferior conjuction (in days)
+            self.nDims_dict.append('t0')
+            
         self.catwoman_params.per = self.pars['period']         #orbital period (in days)
         self.catwoman_params.a = self.pars['aRs']              #semi-major axis (in units of stellar radii)
         self.catwoman_params.inc = self.pars['inc']            #orbital inclination (in degrees)
@@ -150,6 +159,10 @@ class CatwomanModel(object):
         Returns:
         model - the modelled catwoman light curve"""
 
+        if self.fix_t0:
+            self.catwoman_params.t0 = self.pars['t0']              #time of inferior conjuction (in days)
+        else:
+            self.catwoman_params.t0 = self.pars['t0'].currVal    #time of inferior conjuction (in days)
 
         if self.k_m_e_equal:
             self.catwoman_params.rp = self.pars['k'].currVal   #if morning = evening we only have one radius
@@ -205,6 +218,17 @@ class CatwomanModel(object):
         theta = [0] * self.nDims
         
         index_run = 0
+        if self.fix_t0 == False:
+            if self.prior_dict['t0_prior'] == 'N':
+                theta[index_run] = priors.GaussianPrior(self.prior_dict['t0_1'],self.prior_dict['t0_2'])(np.array(x[index_run]))
+                index_run += 1
+            elif self.prior_dict['t0_prior'] == 'U':
+                theta[index_run] = priors.UniformPrior(self.prior_dict['t0_1'],self.prior_dict['t0_2'])(np.array(x[index_run]))
+                index_run += 1
+            else:
+                #add exit here 
+                print('Choose either normal or uniform prior') 
+        
         if self.k_m_e_equal:
             if self.prior_dict['k_e_prior'] == 'N':
                 theta[index_run] = priors.GaussianPrior(self.prior_dict['k_e_1'],self.prior_dict['k_e_2'])(np.array(x[index_run]))
