@@ -703,7 +703,7 @@ def calc_wvl_solution(pixel_values,line_wvls,poly_order,stellar_spectrum,verbose
     return wvl_solution, poly, chi2, BIC
 
 
-def resample_smoothly(reference_pixel_locations,measured_shifts,input_arrays,sigma_clip_outliers=3,median=False,poly_order=3,mf_box_width=None,min_good=0.9,spline_smoothing_factor=None,verbose=False,refit_polynomial=None,reference_wvl_array=None,use_pysynphot=False):
+def resample_smoothly(reference_pixel_locations,measured_shifts,input_arrays,sigma_clip_outliers=3,median=False,poly_order=3,mf_box_width=None,min_good=0.9,spline_smoothing_factor=None,verbose=False,refit_polynomial=None,reference_wvl_array=None,use_pysynphot=True):
     """
 
     Use this function to resample spectra, following a spline smoothing to the measured shifts from cross-correlation/Gaussian fitting.
@@ -725,7 +725,7 @@ def resample_smoothly(reference_pixel_locations,measured_shifts,input_arrays,sig
     refit_polynomial - Define whether we want to refit the polynomial after the initial fit. This allows us to clip outliers from the first fit.
                        The value given to refit_polynomial is an integer and is interpreted as the number of standard deviations away from the residuals that should be clipped.
     reference_wvl_array: can be set to the wavelength array to resample the data onto if working in wavelength, not pixel, space. If working in pixel space, leave this as None.
-    use_pysynphot - True/False. Choose whether to use pysynphot to perform the resampling (via rebin_spec) or use np.interp for 1D linear interpolation. Note the difference is negligible but np.interp1d is much faster. Default=False.
+    use_pysynphot - True/False. Choose whether to use pysynphot to perform the resampling (via rebin_spec) or use np.interp for 1D linear interpolation. The latter doesn't necessarily conserve flux and should be treated with caution! Default=True.
 
     Returns:
     resampled_dict - the dictionary of inputs resampled onto the desired x-axis
