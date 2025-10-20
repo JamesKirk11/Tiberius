@@ -3,4 +3,4 @@ requires = ["setuptools>=70", "wheel", "setuptools_scm[toml]>=7"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-write_to = "src/tiberius/_version.py"
+write_to = "src/_version.py"
