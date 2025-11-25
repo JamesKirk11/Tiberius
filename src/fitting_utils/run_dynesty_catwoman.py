@@ -80,20 +80,26 @@ prior_dict['k_e_prior'] = input_dict['k_e_prior']
 prior_dict['k_e_1'] = float(input_dict['k_e_1'])
 prior_dict['k_e_2'] = float(input_dict['k_e_2'])
 
-prior_dict['u1'] = np.atleast_1d(u1)
-prior_dict['u1_err'] = np.atleast_1d(u1_err)
-prior_dict['u2'] = np.atleast_1d(u2)
-prior_dict['u2_err'] = np.atleast_1d(u2_err)
-prior_dict['u3'] = np.atleast_1d(u3)
-prior_dict['u3_err'] = np.atleast_1d(u3_err)
-prior_dict['u4'] = np.atleast_1d(u4)
-prior_dict['u4_err'] = np.atleast_1d(u4_err)
+prior_dict['u1'] = float(u1)
+prior_dict['u1_err'] = float(u1_err)
+prior_dict['u2'] = float(u2)
+prior_dict['u2_err'] = float(u2_err)
+prior_dict['u3'] = float(u3)
+prior_dict['u3_err'] = float(u3_err)
+prior_dict['u4'] = float(u4)
+prior_dict['u4_err'] = float(u4_err)
+
 
 prior_dict['ld_unc_multiplier'] = float(input_dict['ld_unc_multiplier'])
 
 prior_dict['error_infl_prior'] = input_dict['error_infl_prior']
 prior_dict['err_1'] = float(input_dict['err_1'])
 prior_dict['err_2'] = float(input_dict['err_2'])
+
+prior_dict['phi_prior'] = input_dict['phi_prior']
+prior_dict['phi_1'] = float(input_dict['phi_1'])
+prior_dict['phi_2'] = float(input_dict['phi_2'])
+
 
 ## Other fitting parameters
 ld_law = input_dict["ld_law"]
@@ -147,6 +153,14 @@ if ld_law == "nonlinear":
         d['u4'] = cwm.Param(u4)
 
 d['infl_err'] = cwm.Param(1.)
+
+
+if bool(int(input_dict['fit_phi'])):
+    d['phi'] = cwm.Param(float(input_dict['phi']))
+else:
+    d['phi'] = float(input_dict['phi'])
+
+
 
 print(d)
 model = cwm.CatwomanModel(d,flux,flux_error,time,prior_dict,nested_parameters,k_m_e_equal,ld_law) #,cw_fac=0.0001
