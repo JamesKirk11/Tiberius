@@ -78,6 +78,12 @@ class CatwomanModel(object):
                 self.fix_u4 = True
             else:
                 self.fix_u4 = False
+                
+        if isinstance(self.pars['infl_err'],float):
+            self.fix_infl_err = True
+        else:
+            self.fix_infl_err = False
+            
 
         ##### Catwoman initialisation - note this is first outside of model calculation as it is the fastest way
 
@@ -94,7 +100,15 @@ class CatwomanModel(object):
         self.catwoman_params.inc = self.pars['inc']            #orbital inclination (in degrees)
         self.catwoman_params.ecc = self.pars['ecc']            #eccentricity
         self.catwoman_params.w = self.pars['w']                #longitude of periastron (in degrees)
-        self.catwoman_params.phi = 90.                          #angle of rotation of top semi-circle (in degrees)
+        
+        if 'phi' in self.pars:
+            if isinstance(self.pars['phi'],float):
+                self.phi_fix = True
+                self.catwoman_params.phi = self.pars['phi'] 
+            else:
+                self.phi_fix = False
+        else:
+            self.catwoman_params.phi = 90.  #angle of rotation of top semi-circle (in degrees)
 
         if self.k_m_e_equal:
             self.catwoman_params.rp = self.pars['k'].currVal   #if morning = evening we only have one radius
@@ -142,10 +156,15 @@ class CatwomanModel(object):
             self.catwoman_params.limb_dark = self.ld_law
 
         self.catwoman_model = catwoman.TransitModel(self.catwoman_params, time_array,fac=self.catwoman_fac)    #initializes model
-
-        self.nDims_dict.append('infl_err') # add for error inflation
+        
+        if not self.fix_infl_err:
+            self.nDims_dict.append('infl_err') # add for error inflation
+            
+        if not self.fix_phi:
+            self.nDims_dict.append('phi')
 
         self.nDims = len(self.nDims_dict)
+        
 
     
 
@@ -201,6 +220,9 @@ class CatwomanModel(object):
         if time is not None:
             if np.any(time != self.time_array): # optionally recalculating catwoman model if the time array has changed
                 self.catwoman_model = catwoman.TransitModel(self.catwoman_params, time, fac=self.catwoman_fac)
+                
+        if not self.phi_fix:
+            self.catwoman_params.phi = self.pars['phi'].currVal  
 
         model = self.catwoman_model.light_curve(self.catwoman_params)
         return model
@@ -270,6 +292,7 @@ class CatwomanModel(object):
                 theta[index_run] = priors.GaussianPrior(self.prior_dict['u2'],
                                                         self.prior_dict['u2_err']*self.prior_dict['ld_unc_multiplier'])(np.array(x[index_run]))
                 index_run += 1
+                
         if self.ld_law == "nonlinear":
             if not self.fix_u3:
                 theta[index_run] = priors.GaussianPrior(self.prior_dict['u3'],
@@ -279,16 +302,27 @@ class CatwomanModel(object):
                 theta[index_run] = priors.GaussianPrior(self.prior_dict['u4'],
                                                         self.prior_dict['u4_err']+self.prior_dict['ld_unc_multiplier'])(np.array(x[index_run]))
                 index_run += 1
-
-        if self.prior_dict['error_infl_prior'] == 'N':
-            theta[index_run] = priors.GaussianPrior(self.prior_dict['err_1'],self.prior_dict['err_2'])(np.array(x[index_run]))
-            index_run += 1
-        elif self.prior_dict['error_infl_prior'] == 'U':
-            theta[index_run] = priors.UniformPrior(self.prior_dict['err_1'],self.prior_dict['err_2'])(np.array(x[index_run]))
-            index_run += 1
-        else:
-            #add exit here 
-            print('Choose either normal or uniform prior for err_inflation')
+        if not self.fix_infl_err:
+            if self.prior_dict['error_infl_prior'] == 'N':
+                theta[index_run] = priors.GaussianPrior(self.prior_dict['err_1'],self.prior_dict['err_2'])(np.array(x[index_run]))
+                index_run += 1
+            elif self.prior_dict['error_infl_prior'] == 'U':
+                theta[index_run] = priors.UniformPrior(self.prior_dict['err_1'],self.prior_dict['err_2'])(np.array(x[index_run]))
+                index_run += 1
+            else:
+                #add exit here 
+                print('Choose either normal or uniform prior for err_inflation')
+                
+        if not self.phi_fix:
+            if self.prior_dict['phi_prior'] == 'N':
+                theta[index_run] = priors.GaussianPrior(self.prior_dict['phi_1'],self.prior_dict['phi_2'])(np.array(x[index_run]))
+                index_run += 1
+            elif self.prior_dict['phi_prior'] == 'U':
+                theta[index_run] = priors.UniformPrior(self.prior_dict['phi_1'],self.prior_dict['phi_2'])(np.array(x[index_run]))
+                index_run += 1
+            else:
+                #add exit here 
+                print('Choose either normal or uniform prior for err_inflation')
 
         return theta
 
@@ -311,8 +345,12 @@ class CatwomanModel(object):
         model_values = self.calc(self.time_array)
         
         residuals = self.flux_array - model_values
-
-        new_noise = self.flux_err*self.pars['infl_err'].currVal
+        
+        if self.fix_infl_err:
+            new_noise = self.flux_err*self.pars['infl_err']
+        else:
+            new_noise = self.flux_err*self.pars['infl_err'].currVal
+        
         
         N = len(self.flux_array)
         logL = -N/2. *  np.log(2*np.pi)
@@ -322,7 +360,7 @@ class CatwomanModel(object):
 
 
     def run_dynesty(self):
-        sampler = dynesty.NestedSampler(self.loglikelihood, self.prior_setup, self.nDims,nlive=self.live_points*self.nDims)#,sample='rslice')
+        sampler = dynesty.NestedSampler(self.loglikelihood, self.prior_setup, self.nDims,nlive=self.live_points*self.nDims, bootstrap=0)#,sample='rslice')
         sampler.run_nested(dlogz=self.precision_criterion, print_progress=True) 
         results = sampler.results
 
