@@ -18,6 +18,7 @@ parser.add_argument('-t','--title',help='use this to define the filename of the 
 parser.add_argument('-k','--k',help='use this to plot a horizontal line at a desired value of k (Rp/Rs)',type=float)
 parser.add_argument('-aRs','--aRs',help='use this to plot a horizontal line at a desired value of aRs (a/Rs)',type=float)
 parser.add_argument('-t0','--t0',help='use this to plot a horizontal line at a desired value of t0 (time of mid-transit)',type=float)
+parser.add_argument('-t0_lit','--t0_lit',help='use this to define a literature value of t0 (time of mid-transit), for which all t0s are compared with',type=float)
 parser.add_argument('-inc','--inc',help='use this to plot a horizontal line at a desired value of inc (inclination)',type=float)
 args = parser.parse_args()
 
@@ -50,7 +51,10 @@ for i,t in enumerate(args.best_fit_tabs):
 
         if args.t0_offsets is not None and new_key == "t0":
             value += args.t0_offsets[i]
-            n = np.round((args.t0_offsets[i] - args.t0_offsets[0])/args.period)
+            if args.t0_lit is not None:
+                n = np.round((value - args.t0_lit)/args.period)
+            else:
+                n = np.round((args.t0_offsets[i] - args.t0_offsets[0])/args.period)
             norbits.append(int(n))
             value -= int(n)*args.period
 
@@ -115,7 +119,11 @@ for k in best_fit_dict.keys():
         ax.axhline(args.inc,ls='--',color='r',lw=2,zorder=0)
 
     if k == "t0" and args.t0 is not None:
-        ax.axhline(args.t0,ls='--',color='r',lw=2,zorder=0)
+        if args.t0_lit is not None:
+            n = np.round((args.t0 - args.t0_lit)/args.period)
+            ax.axhline(args.t0-int(n)*args.period,ls='--',color='r',lw=2,zorder=0)
+        else:
+            ax.axhline(args.t0,ls='--',color='r',lw=2,zorder=0)
 
     ax.set_ylabel("%s"%(k),fontsize=12)
     subplot_counter += 1
