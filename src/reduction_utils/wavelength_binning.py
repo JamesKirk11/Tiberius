@@ -7,7 +7,7 @@ import pickle
 from scipy import stats, signal
 import os
 import pandas as pd
-import pysynphot.binning as astrobin
+import synphot.binning as astrobin
 import warnings as warn
 from Tiberius.src.reduction_utils import wavelength_calibration as wc
 
