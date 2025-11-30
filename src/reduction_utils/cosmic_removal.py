@@ -3,10 +3,9 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import medfilt
 from astropy.stats import median_absolute_deviation
 from astropy.convolution import Gaussian2DKernel, interpolate_replace_nans
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, median_filter
 import glob
 import pickle
 
@@ -142,7 +141,7 @@ def find_cosmic_frames_with_medfilt(data,box_width=7,sigma_clip=5,mask=None,sear
             lowpass = gaussian_filter(d, 3)
             residuals = abs(d - lowpass)
         else:
-            MF = medfilt(d,box_width)
+            MF = median_filter(d,box_width)
             residuals = abs(d - MF)
 
         if use_mad:
@@ -407,7 +406,7 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
         residuals =  median - frame[:,left_col:right_col]
 
     else:
-        median = np.array([medfilt(row,mf_box_width) for row in frame[:,left_col:right_col]])
+        median = np.array([median_filter(row,mf_box_width) for row in frame[:,left_col:right_col]])
         residuals = median - frame[:,left_col:right_col]
 
     if use_mad:

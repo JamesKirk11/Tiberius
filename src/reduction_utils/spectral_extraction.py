@@ -6,7 +6,7 @@ from scipy import optimize
 from scipy.interpolate import UnivariateSpline
 from scipy.stats import median_abs_deviation as mad
 from scipy.ndimage import median_filter as MF
-from scipy.ndimage import interpolation
+from scipy.ndimage import shift
 from astropy.io import fits
 import matplotlib.pyplot as plt
 import time
@@ -1608,7 +1608,7 @@ def rectify_spatial(data, curve):
         row = data[i]
         row[~keep_index] = 0
 
-        rectified_row = interpolation.shift(row, curve_p[i], order=3, mode='nearest', prefilter=True)
+        rectified_row = shift(row, curve_p[i], order=3, mode='nearest', prefilter=True)
 
         rectified_row[np.abs(rectified_row) <= 1e-30] = np.nan
         rectified.append(rectified_row)

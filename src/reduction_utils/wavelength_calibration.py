@@ -5,12 +5,12 @@ from astropy.io import fits
 from astropy.modeling.models import Moffat1D
 import numpy as np
 import matplotlib.pyplot as plt
-import peakutils
-from scipy import stats,optimize,interpolate,conjugate, polyfit
+from scipy import stats,optimize,interpolate
+from numpy import conjugate, polyfit
 import pickle
-from scipy.fftpack import fft, ifft
+from scipy.fft import fft, ifft
 from scipy.interpolate import UnivariateSpline as US
-from scipy.signal import medfilt as MF
+from scipy.ndimage import median_filter as MF
 from astropy.stats import median_absolute_deviation
 import warnings
 
