@@ -5,20 +5,19 @@ from astropy.io import fits
 from astropy.modeling.models import Moffat1D
 import numpy as np
 import matplotlib.pyplot as plt
-import peakutils
-from scipy import stats,optimize,interpolate,conjugate, polyfit
+from scipy import stats,optimize,interpolate
+from numpy import conjugate, polyfit
 import pickle
-from scipy.fftpack import fft, ifft
+from scipy.fft import fft, ifft
 from scipy.interpolate import UnivariateSpline as US
-from scipy.signal import medfilt as MF
+from scipy.ndimage import median_filter as MF
 from astropy.stats import median_absolute_deviation
 import warnings
 
 with warnings.catch_warnings():
     # This is to supress the warnings that are generated upon importing pysynphot and are only becuase we've not downloaded the calibration files - which are not needed by us
     warnings.filterwarnings("ignore", category=UserWarning)
-    from pysynphot import observation
-    from pysynphot import spectrum
+    from synphot import SourceSpectrum, SpectralElement, Observation
 
 
 def rebin_spec(wave, specin, wavnew):
@@ -33,10 +32,10 @@ def rebin_spec(wave, specin, wavnew):
     Returns:
     resampled_spectra - the 1D array of the resampled 1D spectrum/errors"""
 
-    spec = spectrum.ArraySourceSpectrum(wave=wave, flux=specin)
+    spec = SourceSpectrum.from_array(wave=wave, flux=specin)
     f = np.ones(len(wave))
-    filt = spectrum.ArraySpectralElement(wave, f, waveunits='angstrom')
-    obs = observation.Observation(spec, filt, binset=wavnew, force='taper')
+    filt = SpectralElement.from_array(wave, f, waveunits='angstrom')
+    obs = Observation(spec, filt, binset=wavnew, force='taper')
 
     return obs.binflux
 
