@@ -1,0 +1,65 @@
+#!/bin/bash
+# following steps as defined here: https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html#calwebb-detector1
+conda activate JWST
+export CRDS_PATH=$HOME/crds_cache/jwst
+export CRDS_SERVER_URL=https://jwst-crds.stsci.edu
+echo ""
+echo "****running group scale****"
+echo ""
+strun group_scale $1_uncal.fits
+echo ""
+echo "****running dq_init****"
+echo ""
+strun dq_init $1_groupscalestep.fits
+rm $1_groupscalestep.fits
+echo ""
+echo "****running saturation****"
+echo ""
+strun saturation $1_dqinitstep.fits
+rm $1_dqinitstep.fits
+echo ""
+echo "****running superbias****"
+echo ""
+strun superbias $1_saturationstep.fits
+rm $1_saturationstep.fits
+echo ""
+echo "****running refpix****"
+echo ""
+strun refpix $1_superbiasstep.fits
+rm $1_superbiasstep.fits
+echo ""
+echo "****running linearity****"
+echo ""
+strun linearity $1_refpixstep.fits
+rm $1_refpixstep.fits
+echo ""
+echo "****running dark_current****"
+echo ""
+strun dark_current $1_linearitystep.fits
+rm $1_linearitystep.fits
+echo ""
+echo "****running 1overf_subtraction.py****"
+echo ""
+python $HOME/python/Tiberius/src/reduction_utils/JWST_utils/1overf_subtraction.py $1_darkcurrentstep.fits --pixel_mask /path/to/nrs2_bad_pixel_mask.pickle --trace_location /path/to/finding_the_trace/pickled_objects/x_positions_1.pickle --extraction_input /path/to/finding_the_trace/extraction_input.txt
+echo ""
+echo "****running ramp_fit****"
+echo ""
+strun ramp_fit $1_darkcurrentstep.fits
+rm $1_darkcurrentstep.fits
+echo ""
+echo "****running gain_scale****"
+echo ""
+strun gain_scale $1_1_rampfitstep.fits
+rm $1_0_rampfitstep.fits
+rm $1_1_rampfitstep.fits
+echo ""
+echo "****running assign_wcs****"
+echo ""
+strun assign_wcs $1_1_gainscalestep.fits
+echo ""
+echo "****running extract_2d****"
+echo ""
+strun extract_2d $1_1_assignwcsstep.fits --tsgrism_extract_height 32
+rm $1_1_assignwcsstep.fits
+echo ""
+conda deactivate

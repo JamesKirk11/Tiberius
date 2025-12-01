@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 from astropy.io import fits
 import numpy as np
 import argparse
-from scipy.signal import medfilt
-from scipy.ndimage import filters
+from scipy.ndimage import median_filter, gaussian_filter
 from scipy.stats import median_abs_deviation as mad
 import pickle
 
@@ -155,14 +154,14 @@ def test_smoothing_widths(flat_data,nwindows):
         box_width = i
 
         if nwindows == 1:
-            MF = medfilt(flat_data[:,ncols//2],box_width)
+            MF = median_filter(flat_data[:,ncols//2],box_width)
             residuals = flat_data[:,ncols//2]/MF
             # rms.append(np.sqrt(np.mean(residuals**2)))
             std.append(np.std(residuals))
 
         else:
-            MF1 = medfilt(flat_data[0][:,ncols1//2],box_width) # just use single column for plotting
-            MF2 = medfilt(flat_data[1][:,ncols2//2],box_width)
+            MF1 = median_filter(flat_data[0][:,ncols1//2],box_width) # just use single column for plotting
+            MF2 = median_filter(flat_data[1][:,ncols2//2],box_width)
 
             residuals1 = flat_data[0][:,ncols1//2]/MF1
             residuals2 = flat_data[1][:,ncols2//2]/MF2
@@ -192,11 +191,11 @@ def median_smooth(flat_data,name,nwindows,box_width,clobber):
         nrows1,ncols1 = np.shape(flat_data[0])
         nrows2,ncols2 = np.shape(flat_data[1])
 
-        MF1 = medfilt(flat_data[0][:,ncols1//2],box_width) # just use single column for plotting
-        MF2 = medfilt(flat_data[1][:,ncols2//2],box_width)
+        MF1 = median_filter(flat_data[0][:,ncols1//2],box_width) # just use single column for plotting
+        MF2 = median_filter(flat_data[1][:,ncols2//2],box_width)
     else:
         nrows,ncols = np.shape(flat_data)
-        MF = medfilt(flat_data[:,ncols//2],box_width)
+        MF = median_filter(flat_data[:,ncols//2],box_width)
 
     plt.figure(figsize=(10,8))
     plt.subplot(211)
@@ -235,7 +234,7 @@ def median_smooth(flat_data,name,nwindows,box_width,clobber):
 
     if nwindows == 1:
         # Now find running median for each column individually
-        MF_reshaped =  np.array([medfilt(flat_data[:,i],box_width) for i in range(ncols)]).transpose()
+        MF_reshaped =  np.array([median_filter(flat_data[:,i],box_width) for i in range(ncols)]).transpose()
 
         MF_reshaped[MF_reshaped == 0] = 1 # have to replace 0s which occur near the edges, the bias over subtracts to give negative values which mess up this line
 
@@ -243,11 +242,11 @@ def median_smooth(flat_data,name,nwindows,box_width,clobber):
         normalised_sky_flat = divided_sky_flat/divided_sky_flat.mean()
 
     else:
-        MF1_reshaped = np.array([medfilt(flat_data[0][:,i],box_width) for i in range(ncols1)]).transpose()
+        MF1_reshaped = np.array([median_filter(flat_data[0][:,i],box_width) for i in range(ncols1)]).transpose()
         divided_sky_flat1 = flat_data[0]/MF1_reshaped
         normalised_sky_flat1 = divided_sky_flat1/divided_sky_flat1.mean()
 
-        MF2_reshaped = np.array([medfilt(flat_data[1][:,i],box_width) for i in range(ncols2)]).transpose()
+        MF2_reshaped = np.array([median_filter(flat_data[1][:,i],box_width) for i in range(ncols2)]).transpose()
         divided_sky_flat2 = flat_data[1]/MF2_reshaped
         normalised_sky_flat2 = divided_sky_flat2/divided_sky_flat2.mean()
 
@@ -289,11 +288,11 @@ def gaussian_smooth(flat_data,name,nwindows,inst,clobber):
         nrows1,ncols1 = np.shape(flat_data[0])
         nrows2,ncols2 = np.shape(flat_data[1])
 
-        GF1 = filters.gaussian_filter(flat_data[0],sigma)
-        GF2 = filters.gaussian_filter(flat_data[1],sigma)
+        GF1 = gaussian_filter(flat_data[0],sigma)
+        GF2 = gaussian_filter(flat_data[1],sigma)
     else:
         nrows,ncols = np.shape(flat_data)
-        GF = filters.gaussian_filter(flat_data,sigma)
+        GF = gaussian_filter(flat_data,sigma)
 
 
     # Plot Gaussian filter evaluated at a column in centre of CCD
@@ -424,7 +423,7 @@ def pixel_mask_medfilt(frame,save):
 
     cut_off = 5
     for i,row in enumerate(frame):
-        MF = medfilt(row,5)
+        MF = median_filter(row,5)
         residuals = row-MF
         good_pixels.append(((residuals >= -10*mad(residuals,scale='normal')) & (residuals <= 10*mad(residuals,scale='normal'))))
 

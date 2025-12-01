@@ -36,6 +36,7 @@ parser.add_argument("-input","--input",help="second method to plot the scale hei
 parser.add_argument("-pickle","--pickle",help="use this if wanting to pickle the figure object",action="store_true")
 parser.add_argument("-colours","--colours",help="use this to define the plot colours",nargs='+')
 parser.add_argument("-symbols","--symbols",help="use this to define the plot symbols",nargs='+')
+parser.add_argument("-R","--resolution",help="use this to rebin the spectrum to a lower spectral resolution",type=int,default=0)
 args = parser.parse_args()
 
 
@@ -130,7 +131,7 @@ def find_nearest(array, value):
     return idx
 
 
-def get_all_transmission_spectra(direc_list,auto_offset,manual_offset,anchor_wvl):
+def get_all_transmission_spectra(direc_list,auto_offset,manual_offset,anchor_wvl,resolution):
 
     """If providing a list of directories"""
 
@@ -146,6 +147,11 @@ def get_all_transmission_spectra(direc_list,auto_offset,manual_offset,anchor_wvl
         print("\n## Statistics for %s..."%d)
 
         k,k_up,k_low,w,we,_ = pu.recover_transmission_spectrum(d,save_fig=False,plot_fig=False,bin_mask=None,save_to_tab=False,print_RpErr_over_RMS=False)
+
+        if resolution > 0:
+            binned_wvl = pu.bin_wave_to_R(w,resolution)
+            binned_spec = pu.bin_trans_spec(binned_wvl,w,k,k_up,k_low)
+            k,k_up,k_low,w,we = binned_spec["bin_y"],binned_spec["bin_dy"],binned_spec["bin_dy"],binned_spec["bin_x"],binned_spec["bin_dx"]
 
         w_all.append(w)
         we_all.append(we)
@@ -188,7 +194,7 @@ def get_all_transmission_spectra(direc_list,auto_offset,manual_offset,anchor_wvl
 
 
 
-def load_all_transmission_spectra(tspec_list,auto_offset,manual_offset,anchor_wvl):
+def load_all_transmission_spectra(tspec_list,auto_offset,manual_offset,anchor_wvl,resolution):
 
     """If providing a list of trans spec files"""
 
@@ -204,6 +210,11 @@ def load_all_transmission_spectra(tspec_list,auto_offset,manual_offset,anchor_wv
         print("\n## Statistics for %s..."%d)
 
         w,we,k,k_up,k_low = np.loadtxt(d,unpack=True,usecols=[0,1,2,3,4])
+
+        if resolution > 0:
+            binned_wvl = pu.bin_wave_to_R(w,resolution)
+            binned_spec = pu.bin_trans_spec(binned_wvl,w,k,k_up,k_low)
+            k,k_up,k_low,w,we = binned_spec["bin_y"],binned_spec["bin_dy"],binned_spec["bin_dy"],binned_spec["bin_x"],binned_spec["bin_dx"]
 
         print("\nMedian Rp/Rs = %f ;  Median Rp/Rs +ve error (ppm) = %d ; Median Rp/Rs -ve error (ppm) = %d ; Median R/Rs error (ppm) = %d "%(np.median(k),np.nanmedian(k_up)*1e6,np.nanmedian(k_low)*1e6,np.nanmedian(np.hstack((k_up,k_low)))*1e6))
 
@@ -247,11 +258,11 @@ def load_all_transmission_spectra(tspec_list,auto_offset,manual_offset,anchor_wv
 
 
 if args.directory_list is not None:
-    w_all,we_all,k_all,k_up_all,k_low_all = get_all_transmission_spectra(args.directory_list,args.auto_offset,args.manual_offset,args.anchor_wvl)
+    w_all,we_all,k_all,k_up_all,k_low_all = get_all_transmission_spectra(args.directory_list,args.auto_offset,args.manual_offset,args.anchor_wvl,args.resolution)
     in_list = args.directory_list
 
 if args.trans_spec is not None:
-    w_all,we_all,k_all,k_up_all,k_low_all = load_all_transmission_spectra(args.trans_spec,args.auto_offset,args.manual_offset,args.anchor_wvl)
+    w_all,we_all,k_all,k_up_all,k_low_all = load_all_transmission_spectra(args.trans_spec,args.auto_offset,args.manual_offset,args.anchor_wvl,args.resolution)
     in_list = args.trans_spec
 
 
@@ -478,21 +489,21 @@ if H_Rs is not None:
     fig.text(1-0.04, 0.5, 'Atmospheric scale heights (H)', va='center', rotation='vertical',fontsize=14)
 
 if args.save_fig:
-    fig.savefig('trans_spec_comparison_%s.pdf'%title,bbox_inches='tight')
-    fig.savefig('trans_spec_comparison_%s.png'%title,bbox_inches='tight',dpi=360)
+    fig.savefig('%s.pdf'%title,bbox_inches='tight')
+    fig.savefig('%s.png'%title,bbox_inches='tight',dpi=360)
 
     if args.combine:
 
         # save the combined transmission spectrum to a table
-        new_tab = open('combined_trans_spec_%s.txt'%title,'w')
+        new_tab = open('%s.txt'%title,'w')
         new_tab.write('# Wvl_centre Wvl_error Rp/Rs Rp/Rs_err Rp/Rs_err \n')
 
         # save the combined transmission spectrum to a table
-        depths_tab = open('combined_trans_spec_depths_%s.txt'%title,'w')
+        depths_tab = open('%s_depths.txt'%title,'w')
         depths_tab.write('# Wvl centre (%s), Wvl error (%s), Transit depth (ppm), Transit depth err (ppm) \n'%(pu.determine_wvl_units(w_mean),pu.determine_wvl_units(w_mean)))
 
         # Make table ready for PLATON input
-        retrieval_tab = open('combined_trans_spec_%s_PLATON.txt'%title,'w')
+        retrieval_tab = open('%s_PLATON.txt'%title,'w')
         retrieval_tab.write('# Wlow (%s) Wup (%s) Transit_Depth (ppm) Transit_Depth_ErrUp (ppm) Transit_Depth_ErrLow (ppm) \n'%(pu.determine_wvl_units(w_mean),pu.determine_wvl_units(w_mean)))
 
         Wlow = w_mean-we_mean/2
@@ -508,6 +519,7 @@ if args.save_fig:
 
         new_tab.close()
         retrieval_tab.close()
+        depths_tab.close()
 
 if args.pickle:
     pickle.dump(fig, open('FigureObject_%s.fig.pickle'%title, 'wb'))

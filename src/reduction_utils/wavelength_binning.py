@@ -7,9 +7,9 @@ import pickle
 from scipy import stats, signal
 import os
 import pandas as pd
-import pysynphot.binning as astrobin
+import synphot.binning as astrobin
 import warnings as warn
-from Tiberius.src.reduction_utils import wavelength_calibration as wc
+from reduction_utils import wavelength_calibration as wc
 
 ### define the alkali metal lines, air wavelengths
 sodium_d1 = 5890
@@ -605,13 +605,13 @@ def simple_bin(flux,flux_error,ancillary_data,wvl_solution,bin_edges,weighted=Tr
 
         else:
             print("N points in bin =",flux[:,index].shape)
-            bf = np.sum(flux[:,index],axis=1)
-            be = np.sqrt(np.sum(flux_error[:,index]**2,axis=1))#/npoints_in_bin
+            bf = np.nansum(flux[:,index],axis=1)
+            be = np.sqrt(np.nansum(flux_error[:,index]**2,axis=1))#/npoints_in_bin
 
             for k in ancillary_data.keys():
-                ba = np.sum(ancillary_data[k][:,index],axis=1)
+                ba = np.nansum(ancillary_data[k][:,index],axis=1)
                 if standardise_input:
-                    ba = (ba-ba.mean())/ba.std()
+                    ba = (ba-np.nanmean(ba))/np.nanstd(ba)
                 binned_ancillary[k].append(ba)
 
         binned_flux.append(bf)
@@ -1312,78 +1312,78 @@ def binning(x, y,  dy=None, binwidth=None, r=None,newx= None, log = False, nan=F
 
 
 def uniform_tophat_mean(newx,x, y, dy=None,nan=False):
-	"""Adapted from Mike R. Line to rebin spectra
+    """Adapted from Mike R. Line to rebin spectra
 
-	Takes mean of groups of points in certain wave bin
+    Takes mean of groups of points in certain wave bin
 
-	Parameters
-	----------
-	newx : list of float or numpy array of float
-	    New wavelength grid to rebin to
-	x : list of float or numpy array of float
-	    Old wavelength grid to get rid of
-	y : list of float or numpy array of float
-	    New rebinned y axis
+    Parameters
+    ----------
+    newx : list of float or numpy array of float
+    New wavelength grid to rebin to
+    x : list of float or numpy array of float
+    Old wavelength grid to get rid of
+    y : list of float or numpy array of float
+    New rebinned y axis
 
-	Returns
-	-------
-	array of floats
-	    new wavelength grid
+    Returns
+    -------
+    array of floats
+    new wavelength grid
 
-	Examples
-	--------
+    Examples
+    --------
 
-	>>> from pandexo.engine.jwst import uniform_tophat_sum
-	>>> oldgrid = np.linspace(1,3,100)
-	>>> y = np.zeros(100)+10.0
-	>>> newy = uniform_tophat_sum(np.linspace(2,3,3), oldgrid, y)
-	>>> newy
-	array([ 240.,  250.,  130.])
-	"""
-	newx = np.array(newx)
-	szmod=newx.shape[0]
-	delta=np.zeros(szmod)
-	ynew=np.zeros(szmod)
-	bin_dy =np.zeros(szmod)
-	bin_n =np.zeros(szmod)
+    >>> from pandexo.engine.jwst import uniform_tophat_sum
+    >>> oldgrid = np.linspace(1,3,100)
+    >>> y = np.zeros(100)+10.0
+    >>> newy = uniform_tophat_sum(np.linspace(2,3,3), oldgrid, y)
+    >>> newy
+    array([ 240.,  250.,  130.])
+    """
+    newx = np.array(newx)
+    szmod=newx.shape[0]
+    delta=np.zeros(szmod)
+    ynew=np.zeros(szmod)
+    bin_dy =np.zeros(szmod)
+    bin_n =np.zeros(szmod)
 
-	delta[0:-1]=newx[1:]-newx[:-1]
-	delta[szmod-1]=delta[szmod-2]
+    delta[0:-1]=newx[1:]-newx[:-1]
+    delta[szmod-1]=delta[szmod-2]
 
-	for i in range(szmod-1):
-		i=i+1
-		loc=np.where((x >= newx[i]-0.5*delta[i-1]) & (x < newx[i]+0.5*delta[i]))
-		#make sure there are values within the slice
-		if len(loc[0]) > 0:
-			ynew[i]=np.mean(y[loc])
-			if dy is not None:
-				bin_dy[i] = np.sqrt(np.sum(dy[loc]**2.0))/len(y[loc])
-			bin_n[i] = len(y[loc])
-		#if not give empty slice a nan
-		elif len(loc[0]) is 0 :
-			warn.warn(UserWarning("Empty slice exists within specified new x, replacing value with nan"))
-			ynew[i]=np.nan
-			bin_n[i] = np.nan
+    for i in range(szmod-1):
+        i=i+1
+        loc=np.where((x >= newx[i]-0.5*delta[i-1]) & (x < newx[i]+0.5*delta[i]))
+        #make sure there are values within the slice
+        if len(loc[0]) > 0:
+            ynew[i]=np.mean(y[loc])
+            if dy is not None:
+                bin_dy[i] = np.sqrt(np.sum(dy[loc]**2.0))/len(y[loc])
+                bin_n[i] = len(y[loc])
+                #if not give empty slice a nan
+        elif len(loc[0]) == 0 :
+            warn.warn(UserWarning("Empty slice exists within specified new x, replacing value with nan"))
+            ynew[i]=np.nan
+            bin_n[i] = np.nan
 
-	#fill in zeroth entry
-	loc=np.where((x > newx[0]-0.5*delta[0]) & (x < newx[0]+0.5*delta[0]))
-	if len(loc[0]) > 0:
-		ynew[0]=np.mean(y[loc])
-		bin_n[0] = len(y[loc])
-		if dy is not None:
-			bin_dy[0] = np.sqrt(np.sum(dy[loc]**2.0))/len(y[loc])
-	elif len(loc[0]) is 0 :
-		ynew[0]=np.nan
-		bin_n[0] = np.nan
-		if dy is not None:
-			bin_dy[0] = np.nan
+    #fill in zeroth entry
+    loc=np.where((x > newx[0]-0.5*delta[0]) & (x < newx[0]+0.5*delta[0]))
+    if len(loc[0]) > 0:
+        ynew[0]=np.mean(y[loc])
+        bin_n[0] = len(y[loc])
+        if dy is not None:
+            bin_dy[0] = np.sqrt(np.sum(dy[loc]**2.0))/len(y[loc])
+    elif len(loc[0]) is 0 :
+        ynew[0]=np.nan
+        bin_n[0] = np.nan
+        if dy is not None:
+            bin_dy[0] = np.nan
 
-	#remove nans if requested
-	out = pd.DataFrame({'bin_y':ynew, 'bin_x':newx, 'bin_dy':bin_dy, 'bin_n':bin_n})
-	if not nan:
-		out = out.dropna()
+    #remove nans if requested
+    out = pd.DataFrame({'bin_y':ynew, 'bin_x':newx, 'bin_dy':bin_dy, 'bin_n':bin_n})
+    if not nan:
+        out = out.dropna()
 
-	return out['bin_x'].values,out['bin_y'].values, out['bin_dy'].values, out['bin_n'].values
+    return out['bin_x'].values,out['bin_y'].values, out['bin_dy'].values, out['bin_n'].values
 
 
 def bin_wave_to_R(w, R):
@@ -1436,3 +1436,25 @@ def bin_wave_to_R(w, R):
 	        tracker = max(w)
 	        wave += [tracker]
 	return wave
+
+
+def generate_wvls_at_R(starting_wvl,stopping_wvl,R):
+
+    """JK's function to generate a wavelength grid with a desired (constant) resolution.
+
+    Inputs:
+    starting_wvl -- the first wavelength to consider
+    stopping_wvl -- the final wavelength to consider
+    R -- the desired spectral resolution of the resulting wavelength axis
+
+    Returns:
+    wvls -- the wavelength grid at the specified resolution"""
+
+    wvls = []
+    i = starting_wvl
+    while i < stopping_wvl:
+        delta_lam = i/R
+        wvls.append(i+delta_lam)
+        i += delta_lam
+
+    return np.array(wvls)

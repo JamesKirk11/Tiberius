@@ -9,7 +9,7 @@ import pickle
 import glob
 from matplotlib.ticker import AutoMinorLocator
 from global_utils import parseInput
-from Tiberius.src.fitting_utils import mcmc_utils as mc
+from fitting_utils import mcmc_utils as mc
 from scipy.stats import chi2 as c2
 from scipy.special import erfinv
 
@@ -352,14 +352,15 @@ def plot_models(model_list,time,flux_array,error_array,wvl_centre,rebin_data=Non
             plt.savefig('fitted_model_rebin_%d.png'%rebin_data,bbox_inches='tight',dpi=360)
 
         plt.close()
+        # plt.show()
 
-    # ~ else:
-        # ~ plt.show()
+    else:
+        plt.show()
 
     return fig
 
 
-def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavelength_bin=None,deconstruct=True,plot_residual_std=0):
+def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavelength_bin=None,deconstruct=True,plot_residual_std=0,systematics_model_inputs=None):
     """
     Plot a single light curve with model.
 
@@ -373,6 +374,7 @@ def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavel
     wavelength_bin - the number of the wavelength bin being plotted, useful for saving to file. Default=None
     deconstruct_gp - True/False: use if wanting to plot the contributions of each kernel to the overall GP fit. Default=True. Note: this used to be more informative when not using a single amplitude for the GP. This could do with improving.
     plot_residual_std - This can be used to overplot the standard deviation on the residuals subplot, which is useful when clipping data based on this. Set this parameter to the number of standard deviations desired. Default=0
+    systematics_model_inputs - the model inputs to feed to the systematics model
 
     Returns:
     matplotlib figure object"""
@@ -396,23 +398,28 @@ def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavel
     gp = model.GP_used
     poly = model.poly_used
     exp = model.exp_ramp_used
+    step = model.step_func_used
 
     # convert times from days to hours from mid-transit
     hours = mjd2hours(time,tc)
 
     # calculate M&A transit model
-    model_y = model.calc(time)
+    model_y = model.calc(time,systematics_model_inputs)
     oot = 1
 
     if poly:# and not gp:
         if deconstruct:
-            oot,poly_components = model.red_noise_poly(time,deconstruct_polys=True)
+            oot,poly_components = model.red_noise_poly(time,systematics_model_inputs,deconstruct_polys=True)
         else:
-            oot = model.red_noise_poly(time)
+            oot = model.red_noise_poly(time,systematics_model_inputs)
 
     if exp:
         exp_ramp = model.exponential_ramp(time)
         oot *= exp_ramp
+
+    if step:
+        step_func = model.step_function(time)
+        oot *= step_func
 
     if gp:
         if deconstruct:
@@ -487,6 +494,9 @@ def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavel
         if exp:
             model_ax.plot(hours,(exp_ramp*1e6)-(exp_ramp*1e6).mean(),label='exponential ramp',alpha=1,lw=1)
 
+        if step:
+            model_ax.plot(hours,(step_func*1e6)-(step_func*1e6).mean(),label='step function',alpha=1,lw=1)
+
         NCOL = 2
         subplot += 1
         model_ax.ticklabel_format(useOffset=False)
@@ -506,9 +516,11 @@ def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavel
     ax2.axhline(0,ls='--',color='k')
 
     if plot_residual_std > 0:
-        rms = np.sqrt(np.mean(yr**2))
-        ax2.axhline(plot_residual_std*rms,ls='--',color='grey')
-        ax2.axhline(-plot_residual_std*rms,ls='--',color='grey')
+        print("plotting outliers")
+        rms = np.sqrt(np.mean(yr**2))*1e6
+
+        ax2.axhline(plot_residual_std*rms,ls='--',color='r')
+        ax2.axhline(-plot_residual_std*rms,ls='--',color='r')
 
         if gp:
             wn_var = np.exp(model.starting_gp_object.white_noise.get_value(time))
@@ -1363,30 +1375,31 @@ def load_completed_bins(directory=".",start_bin=None,end_bin=None,mask=None,retu
 
 
 def bin_wave_to_R(w,R):
-	"""A function to bin a wavelength grid to a specified resolution
+    """A function to bin a wavelength grid to a specified resolution
 
-	Parameters
-	----------
-	w : list of float or numpy array of float
-	    Wavelength axis to be rebinned
-	R : float or int
-	    Resolution to bin axis to
+    Parameters
+    ----------
+    w : list of float or numpy array of float
+    Wavelength axis to be rebinned
+    R : float or int
+    Resolution to bin axis to
 
-	Returns
-	-------
-	list of float
-	    New wavelength axis at specified resolution
-	"""
+    Returns
+    -------
+    list of float
+    New wavelength axis at specified resolution
+    """
 
-	wvls = []
-	starting_wvl = w[0]
-	stopping_wvl = w[-1]
-	i = starting_wvl
-	while i < stopping_wvl:
-	    delta_lam = i/R
-	    wvls.append(i+delta_lam)
-	    i += delta_lam
-	return np.array(wvls)
+    starting_wvl = w[0]
+    stopping_wvl = w[-1]
+    i = starting_wvl
+    wvls = [starting_wvl]
+    while i < stopping_wvl:
+        delta_lam = i/R
+        wvls.append(i+delta_lam)
+        i += delta_lam
+    # wvls.append(stopping_wvl)
+    return np.array(wvls)
 
 
 def bin_trans_spec(bin_edges,x,y,e1,e2=None):
@@ -1410,11 +1423,14 @@ def bin_trans_spec(bin_edges,x,y,e1,e2=None):
     binned_e = []
 
     for i in range(1,len(bin_edges)):
+        if len(y[digitized==i]) == 0:
+            continue
+
         if e2 is not None:
             mean_y,mean_e = weighted_mean_uneven_errors(y[digitized==i],e1[digitized==i],e2[digitized==i])
         else:
-	        mean_y,weights = np.average(y[digitized==i],weights=1/e1[digitized==i]**2,returned=True)
-	        mean_e = np.sqrt(1/weights)
+            mean_y,weights = np.average(y[digitized==i],weights=1/e1[digitized==i]**2,returned=True)
+            mean_e = np.sqrt(1/weights)
 
         binned_x.append(x[digitized==i].mean())
         binned_xe.append(x[digitized==i].max()-x[digitized==i].min())

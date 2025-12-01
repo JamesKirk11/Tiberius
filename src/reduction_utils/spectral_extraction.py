@@ -6,14 +6,14 @@ from scipy import optimize
 from scipy.interpolate import UnivariateSpline
 from scipy.stats import median_abs_deviation as mad
 from scipy.ndimage import median_filter as MF
-from scipy.ndimage import interpolation
+from scipy.ndimage import shift
 from astropy.io import fits
 import matplotlib.pyplot as plt
 import time
 import pickle
 import os
 from collections import Counter
-from Tiberius.src.global_utils import parseInput
+from global_utils import parseInput
 try:
     import astroscrappy
 except:
@@ -56,7 +56,10 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
     else:
         search_frame = frame
 
-    buffer_pixels = 5 # ignore edges of detector which might have abnormally high counts
+    if "JWST" in instrument:
+        buffer_pixels = 0
+    else:
+        buffer_pixels = 5 # ignore edges of detector which might have abnormally high counts
 
     if guess_location-search_width < buffer_pixels:
         search_left_edge = buffer_pixels
@@ -77,7 +80,7 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
 
     row_array = np.arange(nrows)
 
-    plot_row = nrows//2
+    plot_row = 2000#nrows//2
 
     total_errors = [] # number of errors per frame
     force_verbose = False
@@ -107,6 +110,12 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
         x = np.arange(ncols)[np.isfinite(row)]+search_left_edge
         row = row[np.isfinite(row)]
 
+        if len(row) == 0:
+            trace_centre.append(0)
+            fwhm.append(np.nan)
+            gauss_std.append(np.nan)
+            continue
+
         if instrument == "Keck/NIRSPEC":
             # clip out negative frame from A-B
             row_residuals_1 = row - np.median(row)
@@ -122,7 +131,6 @@ def find_spectral_trace(frame,guess_location,search_width,gaussian_width,trace_p
             row = row[keep_index_2]
 
         nerrors = 0 # running count of errors
-        
         centre_guess = peak_counts_location = x[np.argmax(row)]
         amplitude = np.nanmax(row)
         amplitude_offset = np.nanmin(row)
@@ -644,7 +652,7 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
 
         # Clip outliers (possible cosmics)
         keep_idx = (y <= np.nanmedian(y)+3*np.nanstd(y)) & (y >= np.nanmedian(y)-3*np.nanstd(y))
-        
+
         # Clip out-of-order background for Keck/NIRSPEC (defined as 0s)
         if instrument == "Keck/NIRSPEC":
             keep_idx_2 = ((np.isfinite(y)) & (abs(y) >= 1e-2))
@@ -686,9 +694,16 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
             background_fit = poly_dict[chosen_order]
 
         else: # polynomial with user-defined order
-            poly = np.poly1d(np.polyfit(bkg_cols_keep,y_keep,poly_bg_order))
-            background_fit = poly(np.arange(left_bkg_left_hand_edge,right_bkg_right_hand_edge))
-            bkg_poly_orders_used.append(poly_bg_order)
+
+            if len(y_keep) > 0:
+                poly = np.poly1d(np.polyfit(bkg_cols_keep,y_keep,poly_bg_order))
+                background_fit = poly(np.arange(left_bkg_left_hand_edge,right_bkg_right_hand_edge))
+                bkg_poly_orders_used.append(poly_bg_order)
+
+            else: # if the array is empty, then eveything has been clipped due to NaNs so we'll set the background = 0
+                poly = np.poly1d(0)
+                background_fit = poly(np.arange(left_bkg_left_hand_edge,right_bkg_right_hand_edge))
+                bkg_poly_orders_used.append(0)
 
         # Now saving the clipped sky regions
         if "JWST" not in instrument:
@@ -790,43 +805,46 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
     if verbose:
 
         # background subtracted image
-        clipped_frame = np.array(clipped_frame)
-        plt.figure(figsize=(12,8))
-        plt.subplot(121)
+        try:
+            clipped_frame = np.array(clipped_frame)
+            plt.figure(figsize=(12,8))
+            plt.subplot(121)
 
-        if instrument == "Keck/NIRSPEC":
-            vmin,vmax = 0,500
-        else:
-            vmin,vmax = np.nanpercentile(clipped_frame,[10,50])
-        plt.imshow(clipped_frame,vmin=vmin,vmax=vmax,aspect="auto")
-        plt.title("Before background subtraction")
-        plt.xlabel("Pixel column")
-        plt.ylabel("Pixel row")
+            if instrument == "Keck/NIRSPEC":
+                vmin,vmax = 0,500
+            else:
+                vmin,vmax = np.nanpercentile(clipped_frame,[10,50])
+            plt.imshow(clipped_frame,vmin=vmin,vmax=vmax,aspect="auto")
+            plt.title("Before background subtraction")
+            plt.xlabel("Pixel column")
+            plt.ylabel("Pixel row")
 
-        plt.subplot(122)
+            plt.subplot(122)
 
-        if instrument == "Keck/NIRSPEC":
-            vmin,vmax = -500,1000
-        else:
-            vmin,vmax = np.nanpercentile(clipped_frame-np.array(sky_poly),[10,50])
-        plt.imshow(clipped_frame-np.array(sky_poly),vmin=vmin,vmax=vmax,aspect="auto")
-        plt.title("After background subtraction")
-        plt.xlabel("Pixel column")
-        # ~ ax2.set_ylabel("Pixel row")
+            if instrument == "Keck/NIRSPEC":
+                vmin,vmax = -500,1000
+            else:
+                vmin,vmax = np.nanpercentile(clipped_frame-np.array(sky_poly),[10,50])
+            plt.imshow(clipped_frame-np.array(sky_poly),vmin=vmin,vmax=vmax,aspect="auto")
+            plt.title("After background subtraction")
+            plt.xlabel("Pixel column")
+            # ~ ax2.set_ylabel("Pixel row")
 
-        if verbose == -2:
-            plt.show()
-        if verbose > 0:
-            plt.show(block=False)
-            plt.pause(verbose)
-            plt.close()
+            if verbose == -2:
+                plt.show()
+            if verbose > 0:
+                plt.show(block=False)
+                plt.pause(verbose)
+                plt.close()
+        except:
+            pass
 
 
         plt.figure(figsize=(8,6))
         plt.plot(flux)
         plt.show(block=False)
-        plt.ylabel('Integrated counts')
-        plt.xlabel('X pixel')
+        plt.ylabel('Integrated counts (DN/s)')
+        plt.xlabel('Y pixel')
         if verbose == -2:
             plt.show()
         if verbose > 0:
@@ -1022,22 +1040,25 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
 
                 if instrument == "ACAM":
                     obs_time_array.append(fits_file[0].header['MJD-OBS'])
-                    exposure_time_array.append(fits_file[0].header['EXPTIME'])
+                    exposure_time = fits_file[0].header['EXPTIME']
+                    exposure_time_array.append(exposure_time)
                     am = fits_file[0].header['AIRMASS']
                     airmass.append(am)
-                    
+
                 elif instrument == "EFOSC":
                     obs_time_array.append(fits_file[0].header['MJD-OBS'])
-                    exposure_time_array.append(fits_file[0].header['EXPTIME'])
+                    exposure_time = fits_file[0].header['EXPTIME']
+                    exposure_time_array.append(exposure_time)
                     am = fits_file[0].header['HIERARCH ESO TEL AIRM START']
                     airmass.append(am)
-                    
+
                 elif "JWST" in instrument:
                     obs_time_array.append(fits_file["INT_TIMES"].data["int_mid_BJD_TDB"][jwst_index_counter])
-                    exposure_time_array.append(fits_file[0].header["EFFINTTM"])
+                    exposure_time = fits_file[0].header["EFFINTTM"]
+                    exposure_time_array.append(exposure_time)
                     am = 0
                     airmass.append(0)
-                    
+
                 elif instrument == "Keck/NIRSPEC":
                     exposure_time = fits_file[0].header["ITIME"] / 1e3
                     exposure_time_array.append(exposure_time)
@@ -1054,9 +1075,10 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                         new_tab = open("m1temp.txt","w")
                     new_tab.write("%f \n"%(m1temp))
                     new_tab.close()
-                    
+
                 else:
                     obs_time_array.append(0)
+                    exposure_time = 0
                     exposure_time_array.append(0)
                     am = 0
                     airmass.append(0)
@@ -1111,9 +1133,9 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
 
                 original_frame = frame.copy()
                 if "JWST" in instrument:
-                    frame = np.array([interp_bad_pixels(frame[0],pixel_mask),interp_bad_pixels(frame[1],pixel_mask)])
+                    frame = np.array([interp_bad_pixels(frame[0],pixel_mask,replace_with_medians=True),interp_bad_pixels(frame[1],pixel_mask,replace_with_medians=True)])
                 else:
-                    frame = interp_bad_pixels(frame,pixel_mask)
+                    frame = interp_bad_pixels(frame,pixel_mask,replace_with_medians=True)
 
                 if verbose != -1 and verbose != 0 and i == 0 or verbose != -1 and verbose != 0 and cosmic_pixel_mask is not None:
                     plt.figure()
@@ -1242,18 +1264,18 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                     force_verbose = verbose
 
                 if gaussian_defined_aperture:
-                    
+
                     # Smooth the FWHMs with a quadratic polynomial
                     gauss_std_poly = np.poly1d(np.polyfit(np.arange(0,row_max-row_min),gauss_std,trace_poly_order))
                     gauss_std_smooth = gauss_std_poly(np.arange(0,row_max-row_min))
-                    
+
                     # refit with outliers clipped
-                    gauss_std_residuals = gauss_std - gauss_std_poly(np.arange(0,row_max-row_min)) 
+                    gauss_std_residuals = gauss_std - gauss_std_poly(np.arange(0,row_max-row_min))
                     gauss_std_keep_idx = abs(gauss_std_residuals) <= 4*np.std(gauss_std_residuals)
-                    
+
                     gauss_std_poly = np.poly1d(np.polyfit(np.arange(0,row_max-row_min)[gauss_std_keep_idx],gauss_std[gauss_std_keep_idx],trace_poly_order))
                     gauss_std_smooth = gauss_std_poly(np.arange(0,row_max-row_min))
-                    
+
                     if verbose != -1 and verbose != 0:
                         plt.figure()
                         plt.plot(np.arange(row_min,row_max),gauss_std,label="Std dev of trace")
@@ -1268,7 +1290,7 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                             plt.show(block=False)
                             plt.pause(verbose)
                             plt.close()
-                            
+
                     trace_std = gauss_std_smooth*2*np.sqrt(2*np.log(2))
 
                 else:
@@ -1344,7 +1366,7 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
 
     if use_lacosmic and instrument == "Keck/NIRSPEC" and cosmic_pixel_mask is None:
         pickle.dump(np.array(cosmic_masked_pixels),open("pickled_objects/cosmic_masked_pixels.pickle","wb"))
-        
+
     if instrument == "Keck/NIRSPEC":
         os.rename("m1temp.txt", "pickled_objects/m1temp.txt")
 
@@ -1397,7 +1419,7 @@ def generate_wl_curve(stellar_fluxes,stellar_errors,time,nstars,overwrite=True):
     except:
         pass
 
-    pickle.dump(time-int(time[0]),open("./initial_WL_fit/initial_WL_time.pickle","wb"))
+    pickle.dump(time-time[0],open("./initial_WL_fit/initial_WL_time.pickle","wb"))
     pickle.dump(ratio,open("./initial_WL_fit/initial_WL_flux.pickle","wb"))
     pickle.dump(err_ratio,open("./initial_WL_fit/initial_WL_err.pickle","wb"))
 
@@ -1416,7 +1438,7 @@ def main(input_file='extraction_input.txt'):
 
     # order mask for Keck/NIRSPEC data
     if input_dict['instrument'] == 'Keck/NIRSPEC':
-        
+
         NIRSPEC_order = input_dict["NIRSPEC_order"]
         trace_guess_locations,trace_search_widths = KO.get_guess_locations(NIRSPEC_order)
         nstars = 1
@@ -1586,7 +1608,7 @@ def rectify_spatial(data, curve):
         row = data[i]
         row[~keep_index] = 0
 
-        rectified_row = interpolation.shift(row, curve_p[i], order=3, mode='nearest', prefilter=True)
+        rectified_row = shift(row, curve_p[i], order=3, mode='nearest', prefilter=True)
 
         rectified_row[np.abs(rectified_row) <= 1e-30] = np.nan
         rectified.append(rectified_row)

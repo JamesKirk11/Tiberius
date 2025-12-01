@@ -5,12 +5,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import argparse
-from Tiberius.src.fitting_utils import plotting_utils as pu
+from fitting_utils import plotting_utils as pu
 from global_utils import parseInput
 
 parser = argparse.ArgumentParser(description='Generate .dat table of time, flux, err and transit and gp models and residuals')
 parser.add_argument("-pre",help="the prefix of the table name, to go before model_tab_wbXX.dat, can be left blank")
-parser.add_argument("-off",help='mjd offset to be added to time array',type=int)
+parser.add_argument("-off",help='mjd offset to be added to time array',type=float)
 parser.add_argument("-dt_only",help='Use this if only wanting to save the detrended flux and rescaled uncertainties to table',action="store_true")
 args = parser.parse_args()
 

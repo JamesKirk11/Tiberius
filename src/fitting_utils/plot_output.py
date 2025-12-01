@@ -9,8 +9,8 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 from global_utils import parseInput
-from Tiberius.src.fitting_utils import plotting_utils as pu
-from Tiberius.src.fitting_utils import mcmc_utils as mc
+from fitting_utils import plotting_utils as pu
+from fitting_utils import mcmc_utils as mc
 
 ### Define command line arguments with help
 
@@ -77,11 +77,11 @@ if not args.white_light_curve:
         fig = pu.plot_models(m,x,y,e,w,save_fig=False,rebin_data=args.rebin_data)
         if args.save_fig and not args.photon_noise:
             if args.rebin_data is None:
-                fig.savefig('fitted_models_wb%d-%d.pdf'%(args.sb+1,args.fb+1),bbox_inches='tight')
-                fig.savefig('fitted_models_wb%d-%d.png'%(args.sb+1,args.fb+1),bbox_inches='tight')
+                fig.savefig('fitted_models_wb%d-%d.pdf'%(args.start_bin+1,args.end_bin+1),bbox_inches='tight')
+                fig.savefig('fitted_models_wb%d-%d.png'%(args.start_bin+1,args.end_bin+1),bbox_inches='tight')
             else:
-                fig.savefig('fitted_models_wb%d-%d_rebin_%d.pdf'%(args.sb+1,args.fb+1,args.rebin_data),bbox_inches='tight')
-                fig.savefig('fitted_models_wb%d-%d_rebin_%d.png'%(args.sb+1,args.fb+1,args.rebin_data),bbox_inches='tight')
+                fig.savefig('fitted_models_wb%d-%d_rebin_%d.pdf'%(args.start_bin+1,args.end_bin+1,args.rebin_data),bbox_inches='tight')
+                fig.savefig('fitted_models_wb%d-%d_rebin_%d.png'%(args.start_bin+1,args.end_bin+1,args.rebin_data),bbox_inches='tight')
 
         fig.show()
         raise SystemExit
@@ -130,6 +130,8 @@ for i,model in enumerate(m):
             model.pars["u1"] = 0
         else:
             model.pars["u1"].currVal = 0
+        if model.ld_law == "linear":
+            continue
         if model.fix_u2:
             model.pars["u2"] = 0
         else:
@@ -150,6 +152,8 @@ for i,model in enumerate(m):
             red_noise_model *= model.red_noise_poly(x[i])
         if model.exp_ramp_used:
              red_noise_model *= model.exponential_ramp(x[i])
+        if model.step_func_used:
+             red_noise_model *= model.step_function(x[i])
 
         tm = model.calc(x[i])/red_noise_model
 
@@ -243,12 +247,16 @@ for plot_no in range(nplots):
             beta_factor_tab.write('%f %f \n'%(w[i],beta_factor))
 
         if i == 0:
-            ax.plot(npoints_per_bin,rms/rms[0],'r',lw=2,label='measured noise',zorder=1)
-            ax.plot(npoints_per_bin,gaussian_white_noise/gaussian_white_noise[0],color='k',lw=2,label='white noise',zorder=0)
+            # ax.plot(npoints_per_bin,rms/rms[0],'r',lw=2,label='measured noise',zorder=1)
+            # ax.plot(npoints_per_bin,gaussian_white_noise/gaussian_white_noise[0],color='k',lw=2,label='white noise',zorder=0)
+            ax.plot(npoints_per_bin,1e6*np.array(rms),'r',lw=2,label='measured noise',zorder=1)
+            ax.plot(npoints_per_bin,(gaussian_white_noise/gaussian_white_noise[0])*(1e6*rms[0]),color='k',lw=2,label='white noise',zorder=0)
             ax.legend()
         else:
-            ax.plot(npoints_per_bin,rms/rms[0],'r',lw=2,zorder=1)
-            ax.plot(npoints_per_bin,gaussian_white_noise/gaussian_white_noise[0],color='k',lw=2,zorder=0)
+            # ax.plot(npoints_per_bin,rms/rms[0],'r',lw=2,zorder=1)
+            # ax.plot(npoints_per_bin,gaussian_white_noise/gaussian_white_noise[0],color='k',lw=2,zorder=0)
+            ax.plot(npoints_per_bin,1e6*np.array(rms),'r',lw=2,zorder=1)
+            ax.plot(npoints_per_bin,(gaussian_white_noise/gaussian_white_noise[0])*(1e6*rms[0]),color='k',lw=2,zorder=0)
 
         ax.set_yscale('log')
         ax.set_xscale('log')
@@ -256,7 +264,7 @@ for plot_no in range(nplots):
 
         if nrows == 1 and i == 0:
             ax.set_xlabel("Points per bin",fontsize=14)
-            ax.set_ylabel("Normalized RMS",fontsize=14)
+            ax.set_ylabel("RMS (ppm)",fontsize=14)
         if i < nrows*ncols-ncols:
             ax.set_xticklabels([])
         if i%3 != 0:
@@ -275,7 +283,8 @@ for plot_no in range(nplots):
 
         if nrows > 1:
             fig.text(0.5,0.08,'Points per bin',fontsize=14,ha='center',va='center')
-            fig.text(0.08,0.5,'Normalized RMS',fontsize=14,ha='center',va='center',rotation=90)
+            # fig.text(0.08,0.5,'Normalized RMS',fontsize=14,ha='center',va='center',rotation=90)
+            fig.text(0.08,0.5,'RMS (ppm)',fontsize=14,ha='center',va='center',rotation=90)
 
         subplot_counter += 1
         bin_counter += 1

@@ -3,14 +3,13 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import medfilt
 from astropy.stats import median_absolute_deviation
 from astropy.convolution import Gaussian2DKernel, interpolate_replace_nans
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, median_filter
 import glob
 import pickle
 
-def find_cosmic_frames(spectra,ref_frame,clip=3,mad=False,ignore_edges=0,mask=None,verbose=False):
+def find_cosmic_frames(spectra,ref_frame,clip=5,mad=False,ignore_edges=0,mask=None,verbose=False):
     """A function that uses the standard or median absolute deviation of residuals from each spectrum - a reference spectrum to locate cosmic rays.
     This code first normalizes all inputted spectra for the purposes of accurate comparison, although the normalized
     spectra are only used to locate cosmic rays, they are not returned.
@@ -142,7 +141,7 @@ def find_cosmic_frames_with_medfilt(data,box_width=7,sigma_clip=5,mask=None,sear
             lowpass = gaussian_filter(d, 3)
             residuals = abs(d - lowpass)
         else:
-            MF = medfilt(d,box_width)
+            MF = median_filter(d,box_width)
             residuals = abs(d - MF)
 
         if use_mad:
@@ -299,22 +298,57 @@ def not_cosmics(cosmic_flagged_frames,cosmic_flagged_pixels,not_cosmic_list):
     return cosmic_flagged_frames[mask],cosmic_flagged_pixels[mask]
 
 
-def interp_bad_pixels(frame,pixel_mask,return_nans=False):
+def interp_bad_pixels(frame,pixel_mask,return_nans=False,replace_with_medians=False):
     """Interpolate over bad pixels in a frame using a 2D interpolation over neighbouring pixels.
 
     Inputs:
     frame - the frame (2D array) of values
     pixel_mask - the bad pixel mask (same shape as frame)
     returns_nans - True/False - if True return nans at bad pixel locations, otherwise interpolate over them. Default=False.
+    replace_with_medians - True/False - if True, replace the bad pixel with the median of the surrounding pixels, as opposed to interpolating with a Gaussian kernel
 
     Returns:
     frame - with bad pixels interpolated over"""
 
     nrows,ncols = frame.shape
     for i in range(nrows):
-        frame[i][pixel_mask[i]] = np.nan
+        if replace_with_medians:
+            for j in range(ncols):
+                if pixel_mask[i][j]:
+                    surrounding_pixels = []
 
-    if return_nans:
+                    if j > 0: # lett pixel
+                        if not pixel_mask[i][j-1]: # make sure we're not using a bad pixel
+                            surrounding_pixels.append(frame[i][j-1])
+                        else:
+                            if j > 1:
+                                if not pixel_mask[i][j-2]:
+                                    surrounding_pixels.append(frame[i][j-2])
+
+
+                    if j < ncols-1: # right pixel
+                        if not pixel_mask[i][j+1]: # make sure we're not using a bad pixel
+                            surrounding_pixels.append(frame[i][j+1])
+                        else:
+                            if j < ncols-2:
+                                if not pixel_mask[i][j+2]: # make sure we're not using a bad pixel
+                                    surrounding_pixels.append(frame[i][j+2])
+
+
+                    # if i > 0: # lower pixel
+                    #     if not pixel_mask[i-1][j]: # make sure we're not using a bad pixel
+                    #         surrounding_pixels.append(frame[i-1][j])
+                    #
+                    # if i < nrows-1: # upper pixel
+                    #     if not pixel_mask[i+1][j]: # make sure we're not using a bad pixel
+                    #         surrounding_pixels.append(frame[i+1][j])
+
+                    frame[i][j] = np.nanmedian(surrounding_pixels)
+
+        else:
+            frame[i][pixel_mask[i]] = np.nan
+
+    if return_nans or replace_with_medians:
         return frame
 
     # Now use astropy to convolve bad pixels with neighbouring values
@@ -328,7 +362,7 @@ def interp_bad_pixels(frame,pixel_mask,return_nans=False):
 
 
 
-def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad=False,verbose=False,mf_box_width=3,left_col=0,right_col=-1,axis=None,std_box_width=0,use_gaussian_filter=False):
+def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad=False,verbose=False,mf_box_width=3,left_col=0,right_col=-1,axis=None,std_box_width=0,use_gaussian_filter=False,existing_pixel_mask=None):
     """A function that performs a row-by-row running median to locate bad pixels in a given frame.
 
     Inputs:
@@ -344,6 +378,7 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
     axis - set whether to calculate one std/mad across the whole frame (axis=None) or calculae a std/mad for every row (axis=1). Default=None
     std_box_width - set this to have a sliding standard deviation across the row, rather than a single standard deviation. Set this number equal to the number of points over which to calculate the sliding standard deviation. Default=0.
     use_gaussian_filter - set this to True to use a Gaussian filter rather than running median to locate outliers. Default=False.
+    existing_pixel_mask - use this to pass an existing pixel mask to append newly flagged bad pixels to. Default=None
 
     Returns:
     pixel_flags - the boolean (nrows,ncols) array of flagged bad pixels"""
@@ -357,9 +392,21 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
 
     if use_gaussian_filter:
         median = np.array([gaussian_filter(row, 3) for row in frame[:,left_col:right_col]])
+        # interpolate over nan values
+        for i in range(nrows):
+            finite_pixels = np.isfinite(frame[:,left_col:right_col][i])
+            infinite_pixels = ~finite_pixels
+            finite_medians = np.isfinite(median[i])
+            infinite_medians = ~finite_pixels
+            if np.any(finite_pixels):
+                median[i] = np.interp(np.arange(ncols),np.arange(ncols)[finite_medians],median[i][finite_medians])
+            else:
+                median[i] = np.nan*finite_medians
+
         residuals =  median - frame[:,left_col:right_col]
+
     else:
-        median = np.array([medfilt(row,mf_box_width) for row in frame[:,left_col:right_col]])
+        median = np.array([median_filter(row,mf_box_width) for row in frame[:,left_col:right_col]])
         residuals = median - frame[:,left_col:right_col]
 
     if use_mad:
@@ -377,22 +424,25 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
         if std_box_width > 0:
             threshold_array = []
             for i in range(nrows):
-                threshold_array.append(np.array([np.std(residuals[i][j:j+std_box_width]) for j in range(0,ncols,std_box_width)]))
+                threshold_array.append(np.array([np.nanstd(residuals[i][j:j+std_box_width]) for j in range(0,ncols,std_box_width)]))
             threshold = np.zeros_like(residuals)
-            print(residuals.shape)
+
             for i in range(nrows):
                 for j,k in enumerate(range(0,ncols,std_box_width)):
                     threshold[i][k:k+std_box_width] = threshold_array[i][j]
         else:
             threshold = np.nanstd(residuals,axis=axis)
 
-    if axis == 1:
+
+    if axis == 1 and std_box_width == 0:
         threshold = np.ones_like(median)*threshold.reshape(nrows,1)
     else:
         threshold = np.ones_like(median)*threshold
 
     good_pixels = ((residuals <= cut_off*threshold) & (residuals >= -cut_off*threshold))
     bad_pixels = ~good_pixels
+    if existing_pixel_mask is not None:
+        bad_pixels += existing_pixel_mask[:,left_col:right_col].astype(bool)
 
     for i,row in enumerate(frame[:,left_col:right_col]):
 
@@ -405,6 +455,7 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
         pixel_flags[i] = bad_pixels[i]
 
         if plot_rows is not None:
+
             if i in plot_rows:
 
                 plt.figure()
@@ -412,7 +463,7 @@ def flag_bad_pixels(frame,cut_off=5,max_pixels_per_row=10,plot_rows=None,use_mad
                 plt.plot(row,label="Data")
                 plt.plot(median[i],label="Running median")
                 plt.plot(np.arange(ncols)[bad_pixels[i]],row[bad_pixels[i]],"rx",label="Clipped point")
-                plt.yscale("log")
+                # plt.yscale("log")
                 plt.ylabel("Counts")
                 plt.title("Pixel flagging, row %d"%i)
                 plt.legend()

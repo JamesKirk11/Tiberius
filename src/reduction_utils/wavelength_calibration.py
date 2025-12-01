@@ -5,20 +5,19 @@ from astropy.io import fits
 from astropy.modeling.models import Moffat1D
 import numpy as np
 import matplotlib.pyplot as plt
-import peakutils
-from scipy import stats,optimize,interpolate,conjugate, polyfit
+from scipy import stats,optimize,interpolate
+from numpy import conjugate, polyfit
 import pickle
-from scipy.fftpack import fft, ifft
+from scipy.fft import fft, ifft
 from scipy.interpolate import UnivariateSpline as US
-from scipy.signal import medfilt as MF
+from scipy.ndimage import median_filter as MF
 from astropy.stats import median_absolute_deviation
 import warnings
 
 with warnings.catch_warnings():
     # This is to supress the warnings that are generated upon importing pysynphot and are only becuase we've not downloaded the calibration files - which are not needed by us
     warnings.filterwarnings("ignore", category=UserWarning)
-    from pysynphot import observation
-    from pysynphot import spectrum
+    from synphot import SourceSpectrum, SpectralElement, Observation
 
 
 def rebin_spec(wave, specin, wavnew):
@@ -33,10 +32,10 @@ def rebin_spec(wave, specin, wavnew):
     Returns:
     resampled_spectra - the 1D array of the resampled 1D spectrum/errors"""
 
-    spec = spectrum.ArraySourceSpectrum(wave=wave, flux=specin)
+    spec = SourceSpectrum.from_array(wave=wave, flux=specin)
     f = np.ones(len(wave))
-    filt = spectrum.ArraySpectralElement(wave, f, waveunits='angstrom')
-    obs = observation.Observation(spec, filt, binset=wavnew, force='taper')
+    filt = SpectralElement.from_array(wave, f, waveunits='angstrom')
+    obs = Observation(spec, filt, binset=wavnew, force='taper')
 
     return obs.binflux
 
@@ -551,7 +550,7 @@ def plot_and_fit_regions(stellar_spectrum,wvl_input,guess_dict,verbose=False,wor
             minimum = x[np.argmin(norm_y)]
             star_centres_argmin.append(minimum)
             centre_guess = minimum
-            amplitude_guess = norm_y.min()
+            amplitude_guess = 1-norm_y.min()
 
         else:
             # Find argmax
@@ -659,7 +658,7 @@ def calc_wvl_solution(pixel_values,line_wvls,poly_order,stellar_spectrum,verbose
     model = poly(pixel_values)
     residuals = line_wvls - model
     npoints = len(pixel_values)
-    
+
     if refit_clip is not None:
 
         keep_index = ((residuals >= -refit_clip*median_absolute_deviation(residuals)) & (residuals <= refit_clip*median_absolute_deviation(residuals)))
@@ -703,7 +702,7 @@ def calc_wvl_solution(pixel_values,line_wvls,poly_order,stellar_spectrum,verbose
     return wvl_solution, poly, chi2, BIC
 
 
-def resample_smoothly(reference_pixel_locations,measured_shifts,input_arrays,sigma_clip_outliers=3,median=False,poly_order=3,mf_box_width=None,min_good=0.9,spline_smoothing_factor=None,verbose=False,refit_polynomial=None,reference_wvl_array=None,use_pysynphot=False):
+def resample_smoothly(reference_pixel_locations,measured_shifts,input_arrays,sigma_clip_outliers=3,median=False,poly_order=3,mf_box_width=None,min_good=0.9,spline_smoothing_factor=None,verbose=False,refit_polynomial=None,reference_wvl_array=None,use_pysynphot=True):
     """
 
     Use this function to resample spectra, following a spline smoothing to the measured shifts from cross-correlation/Gaussian fitting.
@@ -725,7 +724,7 @@ def resample_smoothly(reference_pixel_locations,measured_shifts,input_arrays,sig
     refit_polynomial - Define whether we want to refit the polynomial after the initial fit. This allows us to clip outliers from the first fit.
                        The value given to refit_polynomial is an integer and is interpreted as the number of standard deviations away from the residuals that should be clipped.
     reference_wvl_array: can be set to the wavelength array to resample the data onto if working in wavelength, not pixel, space. If working in pixel space, leave this as None.
-    use_pysynphot - True/False. Choose whether to use pysynphot to perform the resampling (via rebin_spec) or use np.interp for 1D linear interpolation. Note the difference is negligible but np.interp1d is much faster. Default=False.
+    use_pysynphot - True/False. Choose whether to use pysynphot to perform the resampling (via rebin_spec) or use np.interp for 1D linear interpolation. The latter doesn't necessarily conserve flux and should be treated with caution! Default=True.
 
     Returns:
     resampled_dict - the dictionary of inputs resampled onto the desired x-axis
