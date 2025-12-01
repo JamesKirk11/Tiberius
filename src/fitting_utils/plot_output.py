@@ -130,6 +130,8 @@ for i,model in enumerate(m):
             model.pars["u1"] = 0
         else:
             model.pars["u1"].currVal = 0
+        if model.ld_law == "linear":
+            continue
         if model.fix_u2:
             model.pars["u2"] = 0
         else:

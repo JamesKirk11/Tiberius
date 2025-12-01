@@ -20,6 +20,16 @@ Next you'll need to download the repository from GitHub, cd into the directory a
    pip install -e .
 
 
+.. note::
+
+       You may encounter an issue with installing ``george'' (the Gaussian Process package). If so, install ``george'' before trying to install ``Tiberius'', by doing the following
+
+       .. code-block:: bash
+
+           conda install -c conda-forge george
+
+      Then you can try again with the above installation.
+
 After this, you'll want to add the following to your ``~/.bashrc`` file (or equivalent):
 
 .. code-block:: bash

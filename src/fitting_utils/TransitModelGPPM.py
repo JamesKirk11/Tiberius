@@ -359,10 +359,10 @@ class TransitModelGPPM(object):
 
         if self.white_light_fit:
             step_model[:int(self.pars["breakpoint"].currVal)] *= self.pars["step1"].currVal
-            step_model[int(self.pars["breakpoint"].currVal):] *= self.pars["step2"].currVal
+            # step_model[int(self.pars["breakpoint"].currVal):] *= self.pars["step2"].currVal
         else:
             step_model[:int(self.pars["breakpoint"])] *= self.pars["step1"].currVal
-            step_model[int(self.pars["breakpoint"]):] *= self.pars["step2"].currVal
+            # step_model[int(self.pars["breakpoint"]):] *= self.pars["step2"].currVal
 
         ## If wanting to use two break points, use the below
         # step_model[:int(self.pars["breakpoint1"].currVal)] *= self.pars["step1"].currVal
@@ -475,8 +475,8 @@ class TransitModelGPPM(object):
         if self.step_func_used:
             if self.pars['step1'].currVal > 1.5 or self.pars['step1'].currVal < 0.5:
                 return -np.inf
-            if self.pars['step2'].currVal > 1.5 or self.pars['step2'].currVal < 0.5:
-                return -np.inf
+            # if self.pars['step2'].currVal > 1.5 or self.pars['step2'].currVal < 0.5:
+            #     return -np.inf
             if self.white_light_fit:
                 if self.pars['breakpoint'].currVal > len(self.time_array) or self.pars['breakpoint'].currVal < 0:
                     return -np.inf
@@ -909,9 +909,10 @@ class TransitModelGPPM(object):
             if not self.fix_u1:
                 bnds += [(self.pars['u1'].currVal-0.2,self.pars['u1'].currVal+0.2)] # uncomment this line when not running on test PRISM data!
                 # bnds += [(-2,2)] # comment this line when not running on test PRISM data!
-            if not self.fix_u2:
-                bnds += [(self.pars['u2'].currVal-0.2,self.pars['u2'].currVal+0.2)] # uncomment this line when not running on test PRISM data!
-                # bnds += [(-2,2)] # comment this line when not running on test PRISM data!
+            if self.ld_law != "linear":
+                if not self.fix_u2:
+                    bnds += [(self.pars['u2'].currVal-0.2,self.pars['u2'].currVal+0.2)] # uncomment this line when not running on test PRISM data!
+                    # bnds += [(-2,2)] # comment this line when not running on test PRISM data!
             if self.ld_law == 'nonlinear':
                 if not self.fix_u3:
                     bnds += [(self.pars['u3'].currVal-0.2,self.pars['u3'].currVal+0.2)]
@@ -942,7 +943,7 @@ class TransitModelGPPM(object):
                 bnds += [(-100,100)]*self.exp_ramp_components*2 # these are the coefficients of the expoential ramp
 
         if full_model and self.step_func_used:
-            bnds += [(0.9,1.1)]*2 # these are the normalisation constants of the step function
+            bnds += [(0.9,1.1)]#*2 # these are the normalisation constants of the step function
             if self.white_light_fit:
                 bnds += [(0,len(time))] # this is the breakpoint of the step function
 

@@ -258,6 +258,43 @@ else: # we're considering multiple bins
         if not args.use_exotic:
             ld_model = ld_initialise(Teff,Teff_err,logg_star,logg_star_err,FeH,FeH_err,wavelength_centres,wvl_bin_full_width,error_inflation)
 
+
+def replace_negatives_with_median(arr):
+    arr = arr.copy()
+    n = len(arr)
+    nreplacements = 0
+
+    for i in range(n):
+        if arr[i] < 0:
+            nreplacements += 1
+            # Find nearest non-negative value to the left
+            left = None
+            for j in range(i - 1, -1, -1):
+                if arr[j] >= 0:
+                    left = arr[j]
+                    break
+
+            # Find nearest non-negative value to the right
+            right = None
+            for j in range(i + 1, n):
+                if arr[j] >= 0:
+                    right = arr[j]
+                    break
+
+            # Determine replacement
+            if left is not None and right is not None:
+                arr[i] = np.median([left, right])
+            elif left is not None:
+                arr[i] = left
+            elif right is not None:
+                arr[i] = right
+            else:
+                raise ValueError("No non-negative values found in array")
+
+    print("%d negative LD coefficients replaced"%nreplacements)
+
+    return arr
+
 if not args.seq:
     if not args.use_exotic:
         print('....LDTk model loaded \n')
@@ -269,9 +306,11 @@ if not args.seq:
         coeffs,errors = exotic_ldcs([FeH,Teff,logg_star],instrument_mode,wavelength_centres,wvl_bin_full_width,args.ld_law,ld_model_dimensionality,ld_data_path)
 
     u1,u1e = coeffs[:,0],errors[:,0]
+    u1 = replace_negatives_with_median(u1)
 
     if args.ld_law != "linear":
         u2,u2e = coeffs[:,1],errors[:,1]
+        u2 = replace_negatives_with_median(u2)
     else:
         u2 = [-99]*len(u1) # pad with blank space
         u2e = [-99]*len(u1)
