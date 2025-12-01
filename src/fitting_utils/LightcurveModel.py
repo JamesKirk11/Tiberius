@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from fitting_utils import parametric_fitting_functions as pf
 from fitting_utils import plotting_utils as pu
 from fitting_utils import priors
+from fitting_utils import CatwomanModel
+from fitting_utils import BatmanModel
 
 class Param(object):
     '''A Param (parameter) needs a starting value and a current value. However, when first defining the Param object, it takes the starting value as the current value.
@@ -25,7 +27,7 @@ class Param(object):
 
 
 class LightcurveModel(object):
-    def __init__(self,flux,flux_error,time_array,prior_file,astrophysical_models, systematic_models,ld_law="quadratic"):
+    def __init__(self,flux,flux_error,time_array,prior_file,fit_models,model_inputs):
 
         """
         
@@ -35,6 +37,7 @@ class LightcurveModel(object):
         flux_error        - the errors on the flux data points to be fitted. 
         time_array        - the array of time
         prior_file        - .txt file with priors
+        model_inputs      - input for models
         ld_law            - the limb darkening law we want to use: linear/quadratic/nonlinear/squareroot, default = quadratic
         
 
@@ -46,9 +49,8 @@ class LightcurveModel(object):
         self.flux_array = flux
         self.flux_err = flux_error
         self.time_array = time_array
-        self.ld_law = ld_law
 
-        file = pd.read_csv(prior_file, sep='\s+')
+        file = pd.read_csv(prior_file, sep='\s+', comment='#')
         currVals = list(file['value'])
         param_names = list(file['Name'])
         fixed = list(file['fitting'])
@@ -67,6 +69,21 @@ class LightcurveModel(object):
                 self.param_dict[param_names[i]] = float(currVals[i])
             else:
                 print('something is wrong with your prior file')
+
+        # initialise models
+        self.transit_model_package = fit_models['transit_model']
+        self.transit_model_inputs = model_inputs['transit_model']
+        self.systematics_model_methods = fit_models['systematics_model']
+        self.systematic_model_inputs = model_inputs['systematic_model_inputs']
+        self.gp_model_inputs = model_inputs['gp_model_inputs']
+        self.spot_model_package = model_inputs['spot_model']
+        
+
+        if transit_model_package == 'batman':
+            self.transit_model = BatmanModel(self.param_dict, self.param_list_free, self.transit_model_inputs)
+        elif transit_model_package == 'catwoman':
+            self.transit_model = CatwomanModel(self.param_dict, self.param_list_free, self.transit_model_inputs)
+
         
 
     def return_free_parameter_list(self):
@@ -83,6 +100,14 @@ class LightcurveModel(object):
 
         Returns:
         model - the full light curve"""
+
+        self.transit_model_calc = self.transit_model.calc(time)
+
+        self.systematic_model_calc = # James add systematics model
+
+        self.GP_model_calc = # James/Evie add GP model
+
+        self.spot_model_calc = # Evie add spot model
 
         
         return model
@@ -101,6 +126,7 @@ class LightcurveModel(object):
             return self.flux_err
 
 
-    def calc_residuals():
-        return 
+    def calc_residuals(self):
+        curr_model = self.calc(self.time_array)
+        return flux_array - curr_model
 
