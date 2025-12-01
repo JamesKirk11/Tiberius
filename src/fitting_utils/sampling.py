@@ -61,8 +61,9 @@ class Sampling(object):
 
 
     def loglikelihood_dynesty(self,theta):
-        noise = lightcurve.update_model(theta)
-        
+        lightcurve.update_model(theta)
+        noise = lightcurve.return_flux_err()
+
         residuals = lightcurve.calc_residuals()
              
         N = len(noise)

@@ -91,12 +91,16 @@ class LightcurveModel(object):
     def update_model(self,theta):
         for i in range(len(theta)):
             self.param_dict[self.param_list_free[i]].currVal = theta[i]
+        return 
+        
 
+    def return_flux_err(self):
         if 'infl_err' in param_list_free:
             return self.param_dict['infl_err'].currVal * self.flux_err
         else:
             return self.flux_err
 
 
-
+    def calc_residuals():
+        return 
 
