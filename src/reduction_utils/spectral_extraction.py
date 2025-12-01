@@ -13,7 +13,7 @@ import time
 import pickle
 import os
 from collections import Counter
-from Tiberius.src.global_utils import parseInput
+from global_utils import parseInput
 try:
     import astroscrappy
 except:

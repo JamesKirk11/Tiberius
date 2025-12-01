@@ -10,7 +10,7 @@ from scipy.ndimage import gaussian_filter
 import glob
 import pickle
 
-def find_cosmic_frames(spectra,ref_frame,clip=3,mad=False,ignore_edges=0,mask=None,verbose=False):
+def find_cosmic_frames(spectra,ref_frame,clip=5,mad=False,ignore_edges=0,mask=None,verbose=False):
     """A function that uses the standard or median absolute deviation of residuals from each spectrum - a reference spectrum to locate cosmic rays.
     This code first normalizes all inputted spectra for the purposes of accurate comparison, although the normalized
     spectra are only used to locate cosmic rays, they are not returned.

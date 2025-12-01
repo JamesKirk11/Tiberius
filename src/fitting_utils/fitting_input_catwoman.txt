@@ -1,0 +1,108 @@
+######################################
+#### input file for catwoman run #####
+######################################
+# Based on Tiberius input files
+
+### Input files
+# paths that point to pickled numpy arrays of time, flux(es) and their errors! 
+# Note that the flux file should be a clean transit light curve with all systematics models removed!
+
+time_file = ../F322W2_time.pickle 
+flux_file =	../HD209b_F322W2_light_curves_without_polynom.pickle 
+error_file = ../HD209b_F322W2_light_curves_without_polynom_err.pickle 
+
+
+### System parameters
+# here we assume that all system parameters are fixed
+
+period =	  3.52474859	    # the orbital period of the planet in days.
+inclination = 86.7190637993871        # the inclination of the planet's orbit in degrees. 
+aRs =   	  8.832244590518414	        # the a/Rs of the system. 
+ecc =         0.          # eccentricity of the system.
+omega =       90           # argument of periastron of the system.
+t0 =	      59893.139378	# the time of mid transit in days. Can be fitted for (see further down).
+k =           0.12095          # Rp/Rs, this is always fitted for (see further down).
+
+first_integration = 0       # this allows you to clip the first N integrations from your light curves. This uses Python indexing.
+last_integration = -1       # this allows you to clip the last N integrations from your light curves. This uses Python indexing.
+
+
+
+### Limb-darkening, including whether we want priors and the parameters of the host star
+
+## If you want to use pre-defined limb-darkening parameters (recommended)
+# this can be e.g. fitted limb-darkening from the transmission spectrum run or just the generated limb-darkening parameters
+# has to be of format wave_centre,wave_fullwidth,u1,u1_err,u2,u2_err,u3,u3_err,u4,u4_err
+use_ld_file = ../LD_coefficients_F322W2_exotic.txt 
+
+## If you want to use generate_LDCS.py from Tiberius, you'll need to define the parameters below
+# wvls have to be either a single number (in case of white light curve) OR a pickled numpy array of wavlength bin centres
+# Note that this is the bin width is FULL WIDTH of the bin NOT the width/2.
+wvl_centres = 
+wvl_bin_full_width = 
+
+# stellar parameters for limb-darkening generating codes
+# Teff = 	6112	       # Stellar effective temperature in K
+# Teff_err = 	6         # Error in stellar effective temperature, in K
+# logg_star = 4.300      # log(g) of star
+# logg_star_err = 0.015  # error in  log(g) of star
+# FeH = 	0.305          # Fe/H of star
+# FeH_err = 	0.003       # error in Fe/H of star
+
+
+
+### Define fitted parameters
+
+fit_t0 =      1         # do we want to fit for t0? 1=Yes, 0=No 
+t0_prior =    N         # Gaussian/Normal (N) or uniform (U) prior 
+t0_1 = 59893.2512     # If k_prior = N, this is the centre of the Gaussian prior, if k_prior = U this is the lower boundary 
+t0_2 = 0.0001         # If k_prior = N, this is the std of the Gaussian prior, if k_prior = U this is the upper boundary
+
+k_m_e_equal = 0         # Run the case where evening and morning radii are equal (e.g. to do model comparison), 1 = on, 0 = off, k_m defines prior
+
+# evening (e) and morning (m) radii 
+k_e_prior = U           # Gaussian/Normal (N) or uniform (U) prior 
+k_e_1 = 0.115		    # If k_prior = N, this is the centre of the Gaussian prior, if k_prior = U this is the lower boundary
+k_e_2 = 0.140		    # If k_prior = N, this is the std of the Gaussian prior, if k_prior = U this is the upper boundary
+
+k_m_prior = U           # Gaussian/Normal (N) or uniform (U) prior 
+k_m_1 = 0.115     		# If k_prior = N, this is the centre of the Gaussian prior, if k_prior = U this is the lower boundary
+k_m_2 = 0.140		    # If k_prior = N, this is the std of the Gaussian prior, if k_prior = U this is the upper boundary
+
+# If you choose to fit the limb-darkening parameters, a Gaussian prior will be placed on the ones that aren't fixed here
+ld_law = nonlinear      # choose between linear/quadratic/squareroot/nonlinear/
+fix_u1 = 1 	            # Do we want to fix the first ld coefficient? Set to 1 (on) or 0 (off).
+fix_u2 = 1              # Do we want to fix the second ld coefficient? Set to 1 (on) or 0 (off).
+fix_u3 = 1             # Do we want to fix the first ld coefficient? Set to 1 (on) or 0 (off).
+fix_u4 = 1              # Do we want to fix the second ld coefficient? Set to 1 (on) or 0 (off).
+ld_unc_multiplier = 3 	# If wanting to inflate the std on the Gaussian priors for the LDCs, set this to a factor. e.g. setting to 3, inflates errors by a factor of 3.
+
+
+# inflate error bars
+error_infl_prior = N    # Gaussian/Normal (N) or uniform (U) prior 
+err_1 = 1.0		    # If error_infl_prior = N, this is the centre of the Gaussian prior, if error_infl_prior = U this is the lower boundary
+err_2 = 0.01		    # If error_infl_prior = N, this is the std of the Gaussian prior, if error_infl_prior = U this is the upper boundary
+
+# if you want to fit phi (angle between two semicircles) 
+phi = 90                # if fit_phi = 0, then this is the angle fixed at (90 deg for evening/morning)
+fit_phi = 1             # do we want to fit for t0? 1=Yes, 0=No 
+phi_prior = U           # Gaussian/Normal (N) or uniform (U) prior 
+phi_1 = -90		        # If phi_prior = N, this is the centre of the Gaussian prior, if phi_prior = U this is the lower boundary
+phi_2 = 90		    # If phi_prior = N, this is the std of the Gaussian prior, if phi_prior = U this is the upper boundary
+
+
+
+### Nested sampling parameters
+
+nLive_pdim = 100              # will be multiplied by the number of parameters, so the 'real' live points = nLive_pdim * nDims
+precision_criterion = 1e-3    # ratio between prior and posterior space where the nested sampling 'converged'
+
+
+
+###  Other parameters, needed for plotting
+
+# rp = 1.66	# planet's radius in Jupiter radii
+# rs = 1.62	# star's radius in solar radii
+# logg =  # logg of the planet OR can define:
+# g = 7.2 # surface gravity of planet (in m/s^2)
+# Teq = 1600 # equilibrium temperature of planet in K

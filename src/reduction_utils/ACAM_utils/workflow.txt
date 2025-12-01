@@ -45,6 +45,8 @@ Make reduction directory for each new reduction.
 
 Open extraction_input.txt and edit as appropriate. Before running reduction on all data it is a good idea to set the verbose parameter in the input file to -2 to make sure the background fits and aperture widths are performing correctly.
 
+$ python spectral_extraction.py
+
 Following this, the output will consist of a number of saved (pickled) numpy arrays (.pickle files). The output of these can be plotted via
 
 $ python generate_ancillary_plots.py

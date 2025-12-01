@@ -9,7 +9,7 @@ import os
 import pandas as pd
 import pysynphot.binning as astrobin
 import warnings as warn
-from Tiberius.src.reduction_utils import wavelength_calibration as wc
+from reduction_utils import wavelength_calibration as wc
 
 ### define the alkali metal lines, air wavelengths
 sodium_d1 = 5890

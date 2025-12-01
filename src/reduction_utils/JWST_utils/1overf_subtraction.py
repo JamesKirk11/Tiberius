@@ -3,6 +3,8 @@ import numpy as np
 import argparse
 import pickle
 from pathlib import Path
+import sys
+sys.path.append('/Users/ahrer/Documents/GitHub/Tiberius/src')
 from global_utils import parseInput
 
 home = str(Path.home())
@@ -23,6 +25,7 @@ except:
     bias_name = f[0].header["R_SUPERB"]
 
 instrument = f[0].header["INSTRUME"].lower()
+
 super_bias = fits.open("%s/crds_cache/jwst/references/jwst/%s/%s"%(home,instrument,bias_name))
 
 extension = 1
