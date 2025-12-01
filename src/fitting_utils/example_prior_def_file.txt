@@ -1,0 +1,25 @@
+Name    fitting   value prior_1   prior_2 prior_type
+
+period   fixed    0.0     -0.1     0.1     N     #days
+
+rp       free    0.0     -0.1     0.1     N      #Rp/Rs
+# rp1    free    0.0     -0.1     0.1     N      #Rp/Rs for second half in catwoman
+
+t0       free    0.0     -0.1     0.1     N      
+aRs      free    4.0     -0.1     0.1     N      
+inc      free    88.0     88.1     0.1     N     #deg
+w        fixed    90.0   -0.1     0.1     N
+ecc      fixed    0.0     -0.1     0.1     N
+
+
+u1      fixed    0.0     -0.1     0.1      N    
+u2      fixed    0.0     -0.1     0.1      N
+# u3      fixed    0.0     -0.1     0.1      N
+# u4      fixed    0.0     -0.1     0.1      N
+
+infl_err free    1.0      1.1     0.1      N
+
+c0      fixed    0.0     -0.1     0.1      N    
+c1      fixed    0.0     -0.1     0.1      N    
+c2      fixed    0.0     -0.1     0.1      N    
+c3      fixed    0.0     -0.1     0.1      N    
