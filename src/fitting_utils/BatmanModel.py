@@ -1,6 +1,4 @@
-#### Author of this code: James Kirk
-#### Contact: jameskirk@live.co.uk
-
+#### Author of this code: James Kirk & Eva-Maria Ahrer
 import numpy as np
 import batman
 
@@ -18,7 +16,7 @@ class BatmanModel(object):
         transit_model_inputs         - inputs to build the batman model
 
         Returns:
-        TransitModelGPPM object
+        TransitModel object
         """
 
         self.param_dict = param_dict
