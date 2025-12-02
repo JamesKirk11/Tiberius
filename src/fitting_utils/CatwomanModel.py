@@ -18,7 +18,8 @@ class CatwomanModel(object):
 
         Inputs:
         param_dict                   - the dictionary of the planet's transit parameters
-        transit_model_inputs         - the light curve flux data points. 
+        param_list_free              - list of free parameters
+        transit_model_inputs         - inputs to build the catwoman model
         cw_fac            - scaling factor for catwoman to make it run faster
         
         
@@ -32,6 +33,7 @@ class CatwomanModel(object):
         self.param_list_free = param_list_free
         self.transit_model_inputs = transit_model_inputs
         self.time_array = time_array
+        self.use_kipping = transit_model_inputs['use_kipping']
         ld_list = ['u1', 'u2', 'u3', 'u4']
 
         ##### Catwoman initialisation - note this is first outside of model calculation as it is the fastest way
@@ -42,18 +44,24 @@ class CatwomanModel(object):
         u = []
         for i in range(len(all_params)):
             if all_params[i] in param_list_free and all_params[i] not in ld_list:
-                setattr(catwoman_params, all_params[i], self.param_dict[all_params[i]].currVal)
+                setattr(self.catwoman_params, all_params[i], self.param_dict[all_params[i]].currVal)
             if all_params[i] not in param_list_free and all_params[i] not in ld_list:
-                setattr(catwoman_params, all_params[i], self.param_dict[all_params[i]])
+                setattr(self.catwoman_params, all_params[i], self.param_dict[all_params[i]])
         
-        # for getting the limb-darkening as one array
-        for i in range(len(ld_list)):
-            if ld_list[i] in param_list_free:
-                u.append(self.param_dict[ld_list[i]].currVal)
-            if ld_list[i] not in param_list_free:
-                u.append(self.param_dict[ld_list[i]])
-        self.catwoman_params.limb_dark = transit_model_inputs['ld_law'] 
-        self.catwoman_params.u = u 
+        if not self.use_kipping:
+            # for getting the limb-darkening as one array
+            for i in range(len(ld_list)):
+                if ld_list[i] in param_list_free:
+                    u.append(self.param_dict[ld_list[i]].currVal)
+                if ld_list[i] not in param_list_free:
+                    u.append(self.param_dict[ld_list[i]])
+            self.catwoman_params.limb_dark = transit_model_inputs['ld_law'] 
+            self.catwoman_params.u = u 
+        else:
+            u1 = 2*np.sqrt(self.param_dict['u1'].currVal)*self.param_dict['u2'].currVal
+            u2 = np.sqrt(self.param_dict['u1'].currVal)*(1-2*self.param_dict['u2'].currVal)
+            self.catwoman_params.limb_dark = 'quadratic'
+            self.catwoman_params.u = [u1, u2]
     
         # initalise
         self.catwoman_model = catwoman.TransitModel(self.catwoman_params, self.time_array,fac=self.catwoman_fac)    #initializes model
