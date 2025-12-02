@@ -14,14 +14,15 @@ from fitting_utils import plotting_utils as pu
 from fitting_utils import priors
 
 class Sampling(object):
-    def __init__(self,lightcurve,pars_dict,prior_dict,sampling_arguments,sampling_method):
+    def __init__(self,lightcurve,param_dict, param_list_free,prior_dict,sampling_arguments,sampling_method):
 
         """
 
 
         Inputs:
         lightcurve         - light curve class which includes the full model (transit, systematics, etc.)
-        pars_dict          - the dictionary of fitting parameters
+        param_dict         - list of all paramters and their values
+        param_list_free    - the list of free parameters
         prior_dict         - dictionary with all the information needed to set up the priors (see fitting_input)
         sampling_arguments - dict, parameters needed for dynesty / emcee; e.g. live points, precision criterion, nsteps, nwalkers
         sampling_method    - str, either dynesty, emcee, LM
@@ -34,17 +35,14 @@ class Sampling(object):
         """
 
         self.lightcurve = lightcurve
-        self.pars_dict = pars_dict
+        self.param_dict = param_dict
+        self.param_list_free = param_list_free
         self.prior_dict = prior_dict
         self.sampling_method = sampling_method
         self.sampling_arguments = sampling_arguments
 
         if sampling_method == 'dynesty':
-            self.nDims = len(pars_dict)
-
-
-        self.namelist = [k for k in self.pars_dict.keys() if self.pars_dict[k] is not None and not isinstance(self.pars_dict[k],float)]
-
+            self.nDims = len(param_list_free)
 
     # -------------------- Dynesty methods -------------------- #
     def prior_setup(self, x):
@@ -53,10 +51,10 @@ class Sampling(object):
             theta = [0] * self.nDims
 
             for i in range(self.nDims):
-                if self.prior_dict['%s_prior'%self.pars_dict[i]] == 'N':
-                    theta[i] = priors.GaussianPrior(self.prior_dict['%s_1'%self.pars_dict[i]], self.prior_dict['%s_2'%self.pars_dict[i]])(np.array(x[i]))
-                elif self.prior_dict['%s_prior'%pars_dict[i]] == 'U':
-                    theta[i] = priors.UniformPrior(self.prior_dict['%s_1'%self.pars_dict[i]], self.prior_dict['%s_2'%self.pars_dict[i]])(np.array(x[i]))
+                if self.prior_dict['%s_prior'%self.param_list_free[i]] == 'N':
+                    theta[i] = priors.GaussianPrior(self.prior_dict['%s_1'%self.param_list_free[i]], self.prior_dict['%s_2'%self.param_list_free[i]])(np.array(x[i]))
+                elif self.prior_dict['%s_prior'%param_list_free[i]] == 'U':
+                    theta[i] = priors.UniformPrior(self.prior_dict['%s_1'%self.param_list_free[i]], self.prior_dict['%s_2'%self.param_list_free[i]])(np.array(x[i]))
 
             return theta
 
@@ -88,7 +86,7 @@ class Sampling(object):
     def logprior_emcee(self, theta):
         """Compute log prior based on self.prior_dict."""
         lp = 0
-        for i, pname in enumerate(self.namelist):
+        for i, pname in enumerate(self.param_list_free):
             prior_type = self.prior_dict[f'{pname}_prior']
             if prior_type == 'N':
                 mu = self.prior_dict[f'{pname}_1']
@@ -134,11 +132,11 @@ class Sampling(object):
         """Run emcee MCMC sampling."""
         nsteps = self.sampling_arguments['nsteps']
         nwalk = self.sampling_arguments['nwalkers']
-        npars = len(self.namelist)
+        npars = len(self.param_list_free)
         nwalk_total = nwalk * npars
 
         # Scatter walkers around starting parameters
-        starting_values = np.array([self.pars_dict[k] for k in self.namelist])
+        starting_values = np.array([self.pars_dict[k] for k in self.param_list_free])
         if burn:
             p0 = emcee.utils.sample_ball(starting_values, 1e-3*starting_values, size=nwalk_total)
         else:
@@ -273,11 +271,11 @@ def optimise_params(self, time, flux, flux_err, reset_starting_gp=False, contact
     def build_bounds(self, full_model=False):
         """
         Build parameter bounds using prior definitions and GP/kernel settings.
-        Returns a list of (min, max) tuples in the order of self.namelist.
+        Returns a list of (min, max) tuples in the order of self.param_list_free.
         """
         bnds = []
 
-        for name in self.namelist:
+        for name in self.param_list_free:
 
             # Use prior definitions if available
             prior_type = self.prior_dict.get(f'{name}_prior', None)
