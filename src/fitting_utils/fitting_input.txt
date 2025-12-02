@@ -10,70 +10,24 @@ time_file =  # a path that points to a pickled numpy array of times.
 flux_file =	#  a path that points to a pickled numpy array of fluxes. If this is for a white light curve it should have shape (1,). Otherwise for wavelength-binned fits, it should have shape = (nbins,nfluxes)
 error_file = #  a path that points to a pickled numpy array of fluxes. If this is for a white light curve it should have shape (1,). Otherwise for wavelength-binned fits, it should have shape = (nbins,nfluxes)
 
+wvl_centres = 	# either a single number (in case of white light curve) OR a pickled numpy array of wavlength bin centres. 
+wvl_bin_full_width =	# either a single number (in case of white light curve) OR a pickled numpy array of wavlength bin centres. This is the FULL WIDTH of the bin NOT the width/2.
+
+
 # Ancillary inputs for detrending
 model_input_files =  # paths that point to an arbitrary number of pickled arrays of detrending inputs. Each path needs to be separated by a comma, e.g.: "time.pickle,background.pickle,x.pickle,..."
 
 
-### SYSTEM PARAMETERS
-
-white_light_fit =  	# define whether we're fitting a white light curve or not. This determines whether inclination, a/Rs and t0 are fixed or fitted for. Set to 1 (on) or 0 (off).
-
-period =		# the orbital period of the planet in days.
-period_prior = fixed # the prior to be placed on the period, if a fit parameter. If period is fixed, set this to 'fixed'. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'period' parameter.
-
-inclination =  # the inclination of the planet's orbit in degrees. If this is a white light curve fit, this parameter is fitted for otherwise it is held fixed.
-inclination_prior =  	# the prior to be placed on the inclination, if a fit parameter. If inclination is fixed, set this to 'fixed'. If left blank, a wide uniform prior is used. If inclination is fixed, set this to 'fixed'. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'inclination' parameter.
-
-aRs =   			# the a/Rs of the system. If this is a white light curve fit, this parameter is fitted for otherwise it is held fixed.
-aRs_prior =  			# the prior to be placed on the a/Rs, if a fit parameter. If a/Rs is fixed, set this to 'fixed'. If left blank, a wide uniform prior is used. If a/Rs is fixed, set this to 'fixed'. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'aRs' parameter.
-
-k =  		# the Rp/Rs of the system. This is just a starting value and is always fitted for.
-k_prior = 			# the prior to be placed on the Rp/Rs. If left blank, a wide uniform prior is used. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'k' parameter.
-
-ecc = 0
-ecc_prior = fixed # the prior to be placed on the orbital eccentricity. If eccentricity is fixed, set this to 'fixed'. If left blank, a wide uniform prior is used. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'ecc' parameter.
-
-omega = 90
-omega_prior = fixed # the prior to be placed on the longitude of periastron. If longitude of periastron is fixed, set this to 'fixed'. If left blank, a wide uniform prior is used. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 'ecc' parameter.
-
-
-t0 =			# the time of mid transit in days. If this is a white light curve fit, this parameter is fitted for otherwise it is held fixed.
-t0_prior = fixed # the prior to be placed on the time of mid transit in days, if a fit parameter. If t0 is fixed, set this to 'fixed'. If left blank, a wide uniform prior is used. If this is set to a float, then the float defines the std dev of a Gaussian prior, with the mean set by the above 't0' parameter.
-
-contact1 = 		# position of the first contact point in frame numbers. Used to define the out of transit data, if wanting to optimise GP hyperparams to out of transit data and/or renormalising flux to out-of-transit data.
-contact4 = 		# position of the fourth contact point in frame numbers. Used to define the out of transit data, if wanting to optimise GP hyperparams to out of transit data and/or renormalising flux to out-of-transit data.
-
-first_integration = 0 # this allows you to clip the first N integrations from your light curves. This uses Python indexing.
-last_integration = -1 # this allows you to clip the last N integrations from your light curves. This uses Python indexing.
-
-### PLANET PARAMETERS, NEEDED TO CALCULATE SCALE HEIGHT FOR TRANSMISSION SPECTRUM IN plot_output.py
-
-rp = 	# planet's radius in Jupiter radii
-rs = 	# star's radius in solar radii
-logg =  # logg of the planet OR can define:
-g = 	# surface gravity of planet (in m/s^2)
-Teq = # equilibrium temperature of planet in K
-
-
-
 ### LIMB DARKENING; including whether we want priors and the parameters of the host star
+generate_LDCs = 1 # do you want to generate LDCs? Set to 1 (on) or 0 (off).
+LDCs_package = exotic-ld # Options: exotic-ld or LDTk
 
-wvl_centres = 	# either a single number (in case of white light curve) OR a pickled numpy array of wavlength bin centres. This is used by generate_generate_LDCS.py
-wvl_bin_full_width =	# either a single number (in case of white light curve) OR a pickled numpy array of wavlength bin centres. This is used by generate_generate_LDCS.py. This is the FULL WIDTH of the bin NOT the width/2.
-
-
-ld_prior = 0 	# Do we want to place Gaussian priors on the limb darkening coefficients? Set to 1 (on) or 0 (off).
 ld_law = quadratic # choose between linear/quadratic/squareroot/nonlinear/
-fix_u1 = 0 		# Do we want to fix the first ld coefficient? Set to 1 (on) or 0 (off).
-fix_u2 = 0		# Do we want to fix the second ld coefficient? Set to 1 (on) or 0 (off).
-fix_u3 =  0		# Do we want to fix the first ld coefficient? Set to 1 (on) or 0 (off).
-fix_u4 = 0		# Do we want to fix the second ld coefficient? Set to 1 (on) or 0 (off).
-ld_uncertainty_multiplier = 3 	# If wanting to inflate the error bars on the LDCs, set this to a factor. e.g. setting to 3, inflates errors by a factor of 3.
+use_generated_ld_uncertainties = 1 # do you want to use the unertainties from the generated LDCs? Set to 1 (on) or 0 (off).
+ld_uncertainty_multiplier = 3 	# If wanting to inflate the error bars on the LDCs from the generated LDCs, set this to a factor. e.g. setting to 3, inflates errors by a factor of 3. Only used if use_generated_ld_uncertainties = 1.
 use_kipping_parameterisation = 0	# Use if wanting to use Kipping's change of variables for efficient sampling of LDCs. NOTE: NOT FULLY TESTED. Set to 1 (on) or 0 (off).
 
-
 # Stellar parameters, for limb darkening coefficients
-
 Teff = 			# Stellar effective temperature in K
 Teff_err = 		# Error in stellar effective temperature, in K
 logg_star = 	# log(g) of star
@@ -82,28 +36,22 @@ FeH = 			# Fe/H of star
 FeH_err = 		# error in Fe/H of star
 
 
+### FITTING PARAMETERS
 
-### MCMC PARAMETERS, used by gp_fit.py AND pm_fit.py
+contact1 = 		# position of the first contact point in frame numbers. Used to define the out of transit data, if wanting to optimise GP hyperparams to out of transit data and/or renormalising flux to out-of-transit data.
+contact4 = 		# position of the fourth contact point in frame numbers. Used to define the out of transit data, if wanting to optimise GP hyperparams to out of transit data and/or renormalising flux to out-of-transit data.
 
-nwalkers =	20	# number of emcee walkers. Must be an even integer.
-nsteps =  auto 		# number of emcee steps. Note, set this to "auto" if wanting to let the autocorrelation length automatically determine the length of the chains. Note: these will never run over 20,000 steps even it autocorrelation is not satisfied. ***Set to 0 if wanting to perform a Levernberg-Marquadt fit with no MCMC!***
-nthreads = 	2	# number of threads. NOTE: sometimes multi-threading conks out.
-prod_only = 0   # do you want to run a single MCMC run all the way through (1) or break this up into an initial chain, followed by a 'production' chain (0). The latter is the default and is necessary if not using a GP so that the photometric uncertainties can be rescaled
+first_integration = 0 # this allows you to clip the first N integrations from your light curves. This uses Python indexing.
+last_integration = -1 # this allows you to clip the last N integrations from your light curves. This uses Python indexing.
 
 common_noise_model = 	# a path to a pickled common noise model. Leave blank if not wanting to perform a common mode correction
 clip_outliers = 1		# do you want to clip outliers before fitting? Set to 1 (on) or 0 (off).
 sigma_cut =  4           # choose the sigma cut level (e.g. 3 sigma, 4 sigma) can be a float
 median_clip = 0      # define whether you want to clip the outliers using a running median (1) or using a transit light curve fit (0). Currently only implemented for TransitModelGPPM
 
-rebin_data = 	# can choose to bin the data for purposes of plotting. set this number to number of bins desired. Can be left blank.
-
 normalise_inputs = 1	# do we want to normalise the ancillary data? This is done through (input - mean(input))/std(input).  Set to 1 (on) or 0 (off).
 
 renorm_flux = 0 # do we want to renormalise the flux to give an out of transit median of unity? Set to 1 (on) or 0 (off).
-
-save_chain = 0 # do we want to save the chains to text files: yes (1) or no (0). If yes, this can take up a lot of storage
-
-optimise_model = 	1		# optimise the model parameters using a Nelder-Mead algorithm before starting the MCMC? Set to 1 (on) or 0 (off).
 
 
 ## FOR PARAMETRIC MODELLING
@@ -132,6 +80,34 @@ max_WN_sigma = 1000e6  # the upper bound on the white noise std dev
 
 reset_kernel_priors = 0 # a boolean that allows you to reset the priors on the kernel hyperparameters using the results from the optimisation to the out of transit data. If true (=1), then the new kernel priors will be uniform between 0.9 and 1.1X the optimised values.
 
-## Plotting
 
+
+## MCMC PARAMETERS
+
+nwalkers =	20	# number of emcee walkers. Must be an even integer.
+nsteps =  auto 		# number of emcee steps. Note, set this to "auto" if wanting to let the autocorrelation length automatically determine the length of the chains. Note: these will never run over 20,000 steps even it autocorrelation is not satisfied. ***Set to 0 if wanting to perform a Levernberg-Marquadt fit with no MCMC!***
+nthreads = 	2	# number of threads. NOTE: sometimes multi-threading conks out.
+prod_only = 0   # do you want to run a single MCMC run all the way through (1) or break this up into an initial chain, followed by a 'production' chain (0). The latter is the default and is necessary if not using a GP so that the photometric uncertainties can be rescaled
+save_chain = 0 # do we want to save the chains to text files: yes (1) or no (0). If yes, this can take up a lot of storage
+optimise_model = 	1		# optimise the model parameters using a Nelder-Mead algorithm before starting the MCMC? Set to 1 (on) or 0 (off).
+
+
+## DYNESTY PARAMETERS
+live_points = 50 
+precision_crit = 1e-3
+
+
+## Plotting
 show_plots = 1 # Do you want to plot intermediate plots of the fit outputs? Set to 1 (on) or 0 (off).
+rebin_data = 	# can choose to bin the data for purposes of plotting. set this number to number of bins desired. Can be left blank.
+
+
+# PLANET PARAMETERS, NEEDED TO CALCULATE SCALE HEIGHT FOR TRANSMISSION SPECTRUM IN plot_output.py
+
+rp = 	# planet's radius in Jupiter radii
+rs = 	# star's radius in solar radii
+logg =  # logg of the planet OR can define:
+g = 	# surface gravity of planet (in m/s^2)
+Teq = # equilibrium temperature of planet in K
+
+
