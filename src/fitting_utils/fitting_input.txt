@@ -81,6 +81,9 @@ typeII_maximum_likelihood = 0	# run typeII maximum likelihood? i.e. hold GP hype
 reset_kernel_priors = 0 # a boolean that allows you to reset the priors on the kernel hyperparameters using the results from the optimisation to the out of transit data. If true (=1), then the new kernel priors will be uniform between 0.9 and 1.1X the optimised values.
 
 
+### Sampling setup
+sampling_method = dynesty # either emcee or dynesty
+
 ## MCMC PARAMETERS
 
 nwalkers =	20	# number of emcee walkers. Must be an even integer.
