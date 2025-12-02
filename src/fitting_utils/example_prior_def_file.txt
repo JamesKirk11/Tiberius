@@ -1,25 +1,37 @@
 Name    fitting   value prior_1   prior_2 prior_type
 
-period   fixed    0.0     -0.1     0.1     N     #days
+# Orbital parameters
+per      fixed    0.0     -0.1     0.1     N     # orbital period in days
+rp       free    0.0     -0.1     0.1     N      # Rp/Rs
+# rp1    free    0.0     -0.1     0.1     N      # Rp/Rs for second half if using catwoman
+t0       free    0.0     -0.1     0.1     N      # mid-transit time
+aRs      free    4.0     -0.1     0.1     N      # a/Rs 
+inc      free    88.0     88.1     0.1     N     # inclination in degrees
+w        fixed    90.0   -0.1     0.1     N      # omega/w
+ecc      fixed    0.0     -0.1     0.1     N     # eccentricity
 
-rp       free    0.0     -0.1     0.1     N      #Rp/Rs
-# rp1    free    0.0     -0.1     0.1     N      #Rp/Rs for second half in catwoman
-
-t0       free    0.0     -0.1     0.1     N      
-aRs      free    4.0     -0.1     0.1     N      
-inc      free    88.0     88.1     0.1     N     #deg
-w        fixed    90.0   -0.1     0.1     N
-ecc      fixed    0.0     -0.1     0.1     N
-
-
+# Limb-darkening parameters (make sure to define the limb-darkening law in fitting_input.txt)
 u1      fixed    0.0     -0.1     0.1      N    
 u2      fixed    0.0     -0.1     0.1      N
 # u3      fixed    0.0     -0.1     0.1      N
 # u4      fixed    0.0     -0.1     0.1      N
 
+# Light curve uncertanties error inflation factor
 infl_err free    1.0      1.1     0.1      N
 
+# Polynomial parameters
 c0      fixed    0.0     -0.1     0.1      N    
 c1      fixed    0.0     -0.1     0.1      N    
 c2      fixed    0.0     -0.1     0.1      N    
-c3      fixed    0.0     -0.1     0.1      N    
+c3      fixed    0.0     -0.1     0.1      N   
+
+# GP parameters
+A      fixed    0.0     -0.1     0.1      N    
+
+# Step function parameters
+
+
+# Exponential ramp parameters
+
+
+# Fleck spot fitting parameters
