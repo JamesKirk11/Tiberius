@@ -74,6 +74,7 @@ class CatwomanModel(object):
 
         Inputs:
         time - the array of times at which to evaluate the model. Can be left blank if this has not changed from the initial init call.
+        overwrite  - if the catwoman model should be overwritten using the new time array
 
         Returns:
         model - the modelled catwoman light curve"""
