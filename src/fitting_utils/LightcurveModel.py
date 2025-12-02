@@ -74,8 +74,8 @@ class LightcurveModel(object):
         self.transit_model_package = fit_models['transit_model']
         self.transit_model_inputs = model_inputs['transit_model']
         self.systematics_model_methods = fit_models['systematics_model']
-        self.systematic_model_inputs = model_inputs['systematic_model_inputs']
-        self.gp_model_inputs = model_inputs['gp_model_inputs']
+        self.systematic_model_inputs = model_inputs['systematic_model']
+        self.gp_model_inputs = model_inputs['gp_model']
         self.spot_model_package = model_inputs['spot_model']
         
 
