@@ -9,38 +9,97 @@ class SystematicsModel:
     """
 
     def __init__(self,
-                 pars,
-                 poly_orders=None,
-                 systematics_inputs=None,
-                 exp_ramp_components=0,
-                 exp_ramp_fixed=False,
-                 poly_fixed=False,
-                 step_func_used=False,
-                 white_light_fit=False):
+                 input_dict,
+                 param_dict,
+                 param_list_free
+                 systematics_model_methods,
+                 systematics_model_inputs,
+                 wb):
         """
         Parameters
         ----------
-        pars : dict
-            Dictionary of parameter objects or floats.
-        poly_orders : np.array or list
-            Orders of the polynomial basis.
-        systematics_inputs : list/array
-            Inputs to feed into polynomial systematics model.
-        exp_ramp_components : int
-            Number of exponential ramp components.
-        exp_ramp_fixed : bool
-        poly_fixed : bool
-        step_func_used : bool
-        white_light_fit : bool
+
         """
-        self.pars = pars
-        self.poly_orders = np.array(poly_orders) if poly_orders is not None else None
-        self.systematics_inputs = systematics_inputs
-        self.exp_ramp_components = exp_ramp_components
-        self.exp_ramp_fixed = exp_ramp_fixed
-        self.poly_fixed = poly_fixed
-        self.step_func_used = step_func_used
-        self.white_light_fit = white_light_fit
+        # self.pars = pars
+        # self.poly_orders = np.array(poly_orders) if poly_orders is not None else None
+        # self.systematics_inputs = systematics_inputs
+        # self.exp_ramp_components = exp_ramp_components
+        # self.exp_ramp_fixed = exp_ramp_fixed
+        # self.poly_fixed = poly_fixed
+        # self.step_func_used = step_func_used
+        # self.white_light_fit = white_light_fit
+
+        self.param_dict = param_dict
+        self.param_list_free = param_list_free
+        self.methods = systematics_model_methods
+        self.inputs = systematics_model_inputs
+
+        # store inputs
+        self.model_inputs = model_inputs
+        self.wb = wb
+
+        # ---------------------------------------------------------
+        # Parse exponential ramp usage
+        # ---------------------------------------------------------
+        self.exp_ramp_used = bool(int(input_dict.get("exponential_ramp", 0)))
+
+        # ---------------------------------------------------------
+        # Parse step function usage
+        # ---------------------------------------------------------
+        self.step_func_used = bool(int(input_dict.get("step_function", 0)))
+
+        # ---------------------------------------------------------
+        # Parse polynomial orders
+        # ---------------------------------------------------------
+        poly_orders_str = input_dict.get("polynomial_orders")
+        if poly_orders_str is not None:
+            self.polynomial_orders = np.array([int(i) for i in poly_orders_str.split(",")])
+            if self.polynomial_orders.sum() == 0:
+                self.poly_used = False
+                self.polynomial_orders = None
+            else:
+                self.poly_used = True
+        else:
+            self.poly_used = False
+            self.polynomial_orders = None
+
+        # ---------------------------------------------------------
+        # Load starting coefficients if provided
+        # ---------------------------------------------------------
+        coeff_file = input_dict.get("polynomial_coefficients")
+        if self.poly_used or self.exp_ramp_used:
+            if coeff_file is not None:
+                keys = np.loadtxt(coeff_file, usecols=0, dtype=str)
+                values = np.loadtxt(coeff_file, usecols=2)
+
+                self.polynomial_coefficients = []
+                self.ramp_coefficients = []
+
+                for k, v in zip(keys, values):
+                    # Only load coefficients corresponding to this white-light bin
+                    if int(k.split("_")[1]) == wb + 1:
+                        if k.startswith("c"):
+                            self.polynomial_coefficients.append(v)
+                        elif k.startswith("r"):
+                            self.ramp_coefficients.append(v)
+            else:
+                self.polynomial_coefficients = None
+                self.ramp_coefficients = None
+        else:
+            self.polynomial_coefficients = None
+            self.ramp_coefficients = None
+
+        # ---------------------------------------------------------
+        # Normalize inputs if requested
+        # ---------------------------------------------------------
+        norm_inputs = bool(int(input_dict.get("normalise_inputs", 0)))
+        if norm_inputs and self.model_inputs is not None:
+            self.systematics_model_inputs = np.array(
+                [(i - i.mean()) / i.std() for i in self.model_inputs]
+            )
+        else:
+            self.systematics_model_inputs = np.array(self.model_inputs)
+
 
 
     # ---------------------------------------------------------
@@ -70,29 +129,64 @@ class SystematicsModel:
     # ---------------------------------------------------------
     # Polynomial red-noise trend
     # ---------------------------------------------------------
-    def red_noise_poly(self, time=None, sys_inputs=None, deconstruct=False):
-        """
-        Polynomial systematics model using pf.systematics_model().
-        """
-        if self.poly_orders is None:
-            return np.ones_like(time)
+    # def red_noise_poly(self, time=None, sys_inputs=None, deconstruct=False):
+    #     """
+    #     Polynomial systematics model using pf.systematics_model().
+    #     """
+    #     if self.poly_orders is None:
+    #         return np.ones_like(time)
+    #
+    #     # Extract polynomial coefficients
+    #     if self.poly_fixed:
+    #         coeffs = np.array([self.pars[f"c{i}"] for i in range(1, self.poly_orders.sum() + 2)])
+    #     else:
+    #         coeffs = np.array([self.pars[f"c{i}"].currVal for i in range(1, self.poly_orders.sum() + 2)])
+    #
+    #     inputs = sys_inputs if sys_inputs is not None else self.systematics_inputs
+    #
+    #     if deconstruct:
+    #         trend, components = pf.systematics_model(coeffs, inputs, self.poly_orders,
+    #                                                  GP=False, deconstruct_polys=True)
+    #         return trend, components
+    #
+    #     trend = pf.systematics_model(coeffs, inputs, self.poly_orders,
+    #                                  GP=False, deconstruct_polys=False)
+    #     return trend
 
-        # Extract polynomial coefficients
-        if self.poly_fixed:
-            coeffs = np.array([self.pars[f"c{i}"] for i in range(1, self.poly_orders.sum() + 2)])
+
+    def polynomials(self,time,deconstruct_polys=False):
+
+        # Ancillary data and poly_orders are ALWAYS in the order:
+
+        offset = self.param_dict["f_norm"]
+
+        offset = p0[0] # offset added to model, which is at the start of p0
+        systematics_model = 0 # initiate systematics offset as being zero so that susbequent models can be added together
+        current_index = 0
+        individual_models = []
+
+        for i in range(len(model_inputs)):
+            if poly_orders[i] > 0:
+                poly_coefficients = np.hstack((p0[1+current_index:1+current_index+poly_orders[i]],[0]))
+                poly = np.poly1d(poly_coefficients)
+
+                if normalise_inputs:
+                    input_norm = (model_inputs[i]-model_inputs[i].mean())/model_inputs[i].std()
+                else:
+                    input_norm = model_inputs[i]
+
+                poly_eval = poly(input_norm)
+
+                # add to current systematics model
+                systematics_model += poly_eval
+                individual_models.append(poly_eval)
+
+                current_index += poly_orders[i]
+
+        if deconstruct_polys:
+            return systematics_model + offset,individual_models
         else:
-            coeffs = np.array([self.pars[f"c{i}"].currVal for i in range(1, self.poly_orders.sum() + 2)])
-
-        inputs = sys_inputs if sys_inputs is not None else self.systematics_inputs
-
-        if deconstruct:
-            trend, components = pf.systematics_model(coeffs, inputs, self.poly_orders,
-                                                     GP=False, deconstruct_polys=True)
-            return trend, components
-
-        trend = pf.systematics_model(coeffs, inputs, self.poly_orders,
-                                     GP=False, deconstruct_polys=False)
-        return trend
+            return systematics_model + offset
 
 
     # ---------------------------------------------------------
@@ -134,10 +228,20 @@ class SystematicsModel:
         """
         model = np.ones_like(time)
 
-        # Multiply ramp
-        model *= self.exponential_ramp(time)
+        if "ramp" in self.methods:
+            # Multiply ramp
+            model *= self.exponential_ramp(time)
 
         # Multiply polynomial trend
+        if "polynomial" in self.methods:
+
+            f_norm = self.param_dict['f_norm']
+
+            poly_model = 0 # initiate systematics offset as being zero so that susbequent models can be added together
+
+            for poly_cfg in self.methods["polynomials"]:
+                model += self.evaluate_single_polynomial(poly_cfg)
+
         if self.poly_orders is not None:
             model *= self.red_noise_poly(time=time, sys_inputs=sys_inputs)
 
