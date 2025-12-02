@@ -4,14 +4,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
-from collections import OrderedDict
 import argparse
 import os
 from scipy.interpolate import UnivariateSpline as US
 
 from global_utils import parseInput
-from Tiberius.src.fitting_utils import mcmc_utils as mc
-from Tiberius.src.fitting_utils import TransitModelGPPM as tmgp
+
+from Tiberius.src.fitting_utils import LightcurveModel as lc
+from Tiberius.src.fitting_utils import sampling as lc
 from Tiberius.src.fitting_utils import parametric_fitting_functions as pf
 from Tiberius.src.fitting_utils import plotting_utils as pu
 
@@ -138,6 +138,7 @@ model_inputs['systematic_model_inputs'] = {}
 if input_dict['polynomial_orders'] is not None:
     fit_models['systematics_model'].append('polynomial')
     model_inputs['systematic_model']['polynomial_orders'] = np.array([int(i) for i in input_dict['polynomial_orders'].split(',')])
+    model_input_files = [i.strip() for i in input_dict['model_input_files'].split(',')]
 
 # determine whether we're using an exponential ramp model or not
 if bool(int(input_dict['exponential_ramp'])):
@@ -148,51 +149,70 @@ if bool(int(input_dict['step_function'])):
     fit_models['systematics_model'].append('step_function')
 
 
-model_input_files = [i.strip() for i in input_dict['model_input_files'].split(',')]
-GP_model_input_files = [i.strip() for i in input_dict['GP_model_input_files'].split(',')]
-
-model_inputs = []
+systematics_model_inputs = []
 for i in model_input_files:
     model_in = np.atleast_2d(pickle.load(open(i,'rb')))[:,first_integration:last_integration]
     if model_in.shape[0] == 1:
         vector = model_in[0]
         # replace any nans
         vector[~np.isfinite(vector)] = 1e-10
-        model_inputs.append(vector)
+        systematics_model_inputs.append(vector)
     if model_in.shape[0] > 1:
         vector = model_in[wb]
         # replace any nans
         vector[~np.isfinite(vector)] = 1e-10
-        model_inputs.append(model_in[wb])
-
-
-GP_model_inputs = []
-for i in GP_model_input_files:
-    model_in = np.atleast_2d(pickle.load(open(i,'rb')))[:,first_integration:last_integration]
-    if model_in.shape[0] == 1:
-        vector = model_in[0]
-        # replace any nans
-        vector[~np.isfinite(vector)] = 1e-10
-        GP_model_inputs.append(vector)
-    if model_in.shape[0] > 1:
-        vector = model_in[wb]
-        # replace any nans
-        vector[~np.isfinite(vector)] = 1e-10
-        GP_model_inputs.append(model_in[wb])
-
-        
+        systematics_model_inputs.append(model_in[wb])
 
 # Do we want to normalise inputs? Defined as (input - mean(input))/std(input)
 norm_inputs = bool(int(input_dict['normalise_inputs']))
-norm_GP_inputs = bool(int(input_dict['normalise_GP_inputs']))
 
 if norm_inputs:
     print('standardising model inputs...')
-    systematics_model_inputs = np.array([(i-i.mean())/i.std() for i in model_inputs])
-    GP_model_inputs = np.array([(i-i.mean())/i.std() for i in GP_model_inputs])
+    systematics_model_inputs = np.array([(i-i.mean())/i.std() for i in systematics_model_inputs])
 else:
-    systematics_model_inputs = np.array(model_inputs)
-    GP_model_inputs = np.array(GP_model_inputs)
+    systematics_model_inputs = np.array(systematics_model_inputs)
+
+
+
+### GP controls
+if input_dict['kernel_classes'] is not None:
+    try:
+        kernel_classes = [i.strip() for i in input_dict['kernel_classes'].split(',')]
+    except:
+        GP_used = False
+
+    model_inputs['GP_model']['kernel_classes'] = kernel_classes
+    # are we using a white noise kernel?
+    model_inputs['GP_model']['white_noise_kernel'] = bool(int(input_dict['white_noise_kernel']))
+    GP_used = True
+else:
+    GP_used = False
+
+
+if GP_used:
+    GP_model_input_files = [i.strip() for i in input_dict['GP_model_input_files'].split(',')]
+    GP_model_inputs = []
+    for i in GP_model_input_files:
+        model_in = np.atleast_2d(pickle.load(open(i,'rb')))[:,first_integration:last_integration]
+        if model_in.shape[0] == 1:
+            vector = model_in[0]
+            # replace any nans
+            vector[~np.isfinite(vector)] = 1e-10
+            GP_model_inputs.append(vector)
+        if model_in.shape[0] > 1:
+            vector = model_in[wb]
+            # replace any nans
+            vector[~np.isfinite(vector)] = 1e-10
+            GP_model_inputs.append(model_in[wb])
+    
+    norm_GP_inputs = bool(int(input_dict['normalise_GP_inputs']))
+    if norm_GP_inputs:
+        print('standardising GP model inputs...')
+        GP_model_inputs = np.array([(i-i.mean())/i.std() for i in GP_model_inputs])
+    else:
+        GP_model_inputs = np.array(GP_model_inputs)
+
+
 
 ## Remove any nans and zeroes from the error array
 not_nans = np.isfinite(flux)*np.isfinite(flux_error)
@@ -203,9 +223,29 @@ zero_errors = flux_error == 0
 if np.any(zero_errors):
     flux_error[zero_errors] = np.mean(flux_error)
 systematics_model_inputs = systematics_model_inputs[:,not_nans]
-GP_model_inputs = GP_model_inputs[:,not_nans]
+if GP_used:
+    GP_model_inputs = GP_model_inputs[:,not_nans]
 
-model_inputs['systematic_model']['model_inputs'] = model_inputs
+
+
+### Optionally clip outliers using running median
+
+clip_outliers = bool(int(input_dict['clip_outliers']))
+median_clip = bool(int(input_dict['median_clip']))
+sigma_clip = float(input_dict['sigma_cut'])
+
+if clip_outliers and median_clip:
+    flux, flux_error, time, keep_idx = clipping_outliers_with_median_clip(flux, flux_error, time, sigma_clip, show_plots, save_plots, output_foldername):
+    
+    systematics_model_inputs = np.array(systematics_model_inputs)[:,keep_idx].reshape(len(systematics_model_inputs),len(np.where(keep_idx == True)[0]))
+    if GP_used:
+        GP_model_inputs = np.array(GP_model_inputs)[:,keep_idx].reshape(len(GP_model_inputs),len(np.where(keep_idx == True)[0]))
+
+
+
+
+
+model_inputs['systematic_model']['model_inputs'] = systematics_model_inputs
 model_inputs['GP_model']['model_inputs'] = GP_model_inputs
 
 
@@ -221,489 +261,51 @@ if bool(int(input_dict['renorm_flux'])):
     flux /= oot_median
     flux_error /= oot_median
 
-### GP controls
-if input_dict['kernel_classes'] is not None:
-    try:
-        kernel_classes = [i.strip() for i in input_dict['kernel_classes'].split(',')]
-    except:
-        pass
 
-    model_inputs['GP_model']['kernel_classes'] = kernel_classes
-    # are we using a white noise kernel?
-    model_inputs['GP_model']['white_noise_kernel'] = bool(int(input_dict['white_noise_kernel']))
+### Save clipped arrays for ease of future plotting
+pickle.dump(flux,open('Used_flux_wb%s.pickle'%(str(wb+1).zfill(4)),'wb')) # add '0' in front of single digit wavelength bin numbers so that linux sorts them properly
+pickle.dump(time,open('Used_time_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+pickle.dump(flux_error,open('Used_error_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+pickle.dump(systematics_model_inputs,open('Used_model_inputs_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+pickle.dump(GP_model_inputs,open('Used_GP_model_inputs_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+pickle.dump(keep_idx,open('data_quality_flags_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
 
 
 prior_file = str(input_dict['prior_filename'])
 
+# initalise light curve model
+lc_class = lc.LightcurveModel(flux,flux_error,time,prior_file,fit_models,model_inputs)
+param_dict = lc_class.return_parameter_dict()
+param_list_free = lc_class.return_free_parameter_list()
 
+# sampling controls
+sampling_method = str(input_dict['sampling_method'])
+sampling_arguments = {}
 
-#### updated until here
+if sampling_method == 'emcee':
 
+    sampling_arguments['nwalk'] = int(input_dict['nwalkers'])
+    sampling_arguments['nstep'] = input_dict['nsteps']
+    if sampling_arguments['nstep'] != "auto": # use the autocorrelation time to determine when the chains have converged
+        sampling_arguments['nstep'] = int(nstep)
 
+    sampling_arguments['nthreads'] = int(input_dict['nthreads'])
+    sampling_arguments['use_typeII'] = bool(int(input_dict['typeII_maximum_likelihood']))
+    sampling_arguments['optimise_model'] = bool(int(input_dict['optimise_model']))
 
+    sampling_arguments['save_chain'] = bool(int(input_dict['save_chain']))
+    sampling_arguments['prod_only'] = bool(int(input_dict['prod_only']))
 
-### Optionally clip outliers using running median
+elif sampling_method == 'dynesty':
+    sampling_arguments['nlive_pdim'] = int(input_dict['nlive_points_pdim'])
+    sampling_arguments['precision_crit'] = input_dict['precision_crit']
 
-if clip_outliers and median_clip:
-
-    from scipy.signal import medfilt
-
-    print('Clipping outliers...')
-
-    # Running median
-    box_width = int(len(flux)/10)
-    if box_width % 2 == 0:
-        box_width += 1
-
-    MF = medfilt(flux,box_width)
-
-    # Use polynomial to remove edge effects of running median
-    x = np.arange(len(flux))
-
-    poly_left = np.poly1d(np.polyfit(x[:box_width*2],MF[:box_width*2],1))
-    poly_right = np.poly1d(np.polyfit(x[-box_width*2:],MF[-box_width*2:],1))
-
-    MF[:box_width] = poly_left(x[:box_width])
-    MF[-box_width:] = poly_right(x[-box_width:])
-
-    filtered_residuals = flux - MF
-    standard_residuals = np.std(filtered_residuals)
-
-    keep_idx = ((filtered_residuals <= sigma_clip*standard_residuals) & (filtered_residuals >= -sigma_clip*standard_residuals))
-
-    clipped_flux = flux[keep_idx]
-    clipped_flux_error = flux_error[keep_idx]
-    clipped_time = time[keep_idx]
-    clipped_model_input = np.array(systematics_model_inputs)[:,keep_idx].reshape(len(systematics_model_inputs),len(np.where(keep_idx == True)[0]))
-
-    if show_plots:
-        plt.figure()
-        plt.subplot(211)
-        plt.errorbar(time[~keep_idx],flux[~keep_idx],yerr=flux_error[~keep_idx],fmt='o',ecolor='r',color='r',label='Clipped outliers')
-        plt.errorbar(clipped_time,clipped_flux,yerr=clipped_flux_error,fmt='o',ecolor='k',color='k',alpha=0.5)
-        plt.plot(time,MF,'r')
-        plt.ylabel('Normalised flux')
-        plt.title('Outlier clipping')
-        plt.legend(loc='upper left')
-
-        # residuals
-        plt.subplot(212)
-        plt.errorbar(time[~keep_idx],flux[~keep_idx]-MF[~keep_idx],yerr=flux_error[~keep_idx],fmt='o',ecolor='r',color='r',label='Clipped outliers')
-        plt.errorbar(clipped_time,clipped_flux-MF[keep_idx],yerr=clipped_flux_error,fmt='o',ecolor='k',color='k',alpha=0.5)
-        plt.axhline(sigma_clip*standard_residuals,ls='--',color='gray')
-        plt.axhline(sigma_clip*-standard_residuals,ls='--',color='gray')
-        plt.ylim(-10*standard_residuals,10*standard_residuals)
-
-        plt.xlabel('Time (MJD)')
-        plt.ylabel('Residuals')
-
-        plt.show(block=False) # only show for 5 seconds. This is necessary when running fits to multiple bins so that the code doesn't have to wait for user to manually close windows before continuing.
-        plt.pause(5)
-        plt.close()
-
-
-### Optionally optimise the transit model parameters using a cubic-in-time polynomial here to handle systematic noise here. We can also optionally use this fit to clip outliers instead of through the median clip
-# raise SystemExit
-
-if optimise_model or clip_outliers and not median_clip:
-
-    # Make a new dictionary and toy model where we don't include any GP parameters, these are optimised later
-    d_clip = OrderedDict()
-    for k,v in zip(d.keys(),d.values()):
-        if k != "s" and k != "A" and "lniL" not in k and 'f' not in k:
-            d_clip[k] = v
-
-    if poly_used: # we use the polynomial orders and inputs as defined in fitting_input.txt
-        polynomial_orders_toy = polynomial_orders
-        if median_clip:
-            red_noise_model_inputs = clipped_model_input
-        else:
-            red_noise_model_inputs = systematics_model_inputs
-    else: # in this case we want to use a polynomial to clip outliers but for these purposes we're only going to use time (quadratic) to detrend
-        if not exp_ramp_used:
-            polynomial_orders_toy = np.array([2])
-            d_clip['c1'] = tmgp.Param(1.0)
-            d_clip['c2'] = tmgp.Param(-1e-5)
-            d_clip['c3'] = tmgp.Param(-1e-5)
-        else:
-            polynomial_orders_toy = None
-
-        if median_clip:
-            red_noise_model_inputs = [clipped_time]
-        else:
-            red_noise_model_inputs = [time]
-
-    if exp_ramp_used:
-        for i in range(0,exp_ramp_components*2):
-            if i%2 == 0:
-                d_clip["r%d"%(i+1)] = tmgp.Param(0) # the r1 parameter
-            if i%2 == 1:
-                d_clip["r%d"%(i+1)] = tmgp.Param(-5) # the r2 parameter
-
-    if step_func_used:
-        d_clip["step1"] = tmgp.Param(1)
-        # d_clip["step2"] = tmgp.Param(1)
-        if white_light_fit:
-            d_clip["breakpoint"] = tmgp.Param(float(input_dict["step_breakpoint"]))
-        else:
-            d_clip["breakpoint"] = float(input_dict["step_breakpoint"])
-        # d_clip["breakpoint2"] = tmgp.Param(int(input_dict["step_breakpoint"])+1)
-
-
-
-    ### Generate starting model
-    if median_clip:
-        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law,exp_ramp_used,exp_ramp_components,step_func_used)
-    else:
-        clip_model = tmgp.TransitModelGPPM(d_clip,red_noise_model_inputs,None,flux_error,time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders_toy,ld_law,exp_ramp_used,exp_ramp_components,step_func_used)
-
-    if not np.any(flux_error) > 0: # the errors are all zeroes, need to be replaced for sake of fit only
-        print("using dummy flux errors for sigma clipping only")
-        dummy_error = 1e-3*flux
-    else:
-        dummy_error = flux_error
-
-    # Now fit the model to get the clipped model
-    if median_clip:
-        try:
-            fitted_clip_model,_,_ = clip_model.optimise_params(clipped_time,clipped_flux,clipped_flux_error,reset_starting_gp=False,contact1=contact1,contact4=contact4,full_model=True,sys_priors=sys_priors,LM_fit=True)
-        except:
-            fitted_clip_model,_ = clip_model.optimise_params(clipped_time,clipped_flux,clipped_flux_error,reset_starting_gp=False,contact1=contact1,contact4=contact4,full_model=True,sys_priors=sys_priors)
-
-    else:
-        try:
-            fitted_clip_model,_,_ = clip_model.optimise_params(time,flux,flux_error,reset_starting_gp=False,contact1=contact1,contact4=contact4,full_model=True,sys_priors=sys_priors,LM_fit=True)
-        except:
-            fitted_clip_model,_ = clip_model.optimise_params(time,flux,flux_error,reset_starting_gp=False,contact1=contact1,contact4=contact4,full_model=True,sys_priors=sys_priors)
-
-
-        # check contact points
-        initial_red_noise = 1
-        if poly_used:
-            initial_red_noise *= fitted_clip_model.red_noise_poly(time)
-        if exp_ramp_used:
-            initial_red_noise *= fitted_clip_model.exponential_ramp(time)
-        if step_func_used:
-            initial_red_noise *= fitted_clip_model.step_function(time)
-
-
-        initial_transit_model = fitted_clip_model.calc(time)/initial_red_noise
-
-    if white_light_fit:
-        try:
-            # we can now use the transit light curve fit as another check of where the first and fourth contact points are in terms of frame numbers
-            new_contact1 = max(np.where(initial_transit_model[:contact1+10]==1)[0]) # we assume a 10 frame uncertainty on the user-defined guess
-            new_contact4 = min(np.where(initial_transit_model[contact4-10:]==1)[0]+contact4-10)
-            print("\n## Contact 1 from fit = %d, contact 4 from fit = %d"%(new_contact1,new_contact4))
-        except:
-            pass
-
-    ### Plot the results
-    if clip_outliers and not median_clip:
-        print('\nPlotting lsq fit for clipping using polynomial....')
-    else:
-        print("\nPlotting initial optimised model....")
-
-    if show_plots:
-        if median_clip:
-            fig = pu.plot_single_model(fitted_clip_model,clipped_time,clipped_flux,clipped_flux_error,save_fig=False,plot_residual_std=sigma_clip)
-        else:
-            fig = pu.plot_single_model(fitted_clip_model,time,flux,flux_error,save_fig=False,plot_residual_std=sigma_clip)
-
-    if optimise_model:
-
-        ### update starting transit model parameters with these optimised parameters
-        print("...updating transit and (optionally) polynomial parameters with optimised values")
-        for k,v in zip(d_clip.keys(),d_clip.values()):
-            if k in d:
-                d[k] = v
-
-        ### update photometric uncertainties given best-fit model
-        if median_clip:
-            print("\nRescaling photometric uncertainties by %.3f to give rChi2 = 1"%np.sqrt(fitted_clip_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error)))
-            clipped_flux_error = clipped_flux_error*np.sqrt(fitted_clip_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error))
-            pickle.dump(clipped_flux_error,open('rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-        else:
-            print("\nRescaling photometric uncertainties by %.3f to give rChi2 = 1"%np.sqrt(fitted_clip_model.reducedChisq(time,flux,flux_error)))
-            flux_error = flux_error*np.sqrt(fitted_clip_model.reducedChisq(time,flux,flux_error))
-            pickle.dump(flux_error,open('rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-
-
-    if clip_outliers and not median_clip: # use the above to clip outliers, if we've not already clipped them with the median clipping above
-        residuals_1 = flux - fitted_clip_model.calc(time)
-        rms_1 = np.sqrt(np.mean(residuals_1**2))
-        keep_idx = ((residuals_1 >= -sigma_clip*rms_1) & (residuals_1 <= sigma_clip*rms_1))
-
-        clipped_flux = flux[keep_idx]
-        clipped_flux_error = flux_error[keep_idx]
-        clipped_time = time[keep_idx]
-        clipped_model_input = np.array(systematics_model_inputs)[:,keep_idx].reshape(len(systematics_model_inputs),len(np.where(keep_idx == True)[0]))
-
-        if show_plots:
-            print("Plotting light curve after outlier clipping...")
-            fig = pu.plot_single_model(fitted_clip_model,clipped_time,clipped_flux,clipped_flux_error,save_fig=False,plot_residual_std=sigma_clip,systematics_model_inputs=clipped_model_input)
-
-
-if not clip_outliers:
-    keep_idx = np.ones_like(time).astype(bool)
-    clipped_flux = flux
-    clipped_flux_error = flux_error
-    clipped_time = time
-    clipped_model_input = np.array(systematics_model_inputs)
-
-
-
-### Save clipped arrays for ease of future plotting
-pickle.dump(clipped_flux,open('sigma_clipped_flux_wb%s.pickle'%(str(wb+1).zfill(4)),'wb')) # add '0' in front of single digit wavelength bin numbers so that linux sorts them properly
-pickle.dump(clipped_time,open('sigma_clipped_time_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-pickle.dump(clipped_flux_error,open('sigma_clipped_error_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-pickle.dump(clipped_model_input,open('sigma_clipped_model_inputs_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-pickle.dump(keep_idx,open('data_quality_flags_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-
-if clip_outliers:
-    print("\n %d data points (%.2f%%) clipped from fit"%(len(time)-len(clipped_time),100*(len(time)-len(clipped_time))/len(time)))
-
-starting_model = tmgp.TransitModelGPPM(d,clipped_model_input,kernel_classes,clipped_flux_error,clipped_time,kernel_priors_dict,white_noise_kernel,use_kipping,ld_prior,polynomial_orders,ld_law,exp_ramp_used,exp_ramp_components,step_func_used)
-
-if not optimise_model and show_plots:
-    print("plotting starting model")
-    fig = pu.plot_single_model(starting_model,clipped_time,clipped_flux,clipped_flux_error,save_fig=False)
-
-
-### Optionally fit all combinations of polynomials with a Nelder-Mead to determine the best orders and inputs to use
-if args.determine_best_polynomials > 0 and not GP_used:
-    if not optimise_model:
-        print(optimise_model)
-        raise ValueError("If using -dbp, we must first optimise the starting model! Set optimise_model = 1 in fitting_input.txt")
-    print("\n### Determining best combination of polynomials and input vectors (this could take a while)...")
-    cont = input("...Is time given as the first path given to model_input_files in fitting_input.txt? [Y/n]: ")
-    if cont == "Y":
-        print("continuing...\n")
-    else:
-        print("Make sure time is first input given to model_input_files in fitting_input.txt\n")
-        raise SystemExit
-
-    # Rescale uncertainties to give rChi2 = 1 for reference/starting model
-    clipped_flux_error = clipped_flux_error*np.sqrt(starting_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error))
-
-    # Now feed in the rescaled errors to all cominations fitting
-    pf.fit_all_polynomial_combinations(starting_model,clipped_time,clipped_flux,clipped_flux_error,clipped_model_input,max_order=args.determine_best_polynomials,sys_priors=sys_priors)
-
-    print("All combinations tested, exiting.")
+else:
     raise SystemExit
 
-if args.determine_best_polynomials and GP_used:
-    raise ValueError("determine_best_polynomials and GPs cannot be used at the same time -> turn one off")
 
-
-if show_plots and GP_used: # if we're not using a GP, we've already plotted the starting model from the optimise output above
-    print('\nPlotting starting model....')
-    ### Plot starting model
-    fig = pu.plot_single_model(starting_model,clipped_time,clipped_flux,clipped_flux_error,rebin_data=rebin_data,save_fig=False)
-
-### optimise model parameters prior to MCMC?
-if optimise_model and GP_used:
-    print('\nOptimising hyperparameters....')
-    optimised_kernel_params = starting_model.optimise_params(clipped_time,clipped_flux,clipped_flux_error,reset_starting_gp=starting_model.GP_used,contact1=contact1,contact4=contact4)
-
-    print('\nPlotting optimised GP model....')
-    if show_plots:
-        fig = pu.plot_single_model(starting_model,clipped_time,clipped_flux,clipped_flux_error,rebin_data=rebin_data,save_fig=False)
-
-    if bool(int(input_dict["reset_kernel_priors"])):
-        print("\nUpdating kernel priors with optimised values...\n")
-        kp_counter = 0
-
-        if white_noise_kernel:
-            new_bounds_wn = (np.sqrt(np.exp(optimised_kernel_params[0]))*0.9,np.sqrt(np.exp(optimised_kernel_params[0]))*1.1)
-            starting_model.kernel_priors["min_WN_sigma"] = min(new_bounds_wn)
-            starting_model.kernel_priors["max_WN_sigma"] = max(new_bounds_wn)
-            kp_counter += 1
-
-        new_bounds_A = (0.9*optimised_kernel_params[kp_counter],1.1*optimised_kernel_params[kp_counter])
-        starting_model.kernel_priors["min_A"] = min(new_bounds_A)
-        starting_model.kernel_priors["max_A"] = max(new_bounds_A)
-        kp_counter += 1
-
-        for i in range(nkernels):
-            new_bounds_lniL = (0.9*optimised_kernel_params[kp_counter],1.1*optimised_kernel_params[kp_counter])
-            starting_model.kernel_priors["min_lniL_%d"%(i+1)] = min(new_bounds_lniL)
-            starting_model.kernel_priors["max_lniL_%d"%(i+1)] = max(new_bounds_lniL)
-            kp_counter += 1
-
-
-### check that the prior likelihood is not minus infinity, otherwise the code will fail with no warning
-if not np.isfinite(starting_model.lnprior(sys_priors)) :
-    raise ValueError('Model lnprior is negative infinity')
-
-
-
-### Fitting controls
-
-nwalk = int(input_dict['nwalkers'])
-nstep = input_dict['nsteps']
-if nstep != "auto": # use the autocorrelation time to determine when the chains have converged
-    nstep = int(nstep)
-
-nthreads = int(input_dict['nthreads'])
-use_typeII = bool(int(input_dict['typeII_maximum_likelihood']))
-optimise_model = bool(int(input_dict['optimise_model']))
-
-clip_outliers = bool(int(input_dict['clip_outliers']))
-sigma_clip = float(input_dict['sigma_cut'])
-if clip_outliers:
-    median_clip = bool(int(input_dict['median_clip']))
-else:
-    median_clip = False
-
-save_chain = bool(int(input_dict['save_chain']))
-prod_only = bool(int(input_dict['prod_only']))
-
-
-
-
-### Run the MCMC
-
-if use_typeII:
-    raise Warning("TypeII has not been tested in a long time, may not be accurate")
-    # Using Type II maximum likelihood estimation as used by Gibson+ and Rajpaul+
-    print('Running Type II maximum likelihood...')
-    median_typeII,upper_typeII,lower_typeII,typeII_model = mc.run_emcee(starting_model,clipped_time,clipped_flux,clipped_flux_error,nwalk,nstep,nthreads,burn=False,wavelength_bin=wb,sys_priors=sys_priors,typeII=True,save_chain=False)
-    print('...Type II maximum likelihood complete')
-    starting_model = typeII_model
-    raise SystemExit
-    continue_mcmc = input('Type II worked? (check corner plot) [Y/n] : ')
-    if continue_mcmc == 'Y':
-        pass
-    else:
-        raise SystemExit
-
-if nstep != 0:
-    if not prod_only:
-        # Run burn-in
-        if nstep != "auto":
-            if nstep > 5000 and GP_used: # only run a maximum of 5000 steps for burn in if we're using a GP since we don't perform an uncertainty rescaling
-                nstep_burn = 5000
-            else:
-                nstep_burn = nstep
-        else:
-            if poly_used and not GP_used: # then we're rescaling the uncertainties so we need to make sure the chains are long enough to accurately rescale the uncertainties
-                nstep_burn = nstep
-            else:
-                nstep_burn = 2000 # short burn in before we perform the auto correlation testing
-
-        median_burn,upper_burn,lower_burn,burn_model = mc.run_emcee(starting_model,clipped_time,clipped_flux,clipped_flux_error,nwalk,nstep_burn,nthreads,burn=True,wavelength_bin=wb,sys_priors=sys_priors,typeII=False)
-
-        # Update burn_model starting params with current params
-        for i in burn_model.pars.keys():
-            try:
-                burn_model.pars[i].startVal = burn_model.pars[i].currVal
-            except:
-                pass
-
-        if not GP_used:
-            # we need to rescale the photometric uncertainties to give reduced chi2 = 1
-            print("\nRescaling photometric uncertainties to give rChi2 = 1")
-            clipped_flux_error = clipped_flux_error*np.sqrt(burn_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error))
-            if show_plots:
-                fig = pu.plot_single_model(burn_model,clipped_time,clipped_flux,clipped_flux_error,rebin_data=rebin_data,save_fig=False)
-            rchi2_rescaled = burn_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error)
-            print("reduced Chi2 following error rescaling = %.2f"%(rchi2_rescaled))
-            pickle.dump(clipped_flux_error,open('rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-
-        # Run production
-        median,upper,lower,prod_model = mc.run_emcee(burn_model,clipped_time,clipped_flux,clipped_flux_error,nwalk,nstep,nthreads,burn=False,wavelength_bin=wb,sys_priors=sys_priors,typeII=False,save_chain=save_chain)
-
-    else: # we're running a single chain, all the way through.
-        # Run production
-        median,upper,lower,prod_model = mc.run_emcee(starting_model,clipped_time,clipped_flux,clipped_flux_error,nwalk,nstep,nthreads,burn=False,wavelength_bin=wb,sys_priors=sys_priors,typeII=False,save_chain=save_chain)
-
-else: # we're not running an MCMC at all here, we're just using a Levenberg-Marquadt to estimate the parameters and uncertainties!
-
-    # the "burn" model is our first iteration before rescaling the uncertainties
-    burn_model,median_burn,uncertainties_burn = starting_model.optimise_params(clipped_time,clipped_flux,clipped_flux_error,reset_starting_gp=False,contact1=contact1,contact4=contact4,full_model=True,sys_priors=sys_priors,LM_fit=True)
-
-    # we need to rescale the photometric uncertainties to give reduced chi2 = 1
-    print("\nRescaling photometric uncertainties by %.3f to give rChi2 = 1"%np.sqrt(burn_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error)))
-    clipped_flux_error = clipped_flux_error*np.sqrt(burn_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error))
-    if show_plots:
-        fig = pu.plot_single_model(burn_model,clipped_time,clipped_flux,clipped_flux_error,rebin_data=rebin_data,save_fig=False)
-    rchi2_rescaled = burn_model.reducedChisq(clipped_time,clipped_flux,clipped_flux_error)
-    print("reduced Chi2 following error rescaling = %.2f"%(rchi2_rescaled))
-    pickle.dump(clipped_flux_error,open('rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-
-    # the 'prod' model is the second fit after rescaling the uncertainties
-    prod_model,median_prod,uncertainties_prod = burn_model.optimise_params(clipped_time,clipped_flux,clipped_flux_error,reset_starting_gp=False,contact1=contact1,contact4=contact4,full_model=True,sys_priors=sys_priors,LM_fit=True)
-
-    # save the results
-    mc.save_LM_results(median_prod,uncertainties_prod,prod_model.namelist,wb+1,prod_model,clipped_time,clipped_flux,clipped_flux_error,verbose=True)
-    pickle.dump(prod_model,open('prod_model_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-
-#### Plot and save final models
-
-if GP_used:
-    if white_noise_kernel:
-        # if using white noise kernel, we need to take this into account in our error bars
-        GP = prod_model.construct_gp(compute=True,flux_err=clipped_flux_error)
-        wn_var = np.exp(GP.white_noise.get_value(clipped_time))
-        wn_std = np.sqrt(wn_var)
-        e = np.sqrt(wn_std**2+clipped_flux_error**2)
-        pickle.dump(e,open('rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-
-    else:
-        e = clipped_flux_error
-else:
-    e = clipped_flux_error
-
-if not GP_used:
-    fig = pu.plot_single_model(prod_model,clipped_time,clipped_flux,e,rebin_data=rebin_data,save_fig=True,wavelength_bin=wb,deconstruct=True)
-
-    if white_light_fit:
-        # generate red noise model for possible common mode correction. Note this is performed on the full time array, not the clipped time array, so that the same number of data points are used in the WLC and wb fits
-
-        # first get the red noise model
-        red_noise_model = 1
-
-        if poly_used:
-            red_noise_model *= prod_model.red_noise_poly(time,systematics_model_inputs)
-
-        if exp_ramp_used:
-            red_noise_model *= prod_model.exponential_ramp(time)
-
-        if step_func_used:
-            red_noise_model *= prod_model.step_function(time)
-
-        pickle.dump(red_noise_model,open('red_noise_model.pickle','wb'))
-
-        # now get the common noise model, which is the flux array minus the best fitting transit model
-        full_model = prod_model.calc(time,systematics_model_inputs)
-
-        transit_model = full_model/red_noise_model
-
-        common_noise_model = flux/transit_model
-        pickle.dump(common_noise_model,open('common_noise_model.pickle','wb'))
-
-else:
-    fig = pu.plot_single_model(prod_model,clipped_time,clipped_flux,e,rebin_data=rebin_data,save_fig=True,wavelength_bin=wb,deconstruct=True)
-
-    # Save white light GP model as common mode
-    if white_light_fit:
-        mu,std,mu_components = prod_model.calc_gp_component(time,flux,flux_error,systematics_model_inputs,True)
-
-        pickle.dump(mu,open('gp_model_all.pickle','wb'))
-
-        for i,m in enumerate(mu_components):
-            pickle.dump(m,open('gp_model_kernel%d.pickle'%(i+1),'wb'))
-
-        # the GP component combined with the residuals is given by subtracting the best-fitting transit model. This can be calculated for original arrays
-        tm = prod_model.calc(time,systematics_model_inputs)
-        common_noise_model = flux/tm
-        pickle.dump(common_noise_model,open("common_noise_model.pickle","wb"))
-
-
-if white_light_fit: # make plot of rms vs bins and expected vs calculated LDCs for white light curve. If wb fits, this is handled elsewhere
-    print("\nNow running plot_output.py for expected_vs_calculated_LDCS.pdf and rms_vs_bins.pdf...")
-    import os
-    os.system("python %s/plot_output.py -wlc -cp -st -s"%os.path.dirname(tmgp.__file__))
-    print("Making model table")
-    os.system("python %s/model_table_generator.py"%os.path.dirname(tmgp.__file__))
+sampling = s.Sampling(lc_class,param_dict,param_list_free,prior_dict,sampling_arguments,sampling_method)
+if sampling_method == 'emcee':
+    sampling.run_emcee()
+elif sampling_method == 'dynesty':
+    sampling.run_dynesty()
