@@ -3,12 +3,7 @@
 
 import numpy as np
 import batman
-import george
-from george import kernels
-from scipy import optimize,stats
-import matplotlib.pyplot as plt
-from fitting_utils import parametric_fitting_functions as pf
-from fitting_utils import plotting_utils as pu
+
 
 class BatmanModel(object):
     def __init__(self,param_dict,param_list_free,transit_model_inputs,time_array):
