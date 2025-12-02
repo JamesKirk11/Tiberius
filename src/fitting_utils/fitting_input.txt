@@ -10,8 +10,9 @@ time_file =  # a path that points to a pickled numpy array of times.
 flux_file =	#  a path that points to a pickled numpy array of fluxes. If this is for a white light curve it should have shape (1,). Otherwise for wavelength-binned fits, it should have shape = (nbins,nfluxes)
 error_file = #  a path that points to a pickled numpy array of fluxes. If this is for a white light curve it should have shape (1,). Otherwise for wavelength-binned fits, it should have shape = (nbins,nfluxes)
 
-wvl_centres = 	# either a single number (in case of white light curve) OR a pickled numpy array of wavlength bin centres. 
+wvl_centres = [15,20]	# either a single number (in case of white light curve) OR a pickled numpy array of wavlength bin centres. 
 wvl_bin_full_width =	# either a single number (in case of white light curve) OR a pickled numpy array of wavlength bin centres. This is the FULL WIDTH of the bin NOT the width/2.
+wvls_unit = micron # either angstrom or micron
 
 transit_model = batman # either batman or catwoman
 
@@ -19,12 +20,12 @@ transit_model = batman # either batman or catwoman
 ### LIMB DARKENING; including whether we want priors and the parameters of the host star
 generate_LDCs = 1 # do you want to generate LDCs? Set to 1 (on) or 0 (off).
 LDCs_package = exotic-ld # Options: exotic-ld or LDTk
-LDCs_unit = micron # either angstrom or micron
-
 ld_law = quadratic # choose between linear/quadratic/squareroot/nonlinear/
-use_generated_ld_uncertainties = 1 # do you want to use the unertainties from the generated LDCs? Set to 1 (on) or 0 (off).
-ld_uncertainty_multiplier = 3 	# If wanting to inflate the error bars on the LDCs from the generated LDCs, set this to a factor. e.g. setting to 3, inflates errors by a factor of 3. Only used if use_generated_ld_uncertainties = 1.
-use_kipping_parameterisation = 0	# Use if wanting to use Kipping's change of variables for efficient sampling of LDCs. NOTE: NOT FULLY TESTED. Set to 1 (on) or 0 (off).
+
+# if using exotic-ld please define the following:
+exotic-ld_d_data_path = /path/to/exotic_package_data
+exotic-ld_model_dim = 3D
+exotic-ld_instrument_mode = JWST_NIRSpec_G395H
 
 # Stellar parameters, for limb darkening coefficients
 Teff = 			# Stellar effective temperature in K
@@ -34,8 +35,15 @@ logg_star_err =  # error in  log(g) of star
 FeH = 			# Fe/H of star
 FeH_err = 		# error in Fe/H of star
 
+# for fitting the Limb-darkening
+use_generated_ld_uncertainties = 1 # do you want to use the unertainties from the generated LDCs? Set to 1 (on) or 0 (off).
+ld_uncertainty_multiplier = 3 	# If wanting to inflate the error bars on the LDCs from the generated LDCs, set this to a factor. e.g. setting to 3, inflates errors by a factor of 3. Only used if use_generated_ld_uncertainties = 1.
+use_kipping_parameterisation = 0	# Use if wanting to use Kipping's change of variables for efficient sampling of LDCs. NOTE: NOT FULLY TESTED. Set to 1 (on) or 0 (off).
+
+
 
 ### FITTING PARAMETERS
+prior_filename = example_prior_def_file.txt
 
 contact1 = 		# position of the first contact point in frame numbers. Used to define the out of transit data, if wanting to optimise GP hyperparams to out of transit data and/or renormalising flux to out-of-transit data.
 contact4 = 		# position of the fourth contact point in frame numbers. Used to define the out of transit data, if wanting to optimise GP hyperparams to out of transit data and/or renormalising flux to out-of-transit data.
@@ -48,13 +56,12 @@ clip_outliers = 1		# do you want to clip outliers before fitting? Set to 1 (on) 
 sigma_cut =  4           # choose the sigma cut level (e.g. 3 sigma, 4 sigma) can be a float
 median_clip = 0      # define whether you want to clip the outliers using a running median (1) or using a transit light curve fit (0). Currently only implemented for TransitModelGPPM
 
-normalise_inputs = 1	# do we want to normalise the ancillary data? This is done through (input - mean(input))/std(input).  Set to 1 (on) or 0 (off).
-
 renorm_flux = 0 # do we want to renormalise the flux to give an out of transit median of unity? Set to 1 (on) or 0 (off).
 
 
 ## FOR PARAMETRIC MODELLING
 model_input_files =  # paths that point to an arbitrary number of pickled arrays of detrending inputs. Each path needs to be separated by a comma, e.g.: "time.pickle,background.pickle,x.pickle,..."
+normalise_inputs = 1	# do we want to normalise the ancillary data? This is done through (input - mean(input))/std(input).  Set to 1 (on) or 0 (off).
 
 polynomial_orders = 		 	# What order polynomials are being used to model the systematic model inputs? Can be left blank if not using a polynomial. Note the inputs are those defined in the above 'model_input_files' and so must have the same length. e.g. for 3 model input files, you could set polynomial_orders to 0,1,2 (which would be 0th order/ignored first model input, 1st order poly to second input, 2nd order poly to 3rd input)
 
@@ -65,6 +72,7 @@ step_function = 0 # do you want to fit a step function (1) or not (0)? This can 
 
 ## FOR GP MODELLING
 GP_model_input_files =  # paths that point to an arbitrary number of pickled arrays of GP inputs. Each path needs to be separated by a comma, e.g.: "time.pickle,background.pickle,x.pickle,..."
+normalise_GP_inputs = 1	# do we want to normalise the ancillary data? This is done through (input - mean(input))/std(input).  Set to 1 (on) or 0 (off).
 
 kernel_classes = 				# A list of kernel classes that we want to use, e.g. "ExpSquared,Matern32,..." If we don't want to use a GP (and only polynomials), leave this blank. This needs to be as long as the number of 'model_input_files'
 white_noise_kernel = 1			# Use white noise kernel (1) or not (0)
@@ -88,10 +96,12 @@ nlive_points_pdim = 50  # will be multiplied by the number of parameters, so the
 precision_crit = 1e-3  # ratio between prior and posterior space where the nested sampling converges
 
 
-## Plotting
+### Plotting and Saving
 show_plots = 1 # Do you want to plot intermediate plots of the fit outputs? Set to 1 (on) or 0 (off).
+save_plots = 1 # Do you want to plot intermediate plots of the fit outputs? Set to 1 (on) or 0 (off).
 rebin_data = 	# can choose to bin the data for purposes of plotting. set this number to number of bins desired. Can be left blank.
 
+output_foldername = fitting_1
 
 # PLANET PARAMETERS, NEEDED TO CALCULATE SCALE HEIGHT FOR TRANSMISSION SPECTRUM IN plot_output.py
 
