@@ -5,7 +5,7 @@
 
 ### INPUT FILES
 
-# Critical inputs
+# Light curve inputs
 time_file =  # a path that points to a pickled numpy array of times.
 flux_file =	#  a path that points to a pickled numpy array of fluxes. If this is for a white light curve it should have shape (1,). Otherwise for wavelength-binned fits, it should have shape = (nbins,nfluxes)
 error_file = #  a path that points to a pickled numpy array of fluxes. If this is for a white light curve it should have shape (1,). Otherwise for wavelength-binned fits, it should have shape = (nbins,nfluxes)
@@ -13,14 +13,13 @@ error_file = #  a path that points to a pickled numpy array of fluxes. If this i
 wvl_centres = 	# either a single number (in case of white light curve) OR a pickled numpy array of wavlength bin centres. 
 wvl_bin_full_width =	# either a single number (in case of white light curve) OR a pickled numpy array of wavlength bin centres. This is the FULL WIDTH of the bin NOT the width/2.
 
-
-# Ancillary inputs for detrending
-model_input_files =  # paths that point to an arbitrary number of pickled arrays of detrending inputs. Each path needs to be separated by a comma, e.g.: "time.pickle,background.pickle,x.pickle,..."
+transit_model = batman # either batman or catwoman
 
 
 ### LIMB DARKENING; including whether we want priors and the parameters of the host star
 generate_LDCs = 1 # do you want to generate LDCs? Set to 1 (on) or 0 (off).
 LDCs_package = exotic-ld # Options: exotic-ld or LDTk
+LDCs_unit = micron # either angstrom or micron
 
 ld_law = quadratic # choose between linear/quadratic/squareroot/nonlinear/
 use_generated_ld_uncertainties = 1 # do you want to use the unertainties from the generated LDCs? Set to 1 (on) or 0 (off).
@@ -55,31 +54,23 @@ renorm_flux = 0 # do we want to renormalise the flux to give an out of transit m
 
 
 ## FOR PARAMETRIC MODELLING
+model_input_files =  # paths that point to an arbitrary number of pickled arrays of detrending inputs. Each path needs to be separated by a comma, e.g.: "time.pickle,background.pickle,x.pickle,..."
 
 polynomial_orders = 		 	# What order polynomials are being used to model the systematic model inputs? Can be left blank if not using a polynomial. Note the inputs are those defined in the above 'model_input_files' and so must have the same length. e.g. for 3 model input files, you could set polynomial_orders to 0,1,2 (which would be 0th order/ignored first model input, 1st order poly to second input, 2nd order poly to 3rd input)
-polynomial_coefficients = 		# starting positions of polynomial coefficients. Can be left blank, in which case the code makes a guess.
+
 exponential_ramp = 0 # do you want to use an exponential ramp in your fitting? If yes, set this to an integer >= 1, where the number sets the number of exponentials to use. If not wanting to use an exponential ramp, keep this as 0.
-step_function = 0 # do you want to fit a step function (1) or not (0)? This can be used to fit e.g. mirror tilt events in JWST light curves
-step_breakpoint = # if step_function = 1, use this to define the starting guess for the breakpoint of the step function (in units of integrations). Can be left blank if not using a step function
+
+step_function = 0 # do you want to fit a step function (1) or not (0)? This can be used to fit e.g. mirror tilt events in JWST light curves. 
+
 
 ## FOR GP MODELLING
+GP_model_input_files =  # paths that point to an arbitrary number of pickled arrays of GP inputs. Each path needs to be separated by a comma, e.g.: "time.pickle,background.pickle,x.pickle,..."
 
 kernel_classes = 				# A list of kernel classes that we want to use, e.g. "ExpSquared,Matern32,..." If we don't want to use a GP (and only polynomials), leave this blank. This needs to be as long as the number of 'model_input_files'
 white_noise_kernel = 1			# Use white noise kernel (1) or not (0)
 typeII_maximum_likelihood = 0	# run typeII maximum likelihood? i.e. hold GP hyperparameters fixed to optimized values and run MCMC over mean model parameters. Set to 1 (on) or 0 (off).
 
-
-max_A_multiplier = 100   # the upper bound on the amplitude of the GP, defined as this number multiplied by the out-of-transit variance in the data
-min_A_multiplier = 0.01  # the lower bound on the amplitude of the GP, defined as this number multiplied by the out-of-transit variance in the data
-
-dy_max_multiplier = 3  # the upper bound on the GP lengthscale defined per model_input_parameter, defined as this number X the maximum distance between data points
-dy_min_multiplier = 1  # the lower bound on the GP lengthscale defined per model_input_parameter, defined as this number X the median distance between data points
-
-min_WN_sigma = 1e-7   # the lower bound on the white noise std dev
-max_WN_sigma = 1000e6  # the upper bound on the white noise std dev
-
 reset_kernel_priors = 0 # a boolean that allows you to reset the priors on the kernel hyperparameters using the results from the optimisation to the out of transit data. If true (=1), then the new kernel priors will be uniform between 0.9 and 1.1X the optimised values.
-
 
 
 ## MCMC PARAMETERS
@@ -93,8 +84,8 @@ optimise_model = 	1		# optimise the model parameters using a Nelder-Mead algorit
 
 
 ## DYNESTY PARAMETERS
-live_points = 50 
-precision_crit = 1e-3
+nlive_points_pdim = 50  # will be multiplied by the number of parameters, so the 'real' live points = nLive_pdim * nDims
+precision_crit = 1e-3  # ratio between prior and posterior space where the nested sampling converges
 
 
 ## Plotting
