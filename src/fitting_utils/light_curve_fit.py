@@ -263,12 +263,12 @@ if bool(int(input_dict['renorm_flux'])):
 
 
 ### Save clipped arrays for ease of future plotting
-pickle.dump(flux,open('Used_flux_wb%s.pickle'%(str(wb+1).zfill(4)),'wb')) # add '0' in front of single digit wavelength bin numbers so that linux sorts them properly
-pickle.dump(time,open('Used_time_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-pickle.dump(flux_error,open('Used_error_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-pickle.dump(systematics_model_inputs,open('Used_model_inputs_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-pickle.dump(GP_model_inputs,open('Used_GP_model_inputs_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-pickle.dump(keep_idx,open('data_quality_flags_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+pickle.dump(flux,open(output_foldername + 'Used_flux_wb%s.pickle'%(str(wb+1).zfill(4)),'wb')) # add '0' in front of single digit wavelength bin numbers so that linux sorts them properly
+pickle.dump(time,open(output_foldername + 'Used_time_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+pickle.dump(flux_error,open(output_foldername + 'Used_error_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+pickle.dump(systematics_model_inputs,open(output_foldername + 'Used_model_inputs_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+pickle.dump(GP_model_inputs,open(output_foldername + 'Used_GP_model_inputs_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+pickle.dump(keep_idx,open(output_foldername + 'data_quality_flags_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
 
 
 prior_file = str(input_dict['prior_filename'])
