@@ -51,13 +51,13 @@ class LightcurveModel(object):
         self.prior_dict = {}
 
         for i in range(len(param_names)):
-            if self.fixed[i] == 'free':
+            if fixed[i] == 'free':
                 self.param_list_free.append(param_names[i])
                 self.param_dict[param_names[i]] = Param(currVals[i])
                 self.prior_dict[param_names[i]+'_1'] = file['prior_1'][i]
                 self.prior_dict[param_names[i]+'_2'] = file['prior_2'][i]
                 self.prior_dict[param_names[i]+'_prior'] = file['prior_type'][i]
-            elif self.fixed[i] == 'fixed':
+            elif fixed[i] == 'fixed':
                 self.param_dict[param_names[i]] = float(currVals[i])
             else:
                 print('something is wrong with your prior file')
