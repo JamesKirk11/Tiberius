@@ -9,7 +9,7 @@ class SystematicsModel:
     and step functions for systematics modeling.
     """
 
-    def __init__(param_dict,
+    def __init__(self,param_dict,
                  systematics_model_inputs,
                  systematics_model_methods, time_array):
 
