@@ -77,7 +77,7 @@ class LightcurveModel(object):
             self.transit_model = cwm.CatwomanModel(self.param_dict, self.param_list_free, self.transit_model_inputs, self.time_array)
         
         from fitting_utils import systematics_model as sm
-        self.systematic_model = sm.SystematicsModel(self.param_dict, self.systematics_model_inputs,
+        self.systematic_model = sm.SystematicsModel(self.param_dict, self.systematic_model_inputs,
                                                         self.systematics_model_methods, self.time_array)
         
         if  self.gp_model_inputs['kernel_classes'] is not None:
