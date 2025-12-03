@@ -64,17 +64,16 @@ class LightcurveModel(object):
 
         # initialise models
         self.transit_model_package = fit_models['transit_model']
-        self.transit_model_inputs = model_inputs['transit_model']
         self.systematics_model_methods = fit_models['systematics_model']
         self.systematic_model_inputs = model_inputs['systematic_model']
         self.gp_model_inputs = model_inputs['gp_model']
         self.spot_model_package = model_inputs['spot_model']
         
 
-        if transit_model_package == 'batman':
+        if self.transit_model_package == 'batman':
             from fitting_utils import BatmanModel
             self.transit_model = BatmanModel(self.param_dict, self.param_list_free, self.transit_model_inputs)
-        elif transit_model_package == 'catwoman':
+        elif self.transit_model_package == 'catwoman':
             from fitting_utils import CatwomanModel
             self.transit_model = CatwomanModel(self.param_dict, self.param_list_free, self.transit_model_inputs)
         
