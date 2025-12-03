@@ -12,6 +12,7 @@ from fitting_utils import priors
 from fitting_utils import CatwomanModel
 from fitting_utils import BatmanModel
 from fitting_utils import systematics_model as sm
+from fitting_utils import GPModel as gpm
 
 class Param(object):
     '''A Param (parameter) needs a starting value and a current value. However, when first defining the Param object, it takes the starting value as the current value.
@@ -87,8 +88,17 @@ class LightcurveModel(object):
 
         
         
-        self.systematics_model = sm.SystematicsModel(self.param_dict,self.systematics_model_inputs,self.systematics_model_methods)
+        self.systematic_model = sm.SystematicsModel(self.param_dict, self.systematics_model_inputs,
+                                                        self.systematics_model_methods, self.time_array)
+        
 
+        if  self.gp_model_inputs['kernel_classes'] is not None:
+            self.GP_used = True
+            self.GP_model = gpm.GPModel(self.param_dict,self.gp_model_inputs, self.time_array, self.flux, self.flux_error)
+        else:
+            self.GP_used = False
+        
+        self.spot_used = False # add spot model here
         
 
     def return_free_parameter_list(self):
@@ -96,7 +106,7 @@ class LightcurveModel(object):
     def return_parameter_dict(self):
         return self.param_dict    
 
-    def calc(self,time=None):
+    def calc(self,time=None,decompose=False):
 
         """Calculates and returns the evaluated Mandel & Agol transit model, using catwoman.
 
@@ -106,14 +116,22 @@ class LightcurveModel(object):
         Returns:
         model - the full light curve"""
 
-        self.transit_model_calc = self.transit_model.calc(time)
+        if time is None:
+            time = self.time_array
 
-        self.systematic_model_calc = sm.SystematicsModel(self.param_dict, self.systematics_model_inputs,
-                                                        self.systematics_model_methods, self.time_array)
+        
+        transit_calc = self.transit_model.calc(time)
+        model_calc = np.array(transit_calc)
 
-        self.GP_model_calc = # James/Evie add GP model
+        sys_calc = self.systematic_model.calc(time, decompose=decompose)
+        model_calc *= sys_calc
 
-        self.spot_model_calc = # Evie add spot model
+        if self.GP_used:
+            GP_calc = self.GP_model.calc(time, decompose=decompose)
+            model_calc *= GP_calc
+
+        if self.spot_used:
+            spot_model_calc = # Evie add spot model
 
         
         return model
