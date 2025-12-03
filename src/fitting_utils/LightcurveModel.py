@@ -127,7 +127,7 @@ class LightcurveModel(object):
         model_calc *= sys_calc
 
         if self.GP_used:
-            GP_calc = self.GP_model.calc(time, decompose=decompose)
+            GP_calc = self.GP_model.calc(time, model_calc, decompose=decompose)
             model_calc *= GP_calc
 
         if self.spot_used:

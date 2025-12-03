@@ -124,7 +124,7 @@ class GPModel:
 
 
 
-    def calc(self,time=None,flux=None,flux_err=None,kernel_inputs=None,deconstruct_gp=False):
+    def calc(self,transit_calc,time=None,flux=None,flux_err=None,kernel_inputs=None,deconstruct_gp=False):
         """The function that generates the systematics (red) noise model using the GP.
 
         Inputs:
@@ -147,7 +147,7 @@ class GPModel:
         if flux_err is None:
             flux_err = self.flux_error
 
-        mean_function = self.calc(time)
+        mean_function = transit_calc
 
         if kernel_inputs is None:
             gp_model_inputs = self.GP_kernel_inputs
