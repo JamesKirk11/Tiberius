@@ -126,17 +126,17 @@ class LightcurveModel(object):
         sys_calc = self.systematic_model.calc(time, decompose=decompose)
         model_calc *= sys_calc
 
+        if self.spot_used:
+            spot_model_calc = # Evie add spot model
+            model_calc += spot_model_calc
+        
+
         if self.GP_used:
             GP_calc = self.GP_model.calc(time, model_calc, decompose=decompose)
             model_calc *= GP_calc
 
-        if self.spot_used:
-            spot_model_calc = # Evie add spot model
 
-        
         return model
-
-
 
 
     def update_model(self,theta):
