@@ -11,6 +11,7 @@ from fitting_utils import plotting_utils as pu
 from fitting_utils import priors
 from fitting_utils import CatwomanModel
 from fitting_utils import BatmanModel
+from fitting_utils import systematics_model as sm
 
 class Param(object):
     '''A Param (parameter) needs a starting value and a current value. However, when first defining the Param object, it takes the starting value as the current value.
@@ -85,6 +86,10 @@ class LightcurveModel(object):
             self.transit_model = CatwomanModel(self.param_dict, self.param_list_free, self.transit_model_inputs)
 
         
+        
+        self.systematics_model = sm.SystematicsModel(self.param_dict,self.systematics_model_inputs,self.systematics_model_methods)
+
+        
 
     def return_free_parameter_list(self):
         return self.param_dict_free   
@@ -103,7 +108,8 @@ class LightcurveModel(object):
 
         self.transit_model_calc = self.transit_model.calc(time)
 
-        self.systematic_model_calc = # James add systematics model
+        self.systematic_model_calc = sm.SystematicsModel(self.param_dict, self.systematics_model_inputs,
+                                                        self.systematics_model_methods, self.time_array)
 
         self.GP_model_calc = # James/Evie add GP model
 
@@ -111,6 +117,8 @@ class LightcurveModel(object):
 
         
         return model
+
+
 
 
     def update_model(self,theta):
