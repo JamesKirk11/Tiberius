@@ -18,7 +18,7 @@ if LDCs_package == 'LDTk':
     from ldtk import LDPSetCreator, BoxcarFilter
 elif LDCs_package == 'exotic-ld':
     from exotic_ld import StellarLimbDarkening
-    ld_data_path = str(input_dict['exotic-ld_d_data_path'])
+    ld_data_path = str(input_dict['exotic-ld_data_path'])
     ld_model_dimensionality = str(input_dict['exotic-ld_model_dim'])
     instrument_mode = str(input_dict['exotic-ld_instrument_mode'])
 else:
