@@ -236,7 +236,8 @@ median_clip = bool(int(input_dict['median_clip']))
 sigma_clip = float(input_dict['sigma_cut'])
 
 if clip_outliers and median_clip:
-    flux, flux_error, time, keep_idx = clipping_outliers_with_median_clip(flux, flux_error, time, sigma_clip, show_plots, save_plots, output_foldername)
+    from fitting_utils import managing_outliers
+    flux, flux_error, time, keep_idx = managing_outliers.clipping_outliers_with_median_clip(flux, flux_error, time, sigma_clip, show_plots, save_plots, output_foldername)
     
     systematics_model_inputs = np.array(systematics_model_inputs)[:,keep_idx].reshape(len(systematics_model_inputs),len(np.where(keep_idx == True)[0]))
     if GP_used:
@@ -273,7 +274,10 @@ if GP_used:
     pickle.dump(GP_model_inputs,open(output_foldername + '/pickled_objects/' + 'Used_GP_model_inputs_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
 
    
-
+model_inputs['transit_model'] = {}
+model_inputs['transit_model']['use_kipping'] = bool(int(input_dict['use_kipping_parameterisation']))
+model_inputs['transit_model']['ld_law'] = str(input_dict['ld_law'])
+model_inputs['transit_model']['use_generated_ld_uncertainties'] = bool(int(input_dict['use_generated_ld_uncertainties']))
 
 prior_file = str(input_dict['prior_filename'])
 

@@ -66,16 +66,15 @@ class LightcurveModel(object):
         self.transit_model_package = fit_models['transit_model']
         self.systematics_model_methods = fit_models['systematics_model']
         self.systematic_model_inputs = model_inputs['systematic_model']
-        self.gp_model_inputs = model_inputs['gp_model']
-        self.spot_model_package = model_inputs['spot_model']
+        self.transit_model_inputs = model_inputs['transit_model']
         
 
         if self.transit_model_package == 'batman':
-            from fitting_utils import BatmanModel
-            self.transit_model = BatmanModel(self.param_dict, self.param_list_free, self.transit_model_inputs)
+            from fitting_utils import BatmanModel as bm
+            self.transit_model = bm.BatmanModel(self.param_dict, self.param_list_free, self.transit_model_inputs, self.time_array)
         elif self.transit_model_package == 'catwoman':
-            from fitting_utils import CatwomanModel
-            self.transit_model = CatwomanModel(self.param_dict, self.param_list_free, self.transit_model_inputs)
+            from fitting_utils import CatwomanModel as cwm
+            self.transit_model = cwm.CatwomanModel(self.param_dict, self.param_list_free, self.transit_model_inputs, self.time_array)
         
         from fitting_utils import systematics_model as sm
         self.systematic_model = sm.SystematicsModel(self.param_dict, self.systematics_model_inputs,
@@ -83,12 +82,15 @@ class LightcurveModel(object):
         
         if  self.gp_model_inputs['kernel_classes'] is not None:
             from fitting_utils import GPModel as gpm
+            self.gp_model_inputs = model_inputs['gp_model']
             self.GP_used = True
             self.GP_model = gpm.GPModel(self.param_dict,self.gp_model_inputs, self.time_array, self.flux, self.flux_error)
         else:
             self.GP_used = False
         
         self.spot_used = False # add spot model here
+        if self.spot_used:
+            self.spot_model_package = model_inputs['spot_model']
         
 
     def return_free_parameter_list(self):

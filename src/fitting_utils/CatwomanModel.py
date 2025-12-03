@@ -13,7 +13,7 @@ class CatwomanModel(object):
         Inputs:
         param_dict                   - the dictionary of the planet's transit parameters
         param_list_free              - list of free parameters
-        transit_model_inputs         - inputs to build the catwoman model
+        transit_model_inputs         - inputs to build the model, e.g., whether to use kipping parameterisation
         cw_fac            - scaling factor for catwoman to make it run faster
         
         
@@ -28,13 +28,15 @@ class CatwomanModel(object):
         self.transit_model_inputs = transit_model_inputs
         self.time_array = time_array
         self.use_kipping = transit_model_inputs['use_kipping']
-        ld_list = ['u1', 'u2', 'u3', 'u4']
+        self.catwoman_fac = cw_fac
 
         ##### Catwoman initialisation - note this is first outside of model calculation as it is the fastest way
 
         self.catwoman_params = catwoman.TransitParams()
 
-        all_params = param_dict.keys()
+        all_params = list(param_dict.keys())
+        ld_list = ['u1', 'u2', 'u3', 'u4']
+
         u = []
         for i in range(len(all_params)):
             if all_params[i] in param_list_free and all_params[i] not in ld_list:
@@ -47,7 +49,7 @@ class CatwomanModel(object):
             for i in range(len(ld_list)):
                 if ld_list[i] in param_list_free:
                     u.append(self.param_dict[ld_list[i]].currVal)
-                if ld_list[i] not in param_list_free:
+                if ld_list[i] not in param_list_free and ld_list[i] in all_params:
                     u.append(self.param_dict[ld_list[i]])
             self.catwoman_params.limb_dark = transit_model_inputs['ld_law'] 
             self.catwoman_params.u = u 
@@ -56,6 +58,10 @@ class CatwomanModel(object):
             u2 = np.sqrt(self.param_dict['u1'].currVal)*(1-2*self.param_dict['u2'].currVal)
             self.catwoman_params.limb_dark = 'quadratic'
             self.catwoman_params.u = [u1, u2]
+
+        if 'rp2' not in all_params:
+            self.catwoman_params.rp2 = None
+            self.catwoman_params.phi = 0.
     
         # initalise
         self.catwoman_model = catwoman.TransitModel(self.catwoman_params, self.time_array,fac=self.catwoman_fac)    #initializes model
