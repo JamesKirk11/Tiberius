@@ -29,15 +29,12 @@ class GPModel:
         self.GP_kernel_inputs = GP_model_inputs['model_inputs']
         self.flux_error = flux_error
         self.flux = flux
+        self.GP_used = True
         
         self.time = time_array
         self.kernel_classes = self.GP_model_inputs['kernel_classes']
         self.gp_ndim = len([c for c in kernel_classes if c is not None])
 
-        if self.kernel_classes is not None:
-            self.GP_used = True
-        else:
-            self.GP_used = False
 
         self.wn_kernel = self.GP_model_inputs['white_noise_kernel']
             
