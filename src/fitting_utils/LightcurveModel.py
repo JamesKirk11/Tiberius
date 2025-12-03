@@ -80,12 +80,12 @@ class LightcurveModel(object):
         self.systematic_model = sm.SystematicsModel(self.param_dict, self.systematic_model_inputs,
                                                         self.systematics_model_methods, self.time_array)
         
-        if  self.gp_model_inputs['kernel_classes'] is not None:
-            from fitting_utils import GPModel as gpm
+        try:
             self.gp_model_inputs = model_inputs['gp_model']
+            from fitting_utils import GPModel as gpm
             self.GP_used = True
             self.GP_model = gpm.GPModel(self.param_dict,self.gp_model_inputs, self.time_array, self.flux, self.flux_error)
-        else:
+        except:
             self.GP_used = False
         
         self.spot_used = False # add spot model here
@@ -94,7 +94,7 @@ class LightcurveModel(object):
         
 
     def return_free_parameter_list(self):
-        return self.param_dict_free   
+        return self.param_list_free   
     def return_parameter_dict(self):
         return self.param_dict    
 
