@@ -2,18 +2,9 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import pickle
-from collections import OrderedDict
-import argparse
-import os
 from scipy.interpolate import UnivariateSpline as US
 from scipy.signal import medfilt
 
-from global_utils import parseInput
-from Tiberius.src.fitting_utils import mcmc_utils as mc
-from Tiberius.src.fitting_utils import TransitModelGPPM as tmgp
-from Tiberius.src.fitting_utils import parametric_fitting_functions as pf
-from Tiberius.src.fitting_utils import plotting_utils as pu
 
 def clipping_outliers_with_median_clip(flux, flux_error, time, sigma_clip, show_plots, save_plots, output_foldername):
 
@@ -93,7 +84,7 @@ def clipping_outliers_with_median_clip(flux, flux_error, time, sigma_clip, show_
         plt.xlabel('Time (MJD)')
         plt.ylabel('Residuals')
 
-        plt.savefig(output_foldername + '/Figures/Outlier_clipping.png', bbox_inches=True) 
+        plt.savefig(output_foldername + '/Figures/Outlier_clipping.png', bbox_inches='tight') 
     
     return clipped_flux, clipped_flux_error, clipped_time, keep_idx
 
