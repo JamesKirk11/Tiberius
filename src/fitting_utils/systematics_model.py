@@ -1,5 +1,6 @@
 import numpy as np
 from fitting_utils import parametric_fitting_functions as pf
+from fitting_utils.LightcurveModel import Param
 
 
 class SystematicsModel:
@@ -10,22 +11,15 @@ class SystematicsModel:
 
     def __init__(param_dict,
                  systematics_model_inputs,
-                 polynomial_orders,
-                 exp_ramp,
-                 exp_ramp_components,
-                 step_func):
+                 systematics_model_methods, time_array):
 
         """
         The SystematicsModel model class.
 
         Inputs:
-        param_dict - the dictionary of the planet's transit parameters, as defined in gppm_fit.py:
-        systematics_model_inputs - the ndarray of ancillary data parsed to the GP/polynomials, e.g. np.array([airmass,sky,time])
-        polynomial_orders - if wanting to use polynomial detrending, use this to define the corders of each polynomial to be used. This must be the same length as the systematic_model_inputs.
-        ld_law - the limb darkening law we want to use: linear/quadratic/nonlinear/squareroot
-        exp_ramp - True/False. Do you want to additionally fit a 2 component expoential ramp model? Default = False
-        exp_ramp_components (int) - The number of exponential ramp components to fit. Default=0, no ramp.
-        step_func - True/False. Do you want to additionally fit a step function model with arbitrary breakpoint? Default = False
+        param_dict - the dictionary of the planetary and systematics parameters
+        systematics_model_inputs - the dictionary of inputs for each systematics model
+        systematics_model_methods - a list of the systematics models used
 
         Returns:
         SystematicsModel object
@@ -33,26 +27,35 @@ class SystematicsModel:
 
         self.param_dict = param_dict
         self.systematics_model_inputs = systematics_model_inputs
-        self.polynomial_orders = polynomial_orders
-        self.exp_ramp_used = exp_ramp
-        self.exp_ramp_components = exp_ramp_components
-        self.step_func_used = step_func
+        self.polynomial_model_inputs = self.systematics_model_inputs['model_inputs']
+        self.systematics_model_methods = systematics_model_methods
+        self.time = time_array
 
-        # Acknowledge the fact that we're using a polynomial here
-        if polynomial_orders is None:
-            self.poly_used = False
-        else:
+        if 'polynomial' in self.systematics_model_methods:
+            self.polynomial_orders = self.systematics_model_inputs['polynomial_orders']
             self.poly_used = True
-            if type(pars_dict["c1"]) is Param:
+            if type(param_dict["c1"]) is Param:
                 self.poly_fixed = False
             else:
                 self.poly_fixed = True
+        else:
+            self.poly_used = False
+            
 
-        if exp_ramp:
+        if 'exponential_ramp' in self.systematics_model_methods:
+            self.exp_ramp_used = True
+            self.exp_ramp_components = 
             if type(pars_dict["r1"]) is Param:
                 self.exp_ramp_fixed = False
             else:
                 self.exp_ramp_fixed = True
+        else:
+            self.exp_ramp_used = False
+        
+        if 'step_function' in self.systematics_model_methods:
+            self.step_func_used = True
+        else:
+            self.step_func_used = False
 
 
     def red_noise_poly(self,time=None,sys_model_inputs=None,deconstruct_polys=False):
@@ -69,17 +72,19 @@ class SystematicsModel:
         if deconstruct_polys == True: also returns the poly_components
         """
 
+        if sys_model_inputs is not None:
+            poly_inputs = sys_model_inputs
+        else:
+            poly_inputs = self.polynomial_model_inputs
+
+
         # extract the relevant parameters from the dictionary
         if self.poly_fixed:
             red_noise_pars = np.array([self.param_dict['c%d'%i] for i in range(1,self.polynomial_orders.sum()+2)])
         else:
             red_noise_pars = np.array([self.param_dict['c%d'%i].currVal for i in range(1,self.polynomial_orders.sum()+2)])
 
-        if sys_model_inputs is not None:
-            poly_inputs = sys_model_inputs
-        else:
-            poly_inputs = self.systematics_model_inputs
-
+        
         # generate the model
         if deconstruct_polys:
             red_noise_trend,poly_components = pf.systematics_model(red_noise_pars,poly_inputs,self.polynomial_orders,False,deconstruct_polys)
@@ -105,9 +110,9 @@ class SystematicsModel:
             for i in range(0,2*self.exp_ramp_components,2):
 
                 if self.exp_ramp_fixed:
-                    exp_ramp_model += self.param_dict['r%d'%(i+1)]*np.exp(self.param_dict['r%d'%(i+2)]*time)
+                    exp_ramp_model += self.param_dict['r%d'%(i+1)]*np.exp(self.param_dict['r%d'%(i+2)]*self.time)
                 else:
-                    exp_ramp_model += self.param_dict['r%d'%(i+1)].currVal*np.exp(self.param_dict['r%d'%(i+2)].currVal*time)
+                    exp_ramp_model += self.param_dict['r%d'%(i+1)].currVal*np.exp(self.param_dict['r%d'%(i+2)].currVal*self.time)
 
             return exp_ramp_model
 
@@ -123,9 +128,9 @@ class SystematicsModel:
         step_model - the evaluated step function
         """
 
-        step_model = np.ones_like(time)
+        step_model = np.ones_like(self.time)
 
-        if self.white_light_fit:
+        if self.param_dict["breakpoint"] is Param:
             step_model[:int(self.param_dict["breakpoint"].currVal)] *= self.param_dict["step1"].currVal
         else:
             step_model[:int(self.param_dict["breakpoint"])] *= self.param_dict["step1"].currVal
@@ -133,9 +138,18 @@ class SystematicsModel:
         return step_model
 
 
-    def calc(self,time,sys_model_inputs=None,decompose=False):
+    def calc(self,time=None,poly_inputs=None,decompose=False):
 
-        combined_model = np.ones_like(time)
+        if time is None:
+            combined_model = np.ones_like(self.time)
+        else:
+            combined_model = np.ones_like(time)
+
+        if poly_inputs is None:
+            sys_model_inputs = self.polynomial_model_inputs
+        else:
+            sys_model_inputs = poly_inputs
+
         model_components = {}
 
         if self.poly_used:
