@@ -13,6 +13,8 @@ from global_utils import parseInput
 input_dict = parseInput('fitting_input.txt')
 LDCs_package = str(input_dict['LDCs_package'])
 wvl_unit = str(input_dict['wvls_unit'])
+error_inflation = float(input_dict['ld_uncertainty_multiplier'])
+replace_negatives = bool(int(input_dict['replace_negative_LDCs']))
 
 if LDCs_package == 'LDTk':
     from ldtk import LDPSetCreator, BoxcarFilter
@@ -23,7 +25,6 @@ elif LDCs_package == 'exotic-ld':
     instrument_mode = str(input_dict['exotic-ld_instrument_mode'])
 else:
     raise ValueError("Only 'LDTk' and 'exotic-ld' are supported for generating limb-darkening from models")
-
 
 ld_law = str(input_dict['ld_law'])
 
@@ -295,11 +296,13 @@ if LDCs_package == 'exotic-ld':
     coeffs,errors = exotic_ldcs([FeH,Teff,logg_star],instrument_mode,wavelength_centres,wvl_bin_full_width,ld_law,ld_model_dimensionality,ld_data_path)
 
 u1,u1e = coeffs[:,0],errors[:,0]
-u1 = replace_negatives_with_median(u1)
+if replace_negatives:
+    u1 = replace_negatives_with_median(u1)
 
 if ld_law != "linear":
     u2,u2e = coeffs[:,1],errors[:,1]
-    u2 = replace_negatives_with_median(u2)
+    if replace_negatives:
+        u2 = replace_negatives_with_median(u2)
 else:
     u2 = [-99]*len(u1) # pad with blank space
     u2e = [-99]*len(u1)
@@ -358,7 +361,7 @@ tab = open('LD_coefficients.txt','w')
 tab.write('# Teff = %d +/- %.2f K ; log(g) = %.2f +/- %.2f ; FeH = %.2f +/- %.2f ; u error inflation factor = %.1f \n'%(Teff,Teff_err,logg_star,logg_star_err,FeH,FeH_err,error_inflation))
 tab.write('# %s law used \n'%(ld_law))
 if LDCs_package == 'exotic-ld':
-	tab.write("# Exo-TIC-LD used with a %s model for instrument %s \n"%(ld_model_dimensionality,instrument))
+	tab.write("# Exo-TIC-LD used with a %s model for instrument %s \n"%(ld_model_dimensionality,instrument_mode))
 if LDCs_package == 'LDTk':
 	tab.write("# LDTk used")
 tab.write('# Wavelength | Width | u1 | u1 error | u2 | u2 error | u3 | u3 error | u4 | u4 error |\n')

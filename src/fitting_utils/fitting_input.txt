@@ -10,7 +10,7 @@ time_file =  # a path that points to a pickled numpy array of times.
 flux_file =	#  a path that points to a pickled numpy array of fluxes. If this is for a white light curve it should have shape (1,). Otherwise for wavelength-binned fits, it should have shape = (nbins,nfluxes)
 error_file = #  a path that points to a pickled numpy array of fluxes. If this is for a white light curve it should have shape (1,). Otherwise for wavelength-binned fits, it should have shape = (nbins,nfluxes)
 
-wvl_centres = [15,20]	# either a single number (in case of white light curve) OR a pickled numpy array of wavlength bin centres. 
+wvl_centres = 5	# either a single number (in case of white light curve) OR a pickled numpy array of wavlength bin centres. 
 wvl_bin_full_width =	# either a single number (in case of white light curve) OR a pickled numpy array of wavlength bin centres. This is the FULL WIDTH of the bin NOT the width/2.
 wvls_unit = micron # either angstrom or micron
 
@@ -21,6 +21,7 @@ transit_model = batman # either batman or catwoman
 generate_LDCs = 1 # do you want to generate LDCs? Set to 1 (on) or 0 (off).
 LDCs_package = exotic-ld # Options: exotic-ld or LDTk
 ld_law = quadratic # choose between linear/quadratic/squareroot/nonlinear/
+replace_negative_LDCs = 0 # do you want to replace negative values generated for u1 and u2? Set to 1 (on) or 0 (off).
 
 # if using exotic-ld please define the following:
 exotic-ld_data_path = /path/to/exotic_package_data
