@@ -44,11 +44,6 @@ class SystematicsModel:
 
         if 'exponential_ramp' in self.systematics_model_methods:
             self.exp_ramp_used = True
-            self.exp_ramp_components = 
-            if type(pars_dict["r1"]) is Param:
-                self.exp_ramp_fixed = False
-            else:
-                self.exp_ramp_fixed = True
         else:
             self.exp_ramp_used = False
         
@@ -105,14 +100,20 @@ class SystematicsModel:
             exp_ramp_model - the evaluated exponential ramp
             """
 
-            exp_ramp_model = 1
+            if type(pars_dict["r1"]) is Param:
+                r1 = self.param_dict['r1'].currVal
+            else:
+                r1 = self.param_dict['r1']
+            
+            if type(pars_dict["r2"]) is Param:
+                r2 = self.param_dict['r2'].currVal
+            else:
+                r2 = self.param_dict['r2']
 
-            for i in range(0,2*self.exp_ramp_components,2):
-
-                if self.exp_ramp_fixed:
-                    exp_ramp_model += self.param_dict['r%d'%(i+1)]*np.exp(self.param_dict['r%d'%(i+2)]*self.time)
-                else:
-                    exp_ramp_model += self.param_dict['r%d'%(i+1)].currVal*np.exp(self.param_dict['r%d'%(i+2)].currVal*self.time)
+            if self.exp_ramp_fixed:
+                exp_ramp_model = r1*np.exp(r2*self.time)
+            else:
+                exp_ramp_model = r1*np.exp(r2*self.time)
 
             return exp_ramp_model
 
