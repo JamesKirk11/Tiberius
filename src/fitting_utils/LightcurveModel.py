@@ -3,16 +3,6 @@
 import numpy as np
 import pandas as pd
 
-from scipy import optimize,stats
-import matplotlib.pyplot as plt
-
-from fitting_utils import parametric_fitting_functions as pf
-from fitting_utils import plotting_utils as pu
-from fitting_utils import priors
-from fitting_utils import CatwomanModel
-from fitting_utils import BatmanModel
-from fitting_utils import systematics_model as sm
-from fitting_utils import GPModel as gpm
 
 class Param(object):
     '''A Param (parameter) needs a starting value and a current value. However, when first defining the Param object, it takes the starting value as the current value.
@@ -82,17 +72,18 @@ class LightcurveModel(object):
         
 
         if transit_model_package == 'batman':
+            from fitting_utils import BatmanModel
             self.transit_model = BatmanModel(self.param_dict, self.param_list_free, self.transit_model_inputs)
         elif transit_model_package == 'catwoman':
+            from fitting_utils import CatwomanModel
             self.transit_model = CatwomanModel(self.param_dict, self.param_list_free, self.transit_model_inputs)
-
         
-        
+        from fitting_utils import systematics_model as sm
         self.systematic_model = sm.SystematicsModel(self.param_dict, self.systematics_model_inputs,
                                                         self.systematics_model_methods, self.time_array)
         
-
         if  self.gp_model_inputs['kernel_classes'] is not None:
+            from fitting_utils import GPModel as gpm
             self.GP_used = True
             self.GP_model = gpm.GPModel(self.param_dict,self.gp_model_inputs, self.time_array, self.flux, self.flux_error)
         else:
@@ -126,9 +117,9 @@ class LightcurveModel(object):
         sys_calc = self.systematic_model.calc(time, decompose=decompose)
         model_calc *= sys_calc
 
-        if self.spot_used:
-            spot_model_calc = # Evie add spot model
-            model_calc += spot_model_calc
+        # if self.spot_used:
+            # spot_model_calc = # Evie add spot model
+            # model_calc += spot_model_calc
         
 
         if self.GP_used:

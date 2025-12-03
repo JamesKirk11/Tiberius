@@ -10,10 +10,10 @@ from scipy.interpolate import UnivariateSpline as US
 
 from global_utils import parseInput
 
-from Tiberius.src.fitting_utils import LightcurveModel as lc
-from Tiberius.src.fitting_utils import sampling as lc
-from Tiberius.src.fitting_utils import parametric_fitting_functions as pf
-from Tiberius.src.fitting_utils import plotting_utils as pu
+from fitting_utils import LightcurveModel as lc
+from fitting_utils import sampling as lc
+from fitting_utils import parametric_fitting_functions as pf
+from fitting_utils import plotting_utils as pu
 
 
 parser = argparse.ArgumentParser(description='Run fit to a single light curve that is either a wavelength-binned or white light curve. This makes use of the TransitModelGPPM class, which fits the red noise as a GP + parametric model.')
@@ -235,7 +235,7 @@ median_clip = bool(int(input_dict['median_clip']))
 sigma_clip = float(input_dict['sigma_cut'])
 
 if clip_outliers and median_clip:
-    flux, flux_error, time, keep_idx = clipping_outliers_with_median_clip(flux, flux_error, time, sigma_clip, show_plots, save_plots, output_foldername):
+    flux, flux_error, time, keep_idx = clipping_outliers_with_median_clip(flux, flux_error, time, sigma_clip, show_plots, save_plots, output_foldername)
     
     systematics_model_inputs = np.array(systematics_model_inputs)[:,keep_idx].reshape(len(systematics_model_inputs),len(np.where(keep_idx == True)[0]))
     if GP_used:

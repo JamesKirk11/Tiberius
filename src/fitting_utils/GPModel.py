@@ -2,6 +2,8 @@ import numpy as np
 from fitting_utils import parametric_fitting_functions as pf
 from fitting_utils.LightcurveModel import Param
 
+import george
+from george import kernels
 
 class GPModel:
     """
