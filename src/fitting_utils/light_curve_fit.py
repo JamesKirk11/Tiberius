@@ -11,9 +11,8 @@ from scipy.interpolate import UnivariateSpline as US
 from global_utils import parseInput
 
 from fitting_utils import LightcurveModel as lc
-from fitting_utils import sampling as lc
-from fitting_utils import parametric_fitting_functions as pf
-from fitting_utils import plotting_utils as pu
+from fitting_utils import sampling as s
+# from fitting_utils import plotting_utils as pu
 
 
 parser = argparse.ArgumentParser(description='Run fit to a single light curve that is either a wavelength-binned or white light curve. This makes use of the TransitModelGPPM class, which fits the red noise as a GP + parametric model.')
@@ -50,11 +49,13 @@ if rebin_data is not None:
 show_plots = bool(int(input_dict['show_plots']))
 save_plots = bool(int(input_dict['save_plots']))
 
-output_foldername = str(input_dict['output_foldername'])
 cwd = os.getcwd()
-os.makedirs(cwd + output_foldername, exist_ok=True) 
+output_foldername = cwd + '/' + str(input_dict['output_foldername']) + '/'
+
+os.makedirs(output_foldername, exist_ok=True) 
 if save_plots:
-    os.makedirs(cwd + output_foldername + '/Figures', exist_ok=True) 
+    os.makedirs(output_foldername + '/Figures', exist_ok=True) 
+os.makedirs(output_foldername + '/pickled_objects', exist_ok=True) 
 
 ### Load in various input arrays
 time = pickle.load(open(input_dict['time_file'],'rb'))
@@ -130,7 +131,7 @@ fit_models['transit_model'] = str(input_dict['transit_model'])
 fit_models['systematics_model'] = []
 
 model_inputs = {}
-model_inputs['systematic_model_inputs'] = {}
+model_inputs['systematic_model'] = {}
 
 ### Red noise polynomial model parameters
 
@@ -240,13 +241,9 @@ if clip_outliers and median_clip:
     systematics_model_inputs = np.array(systematics_model_inputs)[:,keep_idx].reshape(len(systematics_model_inputs),len(np.where(keep_idx == True)[0]))
     if GP_used:
         GP_model_inputs = np.array(GP_model_inputs)[:,keep_idx].reshape(len(GP_model_inputs),len(np.where(keep_idx == True)[0]))
+    pickle.dump(keep_idx,open(output_foldername + '/pickled_objects/' + 'data_quality_flags_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
 
 
-
-
-
-model_inputs['systematic_model']['model_inputs'] = systematics_model_inputs
-model_inputs['GP_model']['model_inputs'] = GP_model_inputs
 
 
 ### for GP optimisation and variance limits
@@ -263,12 +260,19 @@ if bool(int(input_dict['renorm_flux'])):
 
 
 ### Save clipped arrays for ease of future plotting
-pickle.dump(flux,open(output_foldername + 'Used_flux_wb%s.pickle'%(str(wb+1).zfill(4)),'wb')) # add '0' in front of single digit wavelength bin numbers so that linux sorts them properly
-pickle.dump(time,open(output_foldername + 'Used_time_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-pickle.dump(flux_error,open(output_foldername + 'Used_error_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-pickle.dump(systematics_model_inputs,open(output_foldername + 'Used_model_inputs_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-pickle.dump(GP_model_inputs,open(output_foldername + 'Used_GP_model_inputs_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-pickle.dump(keep_idx,open(output_foldername + 'data_quality_flags_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+pickle.dump(flux,open(output_foldername + '/pickled_objects/' + 'Used_flux_wb%s.pickle'%(str(wb+1).zfill(4)),'wb')) # add '0' in front of single digit wavelength bin numbers so that linux sorts them properly
+pickle.dump(time,open(output_foldername + '/pickled_objects/' + 'Used_time_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+pickle.dump(flux_error,open(output_foldername + '/pickled_objects/' + 'Used_error_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+
+
+model_inputs['systematic_model']['model_inputs'] = systematics_model_inputs
+pickle.dump(systematics_model_inputs,open(output_foldername + '/pickled_objects/' + 'Used_model_inputs_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+
+if GP_used:
+    model_inputs['GP_model']['model_inputs'] = GP_model_inputs
+    pickle.dump(GP_model_inputs,open(output_foldername + '/pickled_objects/' + 'Used_GP_model_inputs_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+
+   
 
 
 prior_file = str(input_dict['prior_filename'])
