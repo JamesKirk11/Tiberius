@@ -63,6 +63,7 @@ class LightcurveModel(object):
                 self.param_dict[param_names[i]] = float(currVals[i])
             else:
                 print('something is wrong with your prior file')
+    
 
         # initialise models
         self.transit_model_package = fit_models['transit_model']
@@ -70,6 +71,17 @@ class LightcurveModel(object):
         self.systematic_model_inputs = model_inputs['systematic_model']
         self.transit_model_inputs = model_inputs['transit_model']
 
+        if self.transit_model_inputs['use_generated_ld_uncertainties']:
+            wc,we,u1,u1_err,u2,u2_err,u3,u3_err,u4,u4_err = self.transit_model_inputs['LDCs_generated']
+            ldcs = [u1, u2, u3, u4]
+            ldcs_errs = [u1_err, u2_err, u3_err, u4_err]
+            ld_list = ['u1', 'u2', 'u3', 'u4']
+            for i in range(len(ld_list)):
+                if ld_list[i] in param_names and ld_list[i] in self.param_list_free:
+                    self.param_dict[ld_list[i]] = Param(ldcs[i])
+                    self.prior_dict[ld_list[i]+'_1'] = ldcs[i]
+                    self.prior_dict[ld_list[i]+'_2'] = ldcs_errs[i]
+                    self.prior_dict[ld_list[i]+'_prior'] = 'N'
 
         if self.transit_model_package == 'batman':
             from fitting_utils import BatmanModel as bm
@@ -85,15 +97,13 @@ class LightcurveModel(object):
         self.systematic_model = sm.SystematicsModel(self.param_dict, self.systematic_model_inputs,
                                                         self.systematics_model_methods, self.time_array)
 
-        #try:
-        self.gp_model_inputs = model_inputs['GP_model']
-        from fitting_utils import GPModel as gpm
-        print('using a GP')
-        self.GP_used = True
-        self.GP_model = gpm.GPModel(self.param_dict,self.gp_model_inputs, self.time_array, self.flux_array, self.flux_err)
-        print('using a GP')
-        # except:
-        #     self.GP_used = False
+        try:
+            self.gp_model_inputs = model_inputs['GP_model']
+            from fitting_utils import GPModel as gpm
+            self.GP_used = True
+            self.GP_model = gpm.GPModel(self.param_dict,self.gp_model_inputs, self.time_array, self.flux_array, self.flux_err)
+        except:
+            self.GP_used = False
 
         self.spot_used = False # add spot model here
         if self.spot_used:
