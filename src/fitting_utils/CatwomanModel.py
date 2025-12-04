@@ -74,16 +74,20 @@ class CatwomanModel(object):
         for i in self.param_list_free:
             if i not in ld_list:
                 setattr(self.catwoman_params, i, self.param_dict[i].currVal)
-            else:
-                u.append(self.param_dict[i].currVal)
+
+        for j in ld_list:
+            if j in self.param_list_free:
+                u.append(param_dict[j].currVal)
+            elif j in list(self.param_dict.keys()):
+                u.append(self.param_dict[j])
            
         # for getting the limb-darkening as one array
         if not self.use_kipping:
-            self.batman_params.u = u 
+            self.catwoman_params.u = u 
         else:
             u1 = 2*np.sqrt(self.param_dict['u1'].currVal)*self.param_dict['u2'].currVal
             u2 = np.sqrt(self.param_dict['u1'].currVal)*(1-2*self.param_dict['u2'].currVal)
-            self.batman_params.u = [u1, u2]
+            self.catwoman_params.u = [u1, u2]
 
         self.catwoman_model = catwoman.TransitModel(self.catwoman_params, self.time_array,fac=self.catwoman_fac)    #initializes model
         return
