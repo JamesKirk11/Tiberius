@@ -47,7 +47,6 @@ class Sampling(object):
 
     # -------------------- Dynesty methods -------------------- #
     def prior_setup(self, x):
-
         if self.sampling_method == 'dynesty':
             theta = [0] * self.nDims
 
@@ -56,7 +55,6 @@ class Sampling(object):
                     theta[i] = priors.GaussianPrior(self.prior_dict['%s_1'%self.param_list_free[i]], self.prior_dict['%s_2'%self.param_list_free[i]])(np.array(x[i]))
                 elif self.prior_dict['%s_prior'%self.param_list_free[i]] == 'U':
                     theta[i] = priors.UniformPrior(self.prior_dict['%s_1'%self.param_list_free[i]], self.prior_dict['%s_2'%self.param_list_free[i]])(np.array(x[i]))
-
             return theta
 
 
@@ -65,19 +63,25 @@ class Sampling(object):
         self.lightcurve.update_model(theta)
         noise = self.lightcurve.return_flux_err()
 
-        residuals = self.lightcurve.calc_residuals()
+        if self.lightcurve.GP_used:
+            model_calc = self.lightcurve.calc(with_GP=False)
+            logL = self.lightcurve.GP_model.lnlike(model_calc,noise)
+            return logL
 
-        N = len(noise)
-        logL = -N/2. *  np.log(2*np.pi)
-        logL += - np.nansum(np.log(noise)) - np.nansum(residuals**2 / (2 * noise**2))
+        else:
+            residuals = self.lightcurve.calc_residuals()
 
-        return logL
+            N = len(noise)
+            logL = -N/2. *  np.log(2*np.pi)
+            logL += - np.nansum(np.log(noise)) - np.nansum(residuals**2 / (2 * noise**2))
+
+            return logL
 
 
     def run_dynesty(self):
         live_points = self.sampling_arguments['nlive_pdim']
         precision_criterion = self.sampling_arguments['precision_crit']
-        sampler = dynesty.NestedSampler(self.loglikelihood_dynesty, self.prior_setup, self.nDims,nlive=live_points*self.nDims, bootstrap=0)#,sample='rslice')
+        sampler = dynesty.NestedSampler(self.loglikelihood_dynesty, self.prior_setup, self.nDims,nlive=live_points*self.nDims, bootstrap=0) #,sample='rslice')
         sampler.run_nested(dlogz=precision_criterion, print_progress=True)
         results = sampler.results
         return results
