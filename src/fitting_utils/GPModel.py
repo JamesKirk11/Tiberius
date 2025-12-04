@@ -5,13 +5,13 @@ from fitting_utils.LightcurveModel import Param
 import george
 from george import kernels
 
-class GPModel:
+class GPModel(object):
     """
     Encapsulates exponential ramps, polynomial red-noise trends,
     and step functions for systematics modeling.
     """
 
-    def __init__(param_dict,
+    def __init__(self,param_dict,
                  GP_model_inputs, time_array, flux, flux_error):
 
         """
@@ -35,7 +35,7 @@ class GPModel:
         
         self.time = time_array
         self.kernel_classes = self.GP_model_inputs['kernel_classes']
-        self.gp_ndim = len([c for c in kernel_classes if c is not None])
+        self.gp_ndim = len([c for c in self.kernel_classes if c is not None])
 
 
         self.wn_kernel = self.GP_model_inputs['white_noise_kernel']
@@ -60,15 +60,16 @@ class GPModel:
 
         gp_split = []
 
-        if self.param_dict['A'] is Param:
+        if type(self.param_dict['A']) is Param:
             A2 = self.param_dict['A'].currVal # log of the amplitude
         else:
             A2 = self.param_dict['A'] # log of the amplitude
 
+
         for i in range(self.gp_ndim):
 
             # lniL = log-inverse-length-scale
-            if self.param_dict['lniL_%d'%(i+1)] is Param:
+            if type(self.param_dict['lniL_%d'%(i+1)]) is Param:
                 lniL = self.param_dict['lniL_%d'%(i+1)].currVal
             else:
                 lniL = self.param_dict['lniL_%d'%(i+1)]
@@ -82,7 +83,6 @@ class GPModel:
                 KERNEL = kernels.RationalQuadraticKernel(log_alpha=1,metric=L2,ndim=self.gp_ndim,axes=i)
             if self.kernel_classes[i] == 'Exp':
                 KERNEL = kernels.ExpKernel(L2,ndim=self.gp_ndim,axes=i)
-
 
             if split:
                 gp_split.append(kernels.ConstantKernel(A2,ndim=self.gp_ndim,axes=i)*KERNEL)
@@ -98,10 +98,10 @@ class GPModel:
             WN = None
 
         if self.gp_ndim > 1:
-            gp = george.GP(kernels.ConstantKernel(A2,ndim=self.gp_ndim,axes=np.arange(self.gp_ndim))*kernel,white_noise=self.wn_kernel,fit_white_noise=fit_WN,mean=0,fit_mean=False)
+            gp = george.GP(kernels.ConstantKernel(A2,ndim=self.gp_ndim,axes=np.arange(self.gp_ndim))*kernel,white_noise=WN,fit_white_noise=self.wn_kernel,mean=0,fit_mean=False)
 
         else: # use george's HODLRSolver, which provides faster computation. My tests show this doesn't always seem to perform well for GPs with > 1 kernel.
-            gp = george.GP(kernels.ConstantKernel(A2,ndim=self.gp_ndim,axes=np.arange(self.gp_ndim))*kernel,white_noise=self.wn_kernel,fit_white_noise=fit_WN,mean=0,fit_mean=False,solver=george.solvers.HODLRSolver)
+            gp = george.GP(kernels.ConstantKernel(A2,ndim=self.gp_ndim,axes=np.arange(self.gp_ndim))*kernel,white_noise=WN,fit_white_noise=self.wn_kernel,mean=0,fit_mean=False,solver=george.solvers.HODLRSolver)
 
         if compute:
             if flux_err is None:
@@ -119,7 +119,7 @@ class GPModel:
         else:
             return gp
 
-    def update_model(self, new_param_dict)
+    def update_model(self, new_param_dict):
         self.param_dict = new_param_dict
         if self.param_dict['infl_err'] is Param:
             self.gp = self.construct_gp(flux_err=self.flux_err*self.param_dict['infl_err'].currVal)
@@ -175,3 +175,16 @@ class GPModel:
             return mu,std,mu_components
         else:
             return mu,std
+
+    def lnlike(self, model_calc,flux_err):
+        """The log likelihood
+    
+        Returns:
+        gp.lnlikelihood - the log likelihood of the GP evaulated by george
+        """
+        if self.gp_ndim > 1:
+            self.gp.compute(self.gp_model_inputs.T,flux_err)
+        else:
+            self.gp.compute(self.gp_model_inputs[0],flux_err)
+
+        return self.gp.lnlikelihood(self.flux-model_calc,quiet=True)
