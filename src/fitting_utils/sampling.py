@@ -287,6 +287,8 @@ class Sampling(object):
             samples_corner = samples
             pu.make_corner_plot(samples_corner,bin_number=(wavelength_bin+1),save_fig=True,namelist=namelist,parameter_modes=mode)
 
+        self.lightcurve.update_model(med)
+
         fitted_chi2 = self.chisq(med)
         fitted_reducedChi2 = self.reducedChisq(med)
         fitted_rms = self.rms(med)*1e6
@@ -400,9 +402,9 @@ class Sampling(object):
 
         if self.lightcurve.GP_used:
             mu, _ = self.lightcurve.calc_gp_component()
-            resids = (self.lightcurve.flux_array - self.lightcurve.calc() - mu) / self.lightcurve.flux_err
+            resids = (self.lightcurve.flux_array - self.lightcurve.calc() - mu)
         else:
-            resids = (self.lightcurve.flux_array - self.lightcurve.calc()) / self.lightcurve.flux_err
+            resids = (self.lightcurve.flux_array - self.lightcurve.calc())
 
         return np.sqrt(np.mean(resids**2))
 
