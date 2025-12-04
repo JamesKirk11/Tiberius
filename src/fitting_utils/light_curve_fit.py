@@ -306,18 +306,50 @@ if sampling_method == 'emcee':
     sampling_arguments['save_chain'] = bool(int(input_dict['save_chain']))
     sampling_arguments['prod_only'] = bool(int(input_dict['prod_only']))
 
+
 elif sampling_method == 'dynesty':
     sampling_arguments['nlive_pdim'] = int(input_dict['nlive_points_pdim'])
     sampling_arguments['precision_crit'] = float(input_dict['precision_crit'])
 
-else:
-    raise SystemExit
+# else:
+#     raise SystemExit
 
 
 sampling = s.Sampling(lc_class,sampling_arguments,sampling_method)
+
 if sampling_method == 'emcee':
-    fitted_lightcurve = sampling.run_emcee()
+
+    fitted_lightcurve = sampling.run_emcee(wavelength_bin=wb)
     fig = pu.plot_single_model(fitted_lightcurve,time,flux,flux_error,rebin_data=rebin_data,save_fig=True,wavelength_bin=wb,deconstruct=True)
+    pickle.dump(fitted_lightcurve,open('fitted_lightcurve_model_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+
 elif sampling_method == 'dynesty':
-    result = sampling.run_dynesty()
-    
+
+    sampling.run_dynesty()
+
+elif sampling_method == 'LM':
+
+    fitted_lightcurve = sampling.run_LM(wavelength_bin=wb)
+
+    print("LM FIT")
+
+    if 'infl' not in fitted_lightcurve.param_list_free:
+        # we need to rescale the photometric uncertainties to give reduced chi2 = 1
+        rescaling_factor = np.sqrt(sampling.reducedChisq())
+        print("\nRescaling photometric uncertainties by %.3f to give rChi2 = 1"%rescaling_factor)
+        flux_error *= rescaling_factor
+
+        fitted_lightcurve.flux_err = flux_error
+
+        sampling_run2 = s.Sampling(fitted_lightcurve,sampling_arguments,sampling_method)
+        fitted_lightcurve = sampling_run2.run_LM(wavelength_bin=wb)
+
+        rchi2_rescaled = sampling_run2.reducedChisq()
+        print("reduced Chi2 following error rescaling = %.2f"%(rchi2_rescaled))
+        pickle.dump(flux_error,open('rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+
+    fig = pu.plot_single_model(fitted_lightcurve,time,flux,flux_error,rebin_data=rebin_data,save_fig=True,wavelength_bin=wb,deconstruct=True)
+
+    # save the results
+    # s.save_LM_results(fitted_lightcurve, param_medians, param_uncertainties,wb+1,verbose=True)
+    pickle.dump(fitted_lightcurve,open('fitted_lightcurve_model_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
