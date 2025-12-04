@@ -1456,3 +1456,35 @@ def calc_bin_edges_from_centres(bin_centres):
     first_bin_edge = bin_centres[0] - bin_widths[0]/2
     last_bin_edge = bin_centres[-1] + bin_widths[-1]/2
     return np.hstack((first_bin_edge,bin_edges,last_bin_edge))
+
+
+
+def make_corner_plot(sample_chains,bin_number,namelist,parameter_modes,save_fig=False,title=None):
+    """Use DFM's corner package to make a corner plot of the emcee chains.
+
+    Input:
+    sample_chains - the emcee chains
+    bin_number - the wavelength bin number, needed for saving the plot to file
+    namelist - a list of parameter names corresponding to the chain
+    parameter_modes - the modes of the parameter distributions
+    save_fig - True/False: do we want to save the figure to file?
+    title - set to a string if wanting to define where the plot is saved to, otherwise default is used. Default=None.
+
+    Returns:
+    Nothing - just plots the figure
+    """
+
+    print('Generating corner plot...')
+    ndim = np.shape(sample_chains)[1]
+
+    fig = corner(sample_chains,labels=namelist,quantiles=[0.16, 0.5, 0.84],verbose=False,show_titles=True)
+    overplot_lines(fig, parameter_modes)
+
+    if save_fig:
+        if title is not None:
+            fig.savefig(title)
+        else:
+            fig.savefig('cornerplot_wb%s.png'%(str(bin_number).zfill(4)))
+        plt.close()
+    else:
+        plt.show()
