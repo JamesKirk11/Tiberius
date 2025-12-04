@@ -69,7 +69,7 @@ class BatmanModel(object):
 
         for j in ld_list:
             if j in self.param_list_free:
-                u.append(param_dict[j].currVal)
+                u.append(self.param_dict[j].currVal)
             elif j in list(self.param_dict.keys()):
                 u.append(self.param_dict[j])
 
