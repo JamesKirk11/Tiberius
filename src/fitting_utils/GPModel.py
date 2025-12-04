@@ -41,16 +41,16 @@ class GPModel:
         self.wn_kernel = self.GP_model_inputs['white_noise_kernel']
             
 
+        self.gp = self.construct_gp()
 
 
-    def construct_gp(self,split=False,compute=False,flux_err=None,kernel_inputs=None):
+    def construct_gp(self,split=False,compute=False,flux_err=None):
         """The function that constructs the GP kernel and GP object.
 
         Inputs:
         split - True/False - determine whether to split the GP into its component kernels. Useful for plotting. Default=False
         compute - True/False - determine whether to compute the GP. Default=False
         flux_err - the errors on the flux data points, to be added in quadrature to the covariance matrix. Default=None
-        kernel_inputs - the inputs to feed to the GP. Can be left blank if these haven't changed from the init call.
 
         Returns:
         gp - george.GP object
@@ -103,11 +103,6 @@ class GPModel:
         else: # use george's HODLRSolver, which provides faster computation. My tests show this doesn't always seem to perform well for GPs with > 1 kernel.
             gp = george.GP(kernels.ConstantKernel(A2,ndim=self.gp_ndim,axes=np.arange(self.gp_ndim))*kernel,white_noise=self.wn_kernel,fit_white_noise=fit_WN,mean=0,fit_mean=False,solver=george.solvers.HODLRSolver)
 
-        if kernel_inputs is None:
-            gp_model_inputs = self.GP_kernel_inputs 
-        else:
-            gp_model_inputs = kernel_inputs
-
         if compute:
             if flux_err is None:
                 err = self.flux_error
@@ -115,15 +110,22 @@ class GPModel:
                 err = flux_err
 
             if self.gp_ndim > 1:
-                gp.compute(gp_model_inputs.T,yerr=err)
+                gp.compute(self.GP_kernel_inputs.T,yerr=err)
             else:
-                gp.compute(gp_model_inputs[0],yerr=err)
+                gp.compute(self.GP_kernel_inputs[0],yerr=err)
 
         if split:
             return gp,gp_split
         else:
             return gp
 
+    def update_model(self, new_param_dict)
+        self.param_dict = new_param_dict
+        if self.param_dict['infl_err'] is Param:
+            self.gp = self.construct_gp(flux_err=self.flux_err*self.param_dict['infl_err'].currVal)
+        else:
+            self.gp = self.construct_gp()
+        return
 
 
     def calc(self,model_calc,time=None,flux=None,flux_err=None,kernel_inputs=None,deconstruct_gp=False):
