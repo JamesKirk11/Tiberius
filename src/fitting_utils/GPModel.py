@@ -183,8 +183,8 @@ class GPModel(object):
         gp.lnlikelihood - the log likelihood of the GP evaulated by george
         """
         if self.gp_ndim > 1:
-            self.gp.compute(self.gp_model_inputs.T,flux_err)
+            self.gp.compute(self.GP_kernel_inputs.T,flux_err)
         else:
-            self.gp.compute(self.gp_model_inputs[0],flux_err)
+            self.gp.compute(self.GP_kernel_inputs[0],flux_err)
 
         return self.gp.lnlikelihood(self.flux-model_calc,quiet=True)
