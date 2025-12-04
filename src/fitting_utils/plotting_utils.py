@@ -12,7 +12,7 @@ from global_utils import parseInput
 from fitting_utils import mcmc_utils as mc
 from scipy.stats import chi2 as c2
 from scipy.special import erfinv
-
+from corner import corner,overplot_lines
 
 ### FUNCTIONS USEFUL FOR THE PLOTTING OF DATA
 
@@ -1488,3 +1488,26 @@ def make_corner_plot(sample_chains,bin_number,namelist,parameter_modes,save_fig=
         plt.close()
     else:
         plt.show()
+
+
+def plot_chains(sampler,burn,wavelength_bin,npars,namelist):
+
+        # save plots of chains
+        if npars > 1:
+            fig,axes = plt.subplots(npars,1,sharex=True,figsize=(8,12))
+            for j in range(npars):
+                axes[j].plot(sampler.chain[:, :, j].T, color="k", alpha=0.4)
+                axes[j].set_ylabel(namelist[j],fontsize=20)
+                axes[j].set_xlabel("step number")
+        else:
+            fig,axes = plt.subplots(1,1,figsize=(6,3))
+            axes.plot(sampler.chain[:, :, 0].T, color="k", alpha=0.4)
+            axes.set_ylabel(namelist[0],fontsize=20)
+            axes.set_xlabel("step number")
+
+        fig.tight_layout(h_pad=0.0)
+        if burn:
+            fig.savefig('burn_chain_wb%s.png'%(str(wavelength_bin+1).zfill(4)))
+        else:
+            fig.savefig('prod_chain_wb%s.png'%(str(wavelength_bin+1).zfill(4)))
+        plt.close()
