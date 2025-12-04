@@ -31,7 +31,7 @@ class BatmanModel(object):
         self.batman_params = batman.TransitParams()
 
         all_params = list(param_dict.keys())
-        u = []
+        
         for i in range(len(all_params)):
             if all_params[i] in self.param_list_free and all_params[i] not in ld_list:
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]].currVal)
@@ -40,6 +40,7 @@ class BatmanModel(object):
 
         # for getting the limb-darkening as one array
         print(param_dict)
+        u = []
         if not self.use_kipping:
             for i in range(len(ld_list)):
                 if ld_list[i] in self.param_list_free:
@@ -47,13 +48,14 @@ class BatmanModel(object):
                 if ld_list[i] not in self.param_list_free and ld_list[i] in all_params:
                     u.append(self.param_dict[ld_list[i]])
             self.batman_params.limb_dark = transit_model_inputs['ld_law']
+            print(u, self.batman_params.limb_dark)
             self.batman_params.u = u
         else:
             u1 = 2*np.sqrt(self.param_dict['u1'].currVal)*self.param_dict['u2'].currVal
             u2 = np.sqrt(self.param_dict['u1'].currVal)*(1-2*self.param_dict['u2'].currVal)
             self.batman_params.limb_dark = 'quadratic'
             self.batman_params.u = [u1, u2]
-
+        print(self.batman_params)
         self.batman_model = batman.TransitModel(self.batman_params, self.time_array, nthreads=1)    #initializes model
 
     def update_model(self, new_param_dict):
@@ -64,8 +66,12 @@ class BatmanModel(object):
         for i in self.param_list_free:
             if i not in ld_list:
                 setattr(self.batman_params, i, self.param_dict[i].currVal)
-            else:
-                u.append(self.param_dict[i].currVal)
+
+        for j in ld_list:
+            if j in self.param_list_free:
+                u.append(param_dict[j].currVal)
+            elif j in list(self.param_dict.keys()):
+                u.append(self.param_dict[j])
 
         # for getting the limb-darkening as one array
         if not self.use_kipping:
