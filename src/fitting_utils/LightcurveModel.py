@@ -85,13 +85,15 @@ class LightcurveModel(object):
         self.systematic_model = sm.SystematicsModel(self.param_dict, self.systematic_model_inputs,
                                                         self.systematics_model_methods, self.time_array)
 
-        try:
-            self.gp_model_inputs = model_inputs['gp_model']
-            from fitting_utils import GPModel as gpm
-            self.GP_used = True
-            self.GP_model = gpm.GPModel(self.param_dict,self.gp_model_inputs, self.time_array, self.flux, self.flux_error)
-        except:
-            self.GP_used = False
+        #try:
+        self.gp_model_inputs = model_inputs['GP_model']
+        from fitting_utils import GPModel as gpm
+        print('using a GP')
+        self.GP_used = True
+        self.GP_model = gpm.GPModel(self.param_dict,self.gp_model_inputs, self.time_array, self.flux_array, self.flux_err)
+        print('using a GP')
+        # except:
+        #     self.GP_used = False
 
         self.spot_used = False # add spot model here
         if self.spot_used:
@@ -103,33 +105,35 @@ class LightcurveModel(object):
     def return_parameter_dict(self):
         return self.param_dict
 
-    def calc(self,time=None,decompose=False):
+    def calc(self,time=None,decompose=False,with_GP=True):
 
         """Calculates and returns the evaluated Mandel & Agol transit model, using catwoman.
 
         Inputs:
         time - the array of times at which to evaluate the model. Can be left blank if this has not changed from the initial init call.
+        with_GP - if using a GP also return the model including the GP (or without it)
 
         Returns:
         model - the full light curve"""
 
         if time is None:
             time = self.time_array
-
-
+        
         transit_calc = self.transit_model.calc(time)
         model_calc = np.array(transit_calc)
 
         sys_calc = self.systematic_model.calc(time, decompose=decompose)
         model_calc *= sys_calc
 
-        if self.GP_used:
+        if self.GP_used and with_GP:
             GP_calc = self.GP_model.calc(time, model_calc, decompose=decompose)
             model_calc *= GP_calc
+
         return model_calc
 
 
     def update_model(self,theta):
+
         for i in range(len(theta)):
             self.param_dict[self.param_list_free[i]].currVal = theta[i]
 
