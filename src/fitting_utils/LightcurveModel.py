@@ -14,7 +14,7 @@ class Param(object):
     Param object'''
     def __init__(self,startVal):
         self.startVal = startVal
-        self.currVal  = startVal 
+        self.currVal  = startVal
 
 
 
@@ -22,20 +22,20 @@ class LightcurveModel(object):
     def __init__(self,flux,flux_error,time_array,prior_file,fit_models,model_inputs):
 
         """
-        
+
 
         Inputs:
-        flux              - the light curve flux data points. 
-        flux_error        - the errors on the flux data points to be fitted. 
+        flux              - the light curve flux data points.
+        flux_error        - the errors on the flux data points to be fitted.
         time_array        - the array of time
         prior_file        - .txt file with priors
         model_inputs      - input for models
         ld_law            - the limb darkening law we want to use: linear/quadratic/nonlinear/squareroot, default = quadratic
-        
+
 
         Can return:
         - model calculated on a certain time array
-        - ... 
+        - ...
         """
 
         self.flux_array = flux
@@ -49,6 +49,7 @@ class LightcurveModel(object):
         self.param_dict = {}
         self.param_list_free = []
         self.prior_dict = {}
+        self.npars = 0
 
         for i in range(len(param_names)):
             if fixed[i] == 'free':
@@ -57,6 +58,7 @@ class LightcurveModel(object):
                 self.prior_dict[param_names[i]+'_1'] = file['prior_1'][i]
                 self.prior_dict[param_names[i]+'_2'] = file['prior_2'][i]
                 self.prior_dict[param_names[i]+'_prior'] = file['prior_type'][i]
+                self.npars += 1
             elif fixed[i] == 'fixed':
                 self.param_dict[param_names[i]] = float(currVals[i])
             else:
@@ -67,7 +69,7 @@ class LightcurveModel(object):
         self.systematics_model_methods = fit_models['systematics_model']
         self.systematic_model_inputs = model_inputs['systematic_model']
         self.transit_model_inputs = model_inputs['transit_model']
-        
+
 
         if self.transit_model_package == 'batman':
             from fitting_utils import BatmanModel as bm
@@ -78,11 +80,11 @@ class LightcurveModel(object):
         elif self.transit_model_package == 'fleck':
             from fitting_utils import FleckSpotModel as fsm
             self.transit_model = fsm.FleckModel(self.param_dict, self.param_list_free, self.transit_model_inputs, self.time_array)
-        
+
         from fitting_utils import systematics_model as sm
         self.systematic_model = sm.SystematicsModel(self.param_dict, self.systematic_model_inputs,
                                                         self.systematics_model_methods, self.time_array)
-        
+
         try:
             self.gp_model_inputs = model_inputs['gp_model']
             from fitting_utils import GPModel as gpm
@@ -90,16 +92,16 @@ class LightcurveModel(object):
             self.GP_model = gpm.GPModel(self.param_dict,self.gp_model_inputs, self.time_array, self.flux, self.flux_error)
         except:
             self.GP_used = False
-        
+
         self.spot_used = False # add spot model here
         if self.spot_used:
             self.spot_model_package = model_inputs['spot_model']
-        
+
 
     def return_free_parameter_list(self):
-        return self.param_list_free   
+        return self.param_list_free
     def return_parameter_dict(self):
-        return self.param_dict    
+        return self.param_dict
 
     def calc(self,time=None,decompose=False):
 
@@ -114,13 +116,13 @@ class LightcurveModel(object):
         if time is None:
             time = self.time_array
 
-        
+
         transit_calc = self.transit_model.calc(time)
         model_calc = np.array(transit_calc)
 
         sys_calc = self.systematic_model.calc(time, decompose=decompose)
         model_calc *= sys_calc
-        
+
         if self.GP_used:
             GP_calc = self.GP_model.calc(time, model_calc, decompose=decompose)
             model_calc *= GP_calc
@@ -130,14 +132,14 @@ class LightcurveModel(object):
     def update_model(self,theta):
         for i in range(len(theta)):
             self.param_dict[self.param_list_free[i]].currVal = theta[i]
-        
+
         self.transit_model.update_model(self.param_dict)
         self.systematic_model.update_model(self.param_dict)
-        
+
         if self.GP_used:
             self.GP_model.update_model(self.param_dict)
-        return 
-        
+        return
+
 
     def return_flux_err(self):
         if 'infl_err' in self.param_list_free:
@@ -149,4 +151,3 @@ class LightcurveModel(object):
     def calc_residuals(self):
         curr_model = self.calc(self.time_array)
         return self.flux_array - curr_model
-
