@@ -172,3 +172,8 @@ class SystematicsModel:
             return combined_model, model_components
 
         return combined_model
+
+    def update_model(self, new_param_dict):
+        self.param_dict = new_param_dict
+        return 
+
