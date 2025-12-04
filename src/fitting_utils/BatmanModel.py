@@ -61,9 +61,9 @@ class BatmanModel(object):
 
         u = []
         for i in range(len(all_params)):
-            if all_params[i] in param_list_free and all_params[i] not in ld_list and all_params[i]:
+            if all_params[i] in param_list_free and all_params[i] not in ld_list:
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]].currVal)
-            if all_params[i] not in param_list_free and all_params[i] not in ld_list and all_params[i]:
+            if all_params[i] not in param_list_free and all_params[i] not in ld_list:
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]])
         
         # for getting the limb-darkening as one array
