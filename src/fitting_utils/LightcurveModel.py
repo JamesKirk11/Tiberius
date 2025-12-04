@@ -120,18 +120,11 @@ class LightcurveModel(object):
 
         sys_calc = self.systematic_model.calc(time, decompose=decompose)
         model_calc *= sys_calc
-
-        # if self.spot_used:
-            # spot_model_calc = # Evie add spot model
-            # model_calc += spot_model_calc
         
-
         if self.GP_used:
             GP_calc = self.GP_model.calc(time, model_calc, decompose=decompose)
             model_calc *= GP_calc
-
-
-        return model
+        return model_calc
 
 
     def update_model(self,theta):
@@ -147,7 +140,7 @@ class LightcurveModel(object):
         
 
     def return_flux_err(self):
-        if 'infl_err' in param_list_free:
+        if 'infl_err' in self.param_list_free:
             return self.param_dict['infl_err'].currVal * self.flux_err
         else:
             return self.flux_err
@@ -155,5 +148,5 @@ class LightcurveModel(object):
 
     def calc_residuals(self):
         curr_model = self.calc(self.time_array)
-        return flux_array - curr_model
+        return self.flux_array - curr_model
 

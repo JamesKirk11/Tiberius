@@ -154,17 +154,17 @@ class SystematicsModel:
         model_components = {}
 
         if self.poly_used:
-            poly_model = self.red_noise_poly(self,time,sys_model_inputs,deconstruct_polys=decompose)
+            poly_model = self.red_noise_poly(time,sys_model_inputs,deconstruct_polys=False)
             combined_model *= poly_model
             model_components['poly_model'] = poly_model
 
         if self.exp_ramp_used:
-            ramp_model = self.exponential_ramp(self,time)
+            ramp_model = self.exponential_ramp(time)
             combined_model *= ramp_model
             model_components['ramp_model'] = ramp_model
 
         if self.step_func_used:
-            step_model = self.step_function(self,time)
+            step_model = self.step_function(time)
             combined_model *= step_model
             model_components['step_model'] = step_model
 

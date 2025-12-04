@@ -33,17 +33,17 @@ class BatmanModel(object):
         all_params = param_dict.keys()
         u = []
         for i in range(len(all_params)):
-            if all_params[i] in param_list_free and all_params[i] not in ld_list:
+            if all_params[i] in self.param_list_free and all_params[i] not in ld_list:
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]].currVal)
-            if all_params[i] not in param_list_free and all_params[i] not in ld_list:
+            if all_params[i] not in self.param_list_free and all_params[i] not in ld_list:
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]])
         
         # for getting the limb-darkening as one array
         if not self.use_kipping:
             for i in range(len(ld_list)):
-                if ld_list[i] in param_list_free:
+                if ld_list[i] in self.param_list_free:
                     u.append(self.param_dict[ld_list[i]].currVal)
-                if ld_list[i] not in param_list_free and ld_list[i] in all_params:
+                if ld_list[i] not in self.param_list_free and ld_list[i] in all_params:
                     u.append(self.param_dict[ld_list[i]])
             self.batman_params.limb_dark = transit_model_inputs['ld_law'] 
             self.batman_params.u = u 
@@ -57,23 +57,24 @@ class BatmanModel(object):
     
     def update_model(self, new_param_dict):
         self.param_dict = new_param_dict
-        all_params = new_param_dict.keys()
+        all_params = list(new_param_dict.keys())
+        ld_list = ['u1', 'u2', 'u3', 'u4']
 
         u = []
         for i in range(len(all_params)):
-            if all_params[i] in param_list_free and all_params[i] not in ld_list:
+            if all_params[i] in self.param_list_free and all_params[i] not in ld_list:
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]].currVal)
-            if all_params[i] not in param_list_free and all_params[i] not in ld_list:
+            if all_params[i] not in self.param_list_free and all_params[i] not in ld_list:
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]])
         
         # for getting the limb-darkening as one array
         if not self.use_kipping:
             for i in range(len(ld_list)):
-                if ld_list[i] in param_list_free:
+                if ld_list[i] in self.param_list_free:
                     u.append(self.param_dict[ld_list[i]].currVal)
-                if ld_list[i] not in param_list_free and ld_list[i] in all_params:
+                if ld_list[i] not in self.param_list_free and ld_list[i] in all_params:
                     u.append(self.param_dict[ld_list[i]])
-            self.batman_params.limb_dark = transit_model_inputs['ld_law'] 
+            self.batman_params.limb_dark = self.transit_model_inputs['ld_law'] 
             self.batman_params.u = u 
         else:
             u1 = 2*np.sqrt(self.param_dict['u1'].currVal)*self.param_dict['u2'].currVal

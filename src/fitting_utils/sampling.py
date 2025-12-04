@@ -14,20 +14,17 @@ from scipy import optimize,stats
 # import matplotlib.pyplot as plt
 
 # from fitting_utils import parametric_fitting_functions as pf
-from fitting_utils import plotting_utils as pu
+# from fitting_utils import plotting_utils as pu
 from fitting_utils import priors
 
 class Sampling(object):
-    def __init__(self,lightcurve,param_dict, param_list_free,prior_dict,sampling_arguments,sampling_method):
+    def __init__(self,lightcurve,sampling_arguments,sampling_method):
 
         """
 
 
         Inputs:
         lightcurve         - light curve class which includes the full model (transit, systematics, etc.)
-        param_dict         - list of all paramters and their values
-        param_list_free    - the list of free parameters
-        prior_dict         - dictionary with all the information needed to set up the priors (see fitting_input)
         sampling_arguments - dict, parameters needed for dynesty / emcee; e.g. live points, precision criterion, nsteps, nwalkers
         sampling_method    - str, either dynesty, emcee, LM
 
@@ -39,14 +36,14 @@ class Sampling(object):
         """
 
         self.lightcurve = lightcurve
-        self.param_dict = param_dict
-        self.param_list_free = param_list_free
-        self.prior_dict = prior_dict
+        self.param_dict = self.lightcurve.param_dict
+        self.param_list_free = self.lightcurve.param_list_free
+        self.prior_dict = self.lightcurve.prior_dict
         self.sampling_method = sampling_method
         self.sampling_arguments = sampling_arguments
 
         if self.sampling_method == 'dynesty':
-            self.nDims = len(param_list_free)
+            self.nDims = len( self.param_list_free)
 
     # -------------------- Dynesty methods -------------------- #
     def prior_setup(self, x):
@@ -78,8 +75,8 @@ class Sampling(object):
 
 
     def run_dynesty(self):
-        live_points = self.sampling_arguments['live_points']
-        precision_criterion = self.sampling_arguments['precision_criterion']
+        live_points = self.sampling_arguments['nlive_pdim']
+        precision_criterion = self.sampling_arguments['precision_crit']
         sampler = dynesty.NestedSampler(self.loglikelihood_dynesty, self.prior_setup, self.nDims,nlive=live_points*self.nDims, bootstrap=0)#,sample='rslice')
         sampler.run_nested(dlogz=precision_criterion, print_progress=True)
         results = sampler.results

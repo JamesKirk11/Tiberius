@@ -9,7 +9,7 @@ class FleckModel:
     and step functions for systematics modeling.
     """
 
-    def __init__(param_dict, time_array, param_list_free, transit_model_inputs):
+    def __init__(param_dict, time_array, self.param_list_free, transit_model_inputs):
 
         """
         The SystematicsModel model class.
@@ -17,7 +17,7 @@ class FleckModel:
         Inputs:
         param_dict - the dictionary of the planetary and systematics parameters
         time_array - time array
-        param_list_free  - list of free parameters
+        self.param_list_free  - list of free parameters
         transit_model_inputs - transit model inputs, e.g., whether to use Kipping parameterisation, limb-darkening law, etc.
 
 
@@ -51,19 +51,19 @@ class FleckModel:
         all_params = param_dict.keys()
         u = []
         for i in range(len(all_params)):
-            if all_params[i] in param_list_free and all_params[i] not in ld_list and all_params[i] not in fleck_parameters:
+            if all_params[i] in self.param_list_free and all_params[i] not in ld_list and all_params[i] not in fleck_parameters:
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]].currVal)
-            if all_params[i] not in param_list_free and all_params[i] not in ld_list and all_params[i] not in fleck_parameters:
+            if all_params[i] not in self.param_list_free and all_params[i] not in ld_list and all_params[i] not in fleck_parameters:
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]])
         
         # for getting the limb-darkening as one array
         self.fit_ld = False
         if not self.use_kipping:
             for i in range(len(ld_list)):
-                if ld_list[i] in param_list_free:
+                if ld_list[i] in self.param_list_free:
                     u.append(self.param_dict[ld_list[i]].currVal)
                     self.fit_ld = True
-                if ld_list[i] not in param_list_free and ld_list[i] in all_params:
+                if ld_list[i] not in self.param_list_free and ld_list[i] in all_params:
                     u.append(self.param_dict[ld_list[i]])
             self.batman_params.limb_dark = transit_model_inputs['ld_law'] 
             self.batman_params.u = u 
@@ -83,7 +83,7 @@ class FleckModel:
 
     def update_model(self, new_param_dict):
         self.param_dict = new_param_dict
-        all_params = new_param_dict.keys()
+        all_params = list(new_param_dict.keys())
 
         for i in self.fleck_parameters:
             if self.param_dict[i] is Param:
@@ -93,17 +93,17 @@ class FleckModel:
 
         u = []
         for i in range(len(all_params)):
-            if all_params[i] in param_list_free and all_params[i] not in ld_list and all_params[i] not in fleck_parameters:
+            if all_params[i] in self.param_list_free and all_params[i] not in ld_list and all_params[i] not in fleck_parameters:
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]].currVal)
-            if all_params[i] not in param_list_free and all_params[i] not in ld_list and all_params[i] not in fleck_parameters:
+            if all_params[i] not in self.param_list_free and all_params[i] not in ld_list and all_params[i] not in fleck_parameters:
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]])
         
         # for getting the limb-darkening as one array
         if not self.use_kipping:
             for i in range(len(ld_list)):
-                if ld_list[i] in param_list_free:
+                if ld_list[i] in self.param_list_free:
                     u.append(self.param_dict[ld_list[i]].currVal)
-                if ld_list[i] not in param_list_free and ld_list[i] in all_params:
+                if ld_list[i] not in self.param_list_free and ld_list[i] in all_params:
                     u.append(self.param_dict[ld_list[i]])
             self.batman_params.limb_dark = transit_model_inputs['ld_law'] 
             self.batman_params.u = u 
