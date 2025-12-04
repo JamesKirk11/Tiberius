@@ -384,9 +384,9 @@ def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavel
         tc = model.t0.currVal
     except:
         try:
-            tc = model.pars['t0'].currVal
+            tc = model.param_dict['t0'].currVal
         except:
-            tc = model.pars['t0']
+            tc = model.param_dict['t0']
 
     fig = plt.figure()
 
@@ -396,9 +396,11 @@ def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavel
         nsubplots = 2
 
     gp = model.GP_used
-    poly = model.poly_used
-    exp = model.exp_ramp_used
-    step = model.step_func_used
+
+    systematics_model = model.systematic_model
+    poly = systematics_model.poly_used
+    exp = systematics_model.exp_ramp_used
+    step = systematics_model.step_func_used
 
     # convert times from days to hours from mid-transit
     hours = mjd2hours(time,tc)
@@ -409,16 +411,16 @@ def plot_single_model(model,time,flux,error,rebin_data=None,save_fig=False,wavel
 
     if poly:# and not gp:
         if deconstruct:
-            oot,poly_components = model.red_noise_poly(time,systematics_model_inputs,deconstruct_polys=True)
+            oot,poly_components = systematics_model.red_noise_poly(time,deconstruct_polys=True)
         else:
-            oot = model.red_noise_poly(time,systematics_model_inputs)
+            oot = systematics_model.red_noise_poly(time)
 
     if exp:
-        exp_ramp = model.exponential_ramp(time)
+        exp_ramp = systematics_model.exponential_ramp(time)
         oot *= exp_ramp
 
     if step:
-        step_func = model.step_function(time)
+        step_func = systematics_model.step_function(time)
         oot *= step_func
 
     if gp:
