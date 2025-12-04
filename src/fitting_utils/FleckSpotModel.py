@@ -3,13 +3,13 @@ from fitting_utils import parametric_fitting_functions as pf
 from fitting_utils.LightcurveModel import Param
 from fleck import Star
 
-class FleckModel:
+class FleckModel(object):
     """
     Encapsulates exponential ramps, polynomial red-noise trends,
     and step functions for systematics modeling.
     """
 
-    def __init__(param_dict, time_array, self.param_list_free, transit_model_inputs):
+    def __init__(self,param_dict, time_array, self.param_list_free, transit_model_inputs):
 
         """
         The SystematicsModel model class.
@@ -37,7 +37,7 @@ class FleckModel:
         self.fleck_parameters = ['stellar_rotation_period', 'spot_contrast', 'spot_lon', 'spot_lat', 'spot_radius']
 
         for i in self.fleck_parameters:
-            if self.param_dict[i] is Param:
+            if type(self.param_dict[i]) is Param:
                 setattr(self, i, self.param_dict[i].currVal)
             else:
                 setattr(self, i, self.param_dict[i])
@@ -86,7 +86,7 @@ class FleckModel:
         all_params = list(new_param_dict.keys())
 
         for i in self.fleck_parameters:
-            if self.param_dict[i] is Param:
+            if type(self.param_dict[i]) is Param:
                 setattr(self, i, self.param_dict[i].currVal)
             else:
                 setattr(self, i, self.param_dict[i])
@@ -112,7 +112,7 @@ class FleckModel:
             u2 = np.sqrt(self.param_dict['u1'].currVal)*(1-2*self.param_dict['u2'].currVal)
             self.batman_params.u = [u1, u2]
 
-        if self.param_dict['spot_contrast'] is Param or self.param_dict['rotation_period'] is Param or self.fit_ld == True:
+        if type(self.param_dict['spot_contrast']) is Param or type(self.param_dict['rotation_period']) is Param or self.fit_ld == True:
             self.star = Star(spot_contrast=self.spot_contrast, u_ld=self.batman_params.u, rotation_period=self.rotation_period)
 
         self.transit_with_spot_lightcurve = self.star.light_curve(self.spot_lon, self.spot_lat, self.spot_radius,\
