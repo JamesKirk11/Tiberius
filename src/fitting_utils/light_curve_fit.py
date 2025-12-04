@@ -12,7 +12,7 @@ from global_utils import parseInput
 
 from fitting_utils import LightcurveModel as lc
 from fitting_utils import sampling as s
-# from fitting_utils import plotting_utils as pu
+from fitting_utils import plotting_utils as pu
 
 
 parser = argparse.ArgumentParser(description='Run fit to a single light curve that is either a wavelength-binned or white light curve. This makes use of the TransitModelGPPM class, which fits the red noise as a GP + parametric model.')
@@ -52,10 +52,10 @@ save_plots = bool(int(input_dict['save_plots']))
 cwd = os.getcwd()
 output_foldername = cwd + '/' + str(input_dict['output_foldername']) + '/'
 
-os.makedirs(output_foldername, exist_ok=True) 
+os.makedirs(output_foldername, exist_ok=True)
 if save_plots:
-    os.makedirs(output_foldername + '/Figures', exist_ok=True) 
-os.makedirs(output_foldername + '/pickled_objects', exist_ok=True) 
+    os.makedirs(output_foldername + '/Figures', exist_ok=True)
+os.makedirs(output_foldername + '/pickled_objects', exist_ok=True)
 
 ### Load in various input arrays
 time = pickle.load(open(input_dict['time_file'],'rb'))
@@ -107,7 +107,7 @@ if input_dict['common_noise_model'] is not None:
         plt.show(block=False)
         plt.pause(5)
         plt.close()
-    
+
     if save_plots:
         plt.figure()
         plt.errorbar(time,flux,yerr=flux_error,fmt='o',alpha=0.5,ecolor='r',color='r',capsize=2,label='Before correction',rasterized=True)
@@ -205,7 +205,7 @@ if GP_used:
             # replace any nans
             vector[~np.isfinite(vector)] = 1e-10
             GP_model_inputs.append(model_in[wb])
-    
+
     norm_GP_inputs = bool(int(input_dict['normalise_GP_inputs']))
     if norm_GP_inputs:
         print('standardising GP model inputs...')
@@ -238,7 +238,7 @@ sigma_clip = float(input_dict['sigma_cut'])
 if clip_outliers and median_clip:
     from fitting_utils import managing_outliers
     flux, flux_error, time, keep_idx = managing_outliers.clipping_outliers_with_median_clip(flux, flux_error, time, sigma_clip, show_plots, save_plots, output_foldername)
-    
+
     systematics_model_inputs = np.array(systematics_model_inputs)[:,keep_idx].reshape(len(systematics_model_inputs),len(np.where(keep_idx == True)[0]))
     if GP_used:
         GP_model_inputs = np.array(GP_model_inputs)[:,keep_idx].reshape(len(GP_model_inputs),len(np.where(keep_idx == True)[0]))
@@ -273,7 +273,7 @@ if GP_used:
     model_inputs['GP_model']['model_inputs'] = GP_model_inputs
     pickle.dump(GP_model_inputs,open(output_foldername + '/pickled_objects/' + 'Used_GP_model_inputs_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
 
-   
+
 model_inputs['transit_model'] = {}
 model_inputs['transit_model']['use_kipping'] = bool(int(input_dict['use_kipping_parameterisation']))
 model_inputs['transit_model']['ld_law'] = str(input_dict['ld_law'])
@@ -292,10 +292,10 @@ sampling_arguments = {}
 
 if sampling_method == 'emcee':
 
-    sampling_arguments['nwalk'] = int(input_dict['nwalkers'])
-    sampling_arguments['nstep'] = input_dict['nsteps']
-    if sampling_arguments['nstep'] != "auto": # use the autocorrelation time to determine when the chains have converged
-        sampling_arguments['nstep'] = int(nstep)
+    sampling_arguments['nwalkers'] = int(input_dict['nwalkers'])
+    sampling_arguments['nsteps'] = input_dict['nsteps']
+    if sampling_arguments['nsteps'] != "auto": # use the autocorrelation time to determine when the chains have converged
+        sampling_arguments['nsteps'] = int(input_dict['nsteps'])
 
     sampling_arguments['nthreads'] = int(input_dict['nthreads'])
     sampling_arguments['use_typeII'] = bool(int(input_dict['typeII_maximum_likelihood']))
@@ -314,6 +314,7 @@ else:
 
 sampling = s.Sampling(lc_class,sampling_arguments,sampling_method)
 if sampling_method == 'emcee':
-    sampling.run_emcee()
+    fitted_lightcurve = sampling.run_emcee()
+    fig = pu.plot_single_model(fitted_lightcurve,time,flux,flux_error,rebin_data=rebin_data,save_fig=True,wavelength_bin=wb,deconstruct=True)
 elif sampling_method == 'dynesty':
     sampling.run_dynesty()
