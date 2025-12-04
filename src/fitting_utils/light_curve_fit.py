@@ -182,6 +182,7 @@ if input_dict['kernel_classes'] is not None:
     except:
         GP_used = False
 
+    model_inputs['GP_model'] = {}
     model_inputs['GP_model']['kernel_classes'] = kernel_classes
     # are we using a white noise kernel?
     model_inputs['GP_model']['white_noise_kernel'] = bool(int(input_dict['white_noise_kernel']))
@@ -285,6 +286,7 @@ prior_file = str(input_dict['prior_filename'])
 lc_class = lc.LightcurveModel(flux,flux_error,time,prior_file,fit_models,model_inputs)
 param_dict = lc_class.return_parameter_dict()
 param_list_free = lc_class.return_free_parameter_list()
+nDims = len(param_list_free)
 
 # sampling controls
 sampling_method = str(input_dict['sampling_method'])
@@ -317,4 +319,5 @@ if sampling_method == 'emcee':
     fitted_lightcurve = sampling.run_emcee()
     fig = pu.plot_single_model(fitted_lightcurve,time,flux,flux_error,rebin_data=rebin_data,save_fig=True,wavelength_bin=wb,deconstruct=True)
 elif sampling_method == 'dynesty':
-    sampling.run_dynesty()
+    result = sampling.run_dynesty()
+    
