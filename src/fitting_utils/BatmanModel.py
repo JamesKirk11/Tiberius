@@ -11,7 +11,7 @@ class BatmanModel(object):
         However, this has the added option of fitting the time dependence with a polynomial, removing it as a parameter given to the GP. The thought behind this is that the GP has less to do, leading to smaller uncertainties in Rp/Rs.
 
         Inputs:
-        aram_dict                   - the dictionary of the planet's transit parameters
+        param_dict                   - the dictionary of the planet's transit parameters
         param_list_free              - list of free parameters
         transit_model_inputs         - inputs to build the batman model
 
@@ -37,16 +37,17 @@ class BatmanModel(object):
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]].currVal)
             if all_params[i] not in self.param_list_free and all_params[i] not in ld_list:
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]])
-        
+
         # for getting the limb-darkening as one array
+        print(param_dict)
         if not self.use_kipping:
             for i in range(len(ld_list)):
                 if ld_list[i] in self.param_list_free:
                     u.append(self.param_dict[ld_list[i]].currVal)
                 if ld_list[i] not in self.param_list_free and ld_list[i] in all_params:
                     u.append(self.param_dict[ld_list[i]])
-            self.batman_params.limb_dark = transit_model_inputs['ld_law'] 
-            self.batman_params.u = u 
+            self.batman_params.limb_dark = transit_model_inputs['ld_law']
+            self.batman_params.u = u
         else:
             u1 = 2*np.sqrt(self.param_dict['u1'].currVal)*self.param_dict['u2'].currVal
             u2 = np.sqrt(self.param_dict['u1'].currVal)*(1-2*self.param_dict['u2'].currVal)
@@ -54,7 +55,7 @@ class BatmanModel(object):
             self.batman_params.u = [u1, u2]
 
         self.batman_model = batman.TransitModel(self.batman_params, self.time_array, nthreads=1)    #initializes model
-    
+
     def update_model(self, new_param_dict):
         self.param_dict = new_param_dict
         ld_list = ['u1', 'u2', 'u3', 'u4']
@@ -65,10 +66,10 @@ class BatmanModel(object):
                 setattr(self.batman_params, i, self.param_dict[i].currVal)
             else:
                 u.append(self.param_dict[i].currVal)
-        
+
         # for getting the limb-darkening as one array
         if not self.use_kipping:
-            self.batman_params.u = u 
+            self.batman_params.u = u
         else:
             u1 = 2*np.sqrt(self.param_dict['u1'].currVal)*self.param_dict['u2'].currVal
             u2 = np.sqrt(self.param_dict['u1'].currVal)*(1-2*self.param_dict['u2'].currVal)
@@ -95,5 +96,3 @@ class BatmanModel(object):
             self.batman_model = batman.TransitModel(self.batman_params, time_array)    #if we want to continue using that time for the model
             self.time_array = time_array
             return self.batman_model.light_curve(self.batman_params)
-
-
