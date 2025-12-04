@@ -14,7 +14,7 @@ from scipy import optimize,stats
 # import matplotlib.pyplot as plt
 
 # from fitting_utils import parametric_fitting_functions as pf
-# from fitting_utils import plotting_utils as pu
+from fitting_utils import plotting_utils as pu
 from fitting_utils import priors
 
 class Sampling(object):
@@ -104,9 +104,9 @@ class Sampling(object):
         """Compute log likelihood using the lightcurve residuals and errors."""
         self.lightcurve.update_model(theta)
         residuals = self.lightcurve.calc_residuals()
-        noise = self.lightcurve.get_noise()  # TO BE IMPLEMENTED -- this is Evie's noise inflation term
+        flux_error = self.lightcurve.return_flux_err()
         N = len(residuals)
-        logL = -N/2. * np.log(2*np.pi) - np.sum(np.log(noise)) - np.sum(residuals**2 / (2*noise**2))
+        logL = -N/2. * np.log(2*np.pi) - np.sum(np.log(flux_error)) - np.sum(residuals**2 / (2*flux_error**2))
         return logL
 
     def logprobability_emcee(self, theta):
@@ -162,11 +162,11 @@ class Sampling(object):
 
         """Run emcee MCMC sampling."""
         nsteps = self.sampling_arguments['nsteps']
-        nwalk = self.sampling_arguments['nwalkers']
+        nwalkers = self.sampling_arguments['nwalkers']
         nthreads = self.sampling_arguments['nthreads']
         npars = len(self.param_list_free)
         namelist = self.param_list_free
-        nwalk_total = nwalk * npars
+        nwalkers_total = nwalkers * npars
 
         if wavelength_bin > 0 and burn:
             diagnostic_tab = open('burn_statistics.txt','a')
@@ -188,19 +188,19 @@ class Sampling(object):
             diagnostic_tab = open('prod_statistics.txt','a')
 
         # Scatter walkers around starting parameters
-        starting_values = np.array([self.param_dict[k] for k in self.param_list_free])
+        starting_values = np.array([self.param_dict[k].currVal for k in self.param_list_free])
         if burn:
-            p0 = emcee.utils.sample_ball(starting_values, 1e-3*starting_values, size=nwalk_total)
+            p0 = emcee.utils.sample_ball(starting_values, 1e-3*starting_values, size=nwalkers_total)
         else:
-            p0 = [starting_values + 1e-8*np.random.randn(npars) for j in range(nwalk_total)]
+            p0 = [starting_values + 1e-8*np.random.randn(npars) for j in range(nwalkers_total)]
 
         # Initialize sampler
         # sampler = emcee.EnsembleSampler(nwalk_total, npars, self.logprobability_emcee)
         # intiate emcee sampler object
         if npars > 1:
-            sampler = emcee.EnsembleSampler(nwalk_total,npars,self.logprobability_emcee,threads=nthreads)
+            sampler = emcee.EnsembleSampler(nwalkers_total,npars,self.logprobability_emcee,threads=nthreads)
         else: # from my own tests I find that for a single parameter, the acceptance fraction is too high. Increasing the stretch scale factor decreases the acceptance fraction to a more acceptable value. This is relevant for ingress/egress fitting for ingress/egress with just Rp/Rs
-            sampler = emcee.EnsembleSampler(nwalk_total,npars,self.logprobability_emcee,threads=nthreads,moves=emcee.moves.StretchMove(10))
+            sampler = emcee.EnsembleSampler(nwalkers_total,npars,self.logprobability_emcee,threads=nthreads,moves=emcee.moves.StretchMove(10))
 
         # run chains
         print('################')
@@ -264,24 +264,7 @@ class Sampling(object):
             sampler, highest_prob_pars, highest_prob = self.advance_chain(sampler,p0,nsteps,burn,save_chain,wavelength_bin)
 
         # save plots of chains
-        if npars > 1:
-            fig,axes = plt.subplots(npars,1,sharex=True,figsize=(8,12))
-            for j in range(npars):
-                axes[j].plot(sampler.chain[:, :, j].T, color="k", alpha=0.4)
-                axes[j].set_ylabel(namelist[j],fontsize=20)
-                axes[j].set_xlabel("step number")
-        else:
-            fig,axes = plt.subplots(1,1,figsize=(6,3))
-            axes.plot(sampler.chain[:, :, 0].T, color="k", alpha=0.4)
-            axes.set_ylabel(namelist[0],fontsize=20)
-            axes.set_xlabel("step number")
-
-        fig.tight_layout(h_pad=0.0)
-        if burn:
-            fig.savefig('burn_chain_wb%s.png'%(str(wavelength_bin+1).zfill(4)))
-        else:
-            fig.savefig('prod_chain_wb%s.png'%(str(wavelength_bin+1).zfill(4)))
-        plt.close()
+        pu.plot_chains(sampler,burn,wavelength_bin,npars,namelist)
 
         if nsteps >= 500:
             if burn:
@@ -300,12 +283,13 @@ class Sampling(object):
             samples_corner = samples
             pu.make_corner_plot(samples_corner,bin_number=(wavelength_bin+1),save_fig=True,namelist=namelist,parameter_modes=mode)
 
-        fitted_chi2 = self.chisq()
-        fitted_reducedChi2 = self.reducedChisq()
-        fitted_rms = self.rms()*1e6
+        fitted_chi2 = self.chisq(med)
+        fitted_reducedChi2 = self.reducedChisq(med)
+        fitted_rms = self.rms(med)*1e6
         fitted_lnlike = self.loglikelihood_emcee(med)
         fitted_lnprob = self.logprobability_emcee(med)
-        fitted_BIC = self.BIC()
+        fitted_BIC = self.BIC(med)
+        fitted_AIC = self.AIC(med)
 
         print("\n--- Using medians of posteriors ---")
         print('chi2 = %f' % fitted_chi2)
@@ -314,6 +298,7 @@ class Sampling(object):
         print('Lnprobability = %f' % fitted_lnprob)
         print('Residual RMS (ppm) = %f' % fitted_rms)
         print('BIC = %f' % fitted_BIC)
+        print('AIC = %f' % fitted_AIC)
 
         diagnostic_tab.write("\n### Bin %d ###\n" % (wavelength_bin+1))
         diagnostic_tab.write("\n--- Using medians of posteriors --- \n")
@@ -323,6 +308,7 @@ class Sampling(object):
         diagnostic_tab.write('Lnprobability = %f \n' % fitted_lnprob)
         diagnostic_tab.write('Residual RMS (ppm) = %f \n' % fitted_rms)
         diagnostic_tab.write('BIC = %f \n' % fitted_BIC)
+        diagnostic_tab.write('AIC = %f \n' % fitted_AIC)
 
         # mode_model = copy.deepcopy(self.lightcurve)
         # mode_model = self.lightcurve.update_model(mode)
@@ -372,11 +358,11 @@ class Sampling(object):
         diagnostic_tab.close()
 
         if not burn:
-            pickle.dump(fitted_model,open('prod_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
-            try:
-                pickle.dump(mode_model,open('parameter_modes_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
-            except:
-                pass
+            pickle.dump(self.lightcurve,open('prod_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
+            # try:
+            #     pickle.dump(mode_model,open('parameter_modes_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
+            # except:
+            #     pass
 
         if burn:
             print("...burn-in complete for bin %d"%(wavelength_bin+1))
@@ -385,7 +371,7 @@ class Sampling(object):
 
         sampler.reset()
 
-        return med,up,low,fitted_model
+        return self.lightcurve
 
 
     # -------------------- Statistical Evaluation Methods -------------------- #
@@ -395,29 +381,30 @@ class Sampling(object):
 
         if self.lightcurve.GP_used:
             mu, _ = self.lightcurve.calc_gp_component()
-            resids = (self.lightcurve.flux - self.lightcurve.calc() - mu) / self.lightcurve.flux_err
+            resids = (self.lightcurve.flux_array - self.lightcurve.calc() - mu) / self.lightcurve.flux_err
         else:
-            resids = (self.lightcurve.flux - self.lightcurve.calc()) / self.lightcurve.flux_err
+            resids = (self.lightcurve.flux_array - self.lightcurve.calc()) / self.lightcurve.flux_err
 
         return np.sum(resids**2)
 
     def reducedChisq(self, theta=None):
-        return self.chisq(theta) / (len(self.lightcurve.flux) - self.lightcurve.npars)
+        return self.chisq(theta) / (len(self.lightcurve.flux_array) - self.lightcurve.npars)
 
     def rms(self, theta=None):
-        self.lightcurve.update_model(theta)
+        if theta is not None:
+            self.lightcurve.update_model(theta)
 
         if self.lightcurve.GP_used:
             mu, _ = self.lightcurve.calc_gp_component()
-            resids = (self.lightcurve.flux - self.lightcurve.calc() - mu) / self.lightcurve.flux_err
+            resids = (self.lightcurve.flux_array - self.lightcurve.calc() - mu) / self.lightcurve.flux_err
         else:
-            resids = (self.lightcurve.flux - self.lightcurve.calc()) / self.lightcurve.flux_err
+            resids = (self.lightcurve.flux_array - self.lightcurve.calc()) / self.lightcurve.flux_err
 
         return np.sqrt(np.mean(resids**2))
 
     def BIC(self, theta=None):
         # note we can use loglikelihood_emcee also for LM fit since the statistic is independent of the sampling method
-        return self.lightcurve.npars * np.log(len(self.lightcurve.flux)) - 2 * self.loglikelihood_emcee(theta)
+        return self.lightcurve.npars * np.log(len(self.lightcurve.flux_array)) - 2 * self.loglikelihood_emcee(theta)
 
     def AIC(self, theta=None):
         return 2 * self.lightcurve.npars - 2 * self.loglikelihood_emcee(theta)
@@ -435,7 +422,7 @@ class Sampling(object):
         # Rebin residuals
         _, binned_y, _ = pu.rebin(bins,
                                   self.lightcurve.time_array,
-                                  self.lightcurve.flux - self.lightcurve.calc(),
+                                  self.lightcurve.flux_array - self.lightcurve.calc(),
                                   self.lightcurve.flux_err, weighted=False)
 
         max_rms = np.sqrt(np.nanmean(binned_y**2))
@@ -588,8 +575,9 @@ def recover_quartiles_single(samples,namelist,bin_number,verbose=True,save_resul
     length_nl = len(namelist)
 
     # generate dictionary of how many decimal places we want to round each parameter to before calculating the mode of the rounded distribution
-    namelist_decimal_places = {"t0":6,"period":6,"k":6,"aRs":2,"inc":2,"ecc":3,"omega":2,\
-                               "u1":2,"u2":2,"u3":2,"u4":2,"f":4,"s":3,"A":3,"step1":3,"step2":3,"breakpoint":0,"lniL":2}
+    namelist_decimal_places = {"t0":6,"per":6,"rp":6,"a":2,"inc":2,"ecc":3,"w":2,\
+                               "u1":2,"u2":2,"u3":2,"u4":2,"f":4,"s":3,"A":3,"step1":3,"step2":3,"breakpoint":0,"lniL":2,
+                               "infl":3}
 
     # now pad the dictionray with the systematics coefficients which could be a large number of parameters (although much less than the 100 allowed for below)
     for i in range(100):
