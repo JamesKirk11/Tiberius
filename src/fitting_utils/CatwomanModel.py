@@ -102,9 +102,9 @@ class CatwomanModel(object):
         model - the modelled catwoman light curve"""
         if time_array is not None:
             new_model = catwoman.TransitModel(self.catwoman_params, time_array,fac=self.catwoman_fac)    # model
+            return new_model.light_curve(self.catwoman_params)
         if time_array is not None and overwrite == True:
             self.catwoman_model = catwoman.TransitModel(self.catwoman_params, time_array,fac=self.catwoman_fac)    #if we want to continue using that time for the model
             self.time_array = time_array
-        model = new_model.light_curve(self.catwoman_params)
-        return model
+            return self.catwoman_model.light_curve(self.catwoman_params)
 
