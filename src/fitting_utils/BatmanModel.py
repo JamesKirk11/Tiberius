@@ -43,7 +43,7 @@ class BatmanModel(object):
             for i in range(len(ld_list)):
                 if ld_list[i] in param_list_free:
                     u.append(self.param_dict[ld_list[i]].currVal)
-                if ld_list[i] not in param_list_free:
+                if ld_list[i] not in param_list_free and ld_list[i] in all_params:
                     u.append(self.param_dict[ld_list[i]])
             self.batman_params.limb_dark = transit_model_inputs['ld_law'] 
             self.batman_params.u = u 
