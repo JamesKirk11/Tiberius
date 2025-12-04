@@ -312,7 +312,7 @@ else:
     raise SystemExit
 
 
-sampling = s.Sampling(lc_class,param_dict,param_list_free,prior_dict,sampling_arguments,sampling_method)
+sampling = s.Sampling(lc_class,sampling_arguments,sampling_method)
 if sampling_method == 'emcee':
     sampling.run_emcee()
 elif sampling_method == 'dynesty':
