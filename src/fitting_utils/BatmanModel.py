@@ -90,10 +90,10 @@ class BatmanModel(object):
 
         if time_array is not None:
             new_model = batman.TransitModel(self.batman_params, time_array)    # model
+            return new_model.light_curve(self.batman_params)
         if time_array is not None and overwrite == True:
             self.batman_model = batman.TransitModel(self.batman_params, time_array)    #if we want to continue using that time for the model
             self.time_array = time_array
-        model = new_model.light_curve(self.batman_params)
-        return model
+            return self.batman_model.light_curve(self.batman_params)
 
 
