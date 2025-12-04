@@ -2,14 +2,18 @@
 
 import numpy as np
 
-from fitting_utils import lightcurve
+# from fitting_utils import lightcurve
 
 import dynesty
+import emcee
+
+import sys
+import pickle
 
 from scipy import optimize,stats
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
-from fitting_utils import parametric_fitting_functions as pf
+# from fitting_utils import parametric_fitting_functions as pf
 from fitting_utils import plotting_utils as pu
 from fitting_utils import priors
 
@@ -41,19 +45,19 @@ class Sampling(object):
         self.sampling_method = sampling_method
         self.sampling_arguments = sampling_arguments
 
-        if sampling_method == 'dynesty':
+        if self.sampling_method == 'dynesty':
             self.nDims = len(param_list_free)
 
     # -------------------- Dynesty methods -------------------- #
     def prior_setup(self, x):
 
-        if sampling_method == 'dynesty':
+        if self.sampling_method == 'dynesty':
             theta = [0] * self.nDims
 
             for i in range(self.nDims):
                 if self.prior_dict['%s_prior'%self.param_list_free[i]] == 'N':
                     theta[i] = priors.GaussianPrior(self.prior_dict['%s_1'%self.param_list_free[i]], self.prior_dict['%s_2'%self.param_list_free[i]])(np.array(x[i]))
-                elif self.prior_dict['%s_prior'%param_list_free[i]] == 'U':
+                elif self.prior_dict['%s_prior'%self.param_list_free[i]] == 'U':
                     theta[i] = priors.UniformPrior(self.prior_dict['%s_1'%self.param_list_free[i]], self.prior_dict['%s_2'%self.param_list_free[i]])(np.array(x[i]))
 
             return theta
@@ -62,7 +66,7 @@ class Sampling(object):
 
     def loglikelihood_dynesty(self,theta):
         self.lightcurve.update_model(theta)
-        noise = lightcurve.return_flux_err()
+        noise = self.lightcurve.return_flux_err()
 
         residuals = self.lightcurve.calc_residuals()
 
@@ -116,82 +120,327 @@ class Sampling(object):
         return lp + self.loglikelihood_emcee(theta)
 
 
-    def _advance_chain(self, sampler, p0, nsteps, burn, save_chain, bin_number):
-        """Internal method to advance the emcee sampler chain."""
-        for i, (pos, prob, state) in enumerate(sampler.sample(p0, iterations=nsteps, store=True)):
-            # Optional: progress bar
-            if not burn and save_chain:
-                with open(f'prod_chain_wb{str(bin_number+1).zfill(4)}.txt', 'a') as f:
-                    for k in range(pos.shape[0]):
-                        thisPos = pos[k]
-                        thisProb = prob[k]
-                        f.write(f"{k} {' '.join(map(str,thisPos))} {thisProb}\n")
-        return pos, np.max(prob)
+    def advance_chain(self,sampler,p0,nsteps,burn,save_chain,wavelength_bin):
+        """The function that advances the emcee sampler chain with a progress bar
 
-    def run_emcee(self, burn=False, save_chain=True, bin_number=0):
+        Inputs:
+        sampler - the emcee sampler, intitiated in run_emcee
+        p0 - the array of (starting) parameter nvalues
+        nsteps - the number of steps to advance the chain over
+        burn - is this a burn chain? If so, don't save to file
+        save_chain - True/False, do we want to save the chain to file?
+        wavelength_bin - the number of the wavelength bin we're fitting, so that we can save the output correctly
+
+        Returns:
+        sampler - the inputted emcee sampler advanced by nsteps"""
+
+        width = 100 # for progress bar
+        highest_prob = 0
+        print('Progress:') # for progress bar
+        for i,(pos, prob, state) in enumerate(sampler.sample(p0,iterations=nsteps,store=True)):
+            n = int((width+1) * float(i) / nsteps)
+            sys.stdout.write("\r[{0}{1}]".format('#' * n, ' ' * (width - n))) # for progress bar
+
+            if np.max(prob) > highest_prob:
+                highest_prob_pars = pos[np.argmax(prob)]
+                highest_prob = np.max(prob)
+
+            if not burn and save_chain:
+                f = open('prod_chain_wb%s.txt'%(str(wavelength_bin+1).zfill(4)),'a')
+            for k in range(pos.shape[0]):
+                # loop over all walkers and append to file
+                thisPos = pos[k]
+                thisProb = prob[k]
+                if not burn and save_chain: # only save production chain to file and only file steps otherwise these files are huge!
+                    if nsteps > 500 and i > nsteps/2.:
+                        f.write("{0:4d} {1:s} {2:f}\n".format(k," ".join(map(str,thisPos)),thisProb ))
+                    if nsteps < 500 and i > nsteps - 100:
+                        f.write("{0:4d} {1:s} {2:f}\n".format(k," ".join(map(str,thisPos)),thisProb ))
+            if not burn and save_chain:
+                f.close()
+
+        return sampler, highest_prob_pars, highest_prob
+
+    def run_emcee(self, burn=False, save_chain=True, wavelength_bin=0):
+
         """Run emcee MCMC sampling."""
         nsteps = self.sampling_arguments['nsteps']
         nwalk = self.sampling_arguments['nwalkers']
+        nthreads = self.sampling_arguments['nthreads']
         npars = len(self.param_list_free)
+        namelist = self.param_list_free
         nwalk_total = nwalk * npars
 
+        if wavelength_bin > 0 and burn:
+            diagnostic_tab = open('burn_statistics.txt','a')
+
+        elif wavelength_bin > 0 and not burn:
+            diagnostic_tab = open('prod_statistics.txt','a')
+
+        else: # starting fresh
+            if burn:
+                diagnostic_tab = open('burn_statistics.txt','w')
+            else:
+                diagnostic_tab = open('prod_statistics.txt','w')
+
+        diagnostic_tab.close()
+
+        if burn:
+            diagnostic_tab = open('burn_statistics.txt','a')
+        else:
+            diagnostic_tab = open('prod_statistics.txt','a')
+
         # Scatter walkers around starting parameters
-        starting_values = np.array([self.pars_dict[k] for k in self.param_list_free])
+        starting_values = np.array([self.param_dict[k] for k in self.param_list_free])
         if burn:
             p0 = emcee.utils.sample_ball(starting_values, 1e-3*starting_values, size=nwalk_total)
         else:
             p0 = [starting_values + 1e-8*np.random.randn(npars) for j in range(nwalk_total)]
 
         # Initialize sampler
-        sampler = emcee.EnsembleSampler(nwalk_total, npars, self.logprobability_emcee)
+        # sampler = emcee.EnsembleSampler(nwalk_total, npars, self.logprobability_emcee)
+        # intiate emcee sampler object
+        if npars > 1:
+            sampler = emcee.EnsembleSampler(nwalk_total,npars,self.logprobability_emcee,threads=nthreads)
+        else: # from my own tests I find that for a single parameter, the acceptance fraction is too high. Increasing the stretch scale factor decreases the acceptance fraction to a more acceptable value. This is relevant for ingress/egress fitting for ingress/egress with just Rp/Rs
+            sampler = emcee.EnsembleSampler(nwalk_total,npars,self.logprobability_emcee,threads=nthreads,moves=emcee.moves.StretchMove(10))
 
-        # Advance chain
-        self._advance_chain(sampler, p0, nsteps, burn, save_chain, bin_number)
+        # run chains
+        print('################')
+        if burn:
+            print("Running burn-in for bin %d..."%(wavelength_bin+1))
+            # f = open('burn_chain_%d.txt'%(wavelength_bin+1),'w') # deciding to only save production chain
 
-        # Flatten and get samples
-        samples = sampler.get_chain(discard=int(nsteps/4), thin=10, flat=True)
-        return samples
+        else:
+            print("Running production for bin %d..."%(wavelength_bin+1))
+            if save_chain:
+                f = open('prod_chain_wb%s.txt'%(str(wavelength_bin+1).zfill(4)),'w')
+                f.close()
+
+        if nsteps == "auto":
+            not_converged = True
+            chain_number = 1
+            nsteps = 2000
+
+            while not_converged:
+
+                if chain_number == 1:
+                    sampler, highest_prob_pars, highest_prob = self.advance_chain(sampler,p0,nsteps,burn,save_chain,wavelength_bin)
+                else:
+                    sampler, highest_prob_pars, highest_prob = self.advance_chain(sampler,sampler.get_last_sample(),nsteps,burn,save_chain,wavelength_bin)
+
+                total_steps = chain_number*nsteps
+
+                try:
+                    auto_corr_time = np.round(total_steps/np.median(sampler.acor))
+
+                    # ideal scenario, we're >= 50x the median autocorr time
+                    if auto_corr_time >= 50: # taking DFM's estimate
+                        not_converged = False
+                        print("\n\nChains run for %d total steps"%(chain_number*nsteps))
+                        nsteps = total_steps # updated nsteps for calculation of corner plots and parameter values later on
+
+                    # not so good scenario but chains are getting long
+                    elif auto_corr_time >= 20 and total_steps >= 10000:
+                        print("\n\n After %d steps the number of steps is %dX the autocorrelation time, finishing chain"%(chain_number*nsteps,auto_corr_time))
+                        nsteps = total_steps # updated nsteps for calculation of corner plots and parameter values later on
+                        not_converged = False
+
+                    # chains too long, probably won't converge now
+                    elif total_steps >= 20000:
+                        print("\n\n After %d steps the chains have not yet converged, exiting"%(chain_number*nsteps))
+                        nsteps = total_steps
+                        not_converged = False
+
+                    else:
+                        print("\n\n After %d steps the number of steps is %dX the autocorrelation time, running chain again"%(chain_number*nsteps,auto_corr_time))
+                        chain_number += 1
+                except:
+                    if total_steps >= 20000:
+                        print("\n\n After %d steps the chains have not yet converged, exiting"%(chain_number*nsteps))
+                        nsteps = total_steps
+                        not_converged = False
+                    else:
+                        print("\n\n After %d steps the chains have not yet converged, running chain again"%(chain_number*nsteps))
+                        chain_number += 1
+        else:
+            sampler, highest_prob_pars, highest_prob = self.advance_chain(sampler,p0,nsteps,burn,save_chain,wavelength_bin)
+
+        # save plots of chains
+        if npars > 1:
+            fig,axes = plt.subplots(npars,1,sharex=True,figsize=(8,12))
+            for j in range(npars):
+                axes[j].plot(sampler.chain[:, :, j].T, color="k", alpha=0.4)
+                axes[j].set_ylabel(namelist[j],fontsize=20)
+                axes[j].set_xlabel("step number")
+        else:
+            fig,axes = plt.subplots(1,1,figsize=(6,3))
+            axes.plot(sampler.chain[:, :, 0].T, color="k", alpha=0.4)
+            axes.set_ylabel(namelist[0],fontsize=20)
+            axes.set_xlabel("step number")
+
+        fig.tight_layout(h_pad=0.0)
+        if burn:
+            fig.savefig('burn_chain_wb%s.png'%(str(wavelength_bin+1).zfill(4)))
+        else:
+            fig.savefig('prod_chain_wb%s.png'%(str(wavelength_bin+1).zfill(4)))
+        plt.close()
+
+        if nsteps >= 500:
+            if burn:
+                samples = sampler.chain[:, int(nsteps/2):, :].reshape((-1, ndim))
+            else:
+                samples = sampler.get_chain(discard=int(nsteps/4), thin=10, flat=True)
+        else:
+            samples = sampler.chain[:, -100:, :].reshape((-1, npars))
+
+        print('\n')
+        # generate median, upper and lower bounds
+        med, up, low, mode = recover_quartiles_single(samples,namelist,bin_number=(wavelength_bin+1),verbose=True,save_result=True,burn=burn)
+
+        if not burn and npars > 1:
+            # generate and save corner plot
+            samples_corner = samples
+            pu.make_corner_plot(samples_corner,bin_number=(wavelength_bin+1),save_fig=True,namelist=namelist,parameter_modes=mode)
+
+        fitted_chi2 = self.chisq()
+        fitted_reducedChi2 = self.reducedChisq()
+        fitted_rms = self.rms()*1e6
+        fitted_lnlike = self.loglikelihood_emcee(med)
+        fitted_lnprob = self.logprobability_emcee(med)
+        fitted_BIC = self.BIC()
+
+        print("\n--- Using medians of posteriors ---")
+        print('chi2 = %f' % fitted_chi2)
+        print('Reduced chi2 = %f' % fitted_reducedChi2)
+        print('Lnlikelihood = %f' % fitted_lnlike)
+        print('Lnprobability = %f' % fitted_lnprob)
+        print('Residual RMS (ppm) = %f' % fitted_rms)
+        print('BIC = %f' % fitted_BIC)
+
+        diagnostic_tab.write("\n### Bin %d ###\n" % (wavelength_bin+1))
+        diagnostic_tab.write("\n--- Using medians of posteriors --- \n")
+        diagnostic_tab.write('Chi2 = %f \n' % fitted_chi2)
+        diagnostic_tab.write('Reduced chi2 = %f \n' % fitted_reducedChi2)
+        diagnostic_tab.write('Lnlikelihood = %f \n' % fitted_lnlike)
+        diagnostic_tab.write('Lnprobability = %f \n' % fitted_lnprob)
+        diagnostic_tab.write('Residual RMS (ppm) = %f \n' % fitted_rms)
+        diagnostic_tab.write('BIC = %f \n' % fitted_BIC)
+
+        # mode_model = copy.deepcopy(self.lightcurve)
+        # mode_model = self.lightcurve.update_model(mode)
+        #
+        # mode_chi2 = mode_model.chisq(x,y,e)
+        # mode_reducedChi2 = mode_model.reducedChisq(x,y,e)
+        # mode_rms = mode_model.rms(x,y,e)*1e6
+        # mode_lnlike = mode_model.lnlike(x,y,e)
+        # mode_lnprob = lnprob_emcee(mode,mode_model,x,y,e,None,sys_priors,typeII)
+        # mode_BIC = mode_model.BIC(x,y,e)
+        #
+        # print("\n--- Using modes of posteriors ---")
+        # print('chi2 = %f' % mode_chi2)
+        # print('Reduced chi2 = %f' % mode_reducedChi2)
+        # print('Lnlikelihood = %f' % mode_lnlike)
+        # print('Lnprobability = %f' % mode_lnprob)
+        # print('Residual RMS (ppm) = %f' % mode_rms)
+        # print('BIC = %f' % mode_BIC)
+        #
+        # diagnostic_tab.write("\n--- Using modes of posteriors --- \n")
+        # diagnostic_tab.write('Chi2 = %f \n' % mode_chi2)
+        # diagnostic_tab.write('Reduced chi2 = %f \n' % mode_reducedChi2)
+        # diagnostic_tab.write('Lnlikelihood = %f \n' % mode_lnlike)
+        # diagnostic_tab.write('Lnprobability = %f \n' % mode_lnprob)
+        # diagnostic_tab.write('Residual RMS (ppm) = %f \n' % mode_rms)
+        # diagnostic_tab.write('BIC = %f \n' % mode_BIC)
+
+        try:
+            print('\nAutocorrelation time for each parameter = ',np.round(sampler.acor).astype(int))
+            # Alternatively something like: emcee.autocorr.integrated_time(sampler.chain, low=10, high=None, step=1, c=5, full_output=True,axis=0, fast=False)
+            diagnostic_tab.write('\nAutocorrelation time for each parameter = ')
+            for ac in np.round(sampler.acor).astype(int):
+                diagnostic_tab.write('%d '%ac)
+            diagnostic_tab.write('\n')
+
+            print('nsamples/median(autocorrelation time) = %d'%np.round(nsteps/np.median(sampler.acor)))
+            diagnostic_tab.write('nsamples/median(autocorrelation time) = %d \n'%(np.round(nsteps/np.median(sampler.acor))))
+        except:
+            print("\nAutocorrelation time can't be calculated - chains likely too short")
+            diagnostic_tab.write("\nAutocorrelation time can't be calculated - chains likely too short \n")
+
+        print('Acceptance fraction = %f'%(np.mean(sampler.acceptance_fraction)))
+
+        diagnostic_tab.write('Acceptance fraction = %f \n'%(np.mean(sampler.acceptance_fraction)))
+        diagnostic_tab.write('Total steps = %d \n'%(nsteps))
+
+        diagnostic_tab.close()
+
+        if not burn:
+            pickle.dump(fitted_model,open('prod_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
+            try:
+                pickle.dump(mode_model,open('parameter_modes_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
+            except:
+                pass
+
+        if burn:
+            print("...burn-in complete for bin %d"%(wavelength_bin+1))
+        else:
+            print("...production complete for bin %d"%(wavelength_bin+1))
+
+        sampler.reset()
+
+        return med,up,low,fitted_model
 
 
     # -------------------- Statistical Evaluation Methods -------------------- #
-    def chisq(self, theta, time, flux, flux_err, sys_model_inputs=None):
-        self.lightcurve.update_model(theta)
+    def chisq(self, theta=None):
+        if theta is not None:
+            self.lightcurve.update_model(theta)
+
         if self.lightcurve.GP_used:
-            mu, _ = self.lightcurve.calc_gp_component(time, flux, flux_err, sys_model_inputs)
-            resids = (flux - self.lightcurve.calc(time, sys_model_inputs) - mu) / flux_err
+            mu, _ = self.lightcurve.calc_gp_component()
+            resids = (self.lightcurve.flux - self.lightcurve.calc() - mu) / self.lightcurve.flux_err
         else:
-            resids = (flux - self.lightcurve.calc(time, sys_model_inputs)) / flux_err
+            resids = (self.lightcurve.flux - self.lightcurve.calc()) / self.lightcurve.flux_err
+
         return np.sum(resids**2)
 
-    def reducedChisq(self, theta, time, flux, flux_err, sys_model_inputs=None):
-        return self.chisq(theta, time, flux, flux_err, sys_model_inputs) / (len(flux) - self.lightcurve.npars)
+    def reducedChisq(self, theta=None):
+        return self.chisq(theta) / (len(self.lightcurve.flux) - self.lightcurve.npars)
 
-    def rms(self, theta, time, flux, flux_err=None, sys_model_inputs=None):
+    def rms(self, theta=None):
         self.lightcurve.update_model(theta)
+
         if self.lightcurve.GP_used:
-            mu, _ = self.lightcurve.calc_gp_component(time, flux, flux_err, sys_model_inputs)
-            resids = flux - self.lightcurve.calc(time, sys_model_inputs) - mu
+            mu, _ = self.lightcurve.calc_gp_component()
+            resids = (self.lightcurve.flux - self.lightcurve.calc() - mu) / self.lightcurve.flux_err
         else:
-            resids = flux - self.lightcurve.calc(time, sys_model_inputs)
+            resids = (self.lightcurve.flux - self.lightcurve.calc()) / self.lightcurve.flux_err
+
         return np.sqrt(np.mean(resids**2))
 
-    def BIC(self, theta, time, flux, flux_err, sys_model_inputs=None):
+    def BIC(self, theta=None):
         # note we can use loglikelihood_emcee also for LM fit since the statistic is independent of the sampling method
-        return self.lightcurve.npars * np.log(len(flux)) - 2 * self.loglikelihood_emcee(theta, flux, flux_err, time, sys_model_inputs)
+        return self.lightcurve.npars * np.log(len(self.lightcurve.flux)) - 2 * self.loglikelihood_emcee(theta)
 
-    def AIC(self, theta, time, flux, flux_err, sys_model_inputs=None):
-        return 2 * self.lightcurve.npars - 2 * self.loglikelihood_emcee(theta, flux, flux_err, time, sys_model_inputs)
+    def AIC(self, theta=None):
+        return 2 * self.lightcurve.npars - 2 * self.loglikelihood_emcee(theta)
 
-    def red_noise_beta(self, theta, time, flux, flux_err, sys_model_inputs=None):
+    def red_noise_beta(self, theta=None):
         # Get the RMS of the residuals using the existing function
-        rms_val = self.rms(theta, time, flux, flux_err, sys_model_inputs)
+        rms_val = self.rms(theta)
 
-        time_diff = np.diff(time).min() * 24 * 60  # in minutes
+        time_diff = np.diff(self.lightcurve.time_array).min() * 24 * 60  # in minutes
         max_points = int(np.round(30 / time_diff))
-        bins = np.linspace(time[0], time[-1], int(len(time) / max_points))
+        bins = np.linspace(self.lightcurve.time_array[0],
+                           self.lightcurve.time_array[-1],
+                           int(len(self.lightcurve.time_array) / max_points))
 
         # Rebin residuals
-        _, binned_y, _ = pu.rebin(bins, time, flux - self.lightcurve.calc(time, sys_model_inputs), flux_err, weighted=False)
+        _, binned_y, _ = pu.rebin(bins,
+                                  self.lightcurve.time_array,
+                                  self.lightcurve.flux - self.lightcurve.calc(),
+                                  self.lightcurve.flux_err, weighted=False)
+
         max_rms = np.sqrt(np.nanmean(binned_y**2))
 
         gaussian_white_noise = np.array([1, 1/np.sqrt(max_points)])
@@ -200,6 +449,14 @@ class Sampling(object):
         beta_factor = max(max_rms / gaussian_white_noise)
 
         return beta_factor
+
+    def LM_fit(self):
+
+            # Build bounds systematically
+            bnds = self.build_bounds()
+
+
+
 
     # -------------------- Parameter Opimisation -------------------- #
 def optimise_params(self, time, flux, flux_err, reset_starting_gp=False, contact1=None, contact4=None,
@@ -306,3 +563,90 @@ def optimise_params(self, time, flux, flux_err, reset_starting_gp=False, contact
                 bnds.append((self.lightcurve.kernel_priors['min_A'], self.lightcurve.kernel_priors['max_A']))
 
         return bnds
+
+
+
+def recover_quartiles_single(samples,namelist,bin_number,verbose=True,save_result=False,burn=False):
+    """
+    Function that calculates the 16th, 50th and 84th percentiles from a numpy array / emcee chain and saves these to a table.
+
+    Inputs:
+    samples - the samples/chains from emcee
+    namelist - the names of the parameters that were fit - needed for printing and saving to file
+    bin_number - the number of the wavelength bin we're considering. Necessary for printing and saving to file.
+    verbose - True/False: do we want to print the results to screen?
+    save_result - True/False: do we want to save the results to a table?
+    burn - True/False: is this a burn-in chain? If so, save to burn_parameters.dat, else save to best_fit_parameters.dat
+
+    Returns:
+    (median, upper bound, lower bound) with shape (nparameters,3)
+    """
+    lower = []
+    median = []
+    upper = []
+    mode = []
+
+    ndim = np.shape(samples)[1] # this is equal to the number of params
+
+    length_nl = len(namelist)
+
+    # generate dictionary of how many decimal places we want to round each parameter to before calculating the mode of the rounded distribution
+    namelist_decimal_places = {"t0":6,"period":6,"k":6,"aRs":2,"inc":2,"ecc":3,"omega":2,\
+                               "u1":2,"u2":2,"u3":2,"u4":2,"f":4,"s":3,"A":3,"step1":3,"step2":3,"breakpoint":0,"lniL":2}
+
+    # now pad the dictionray with the systematics coefficients which could be a large number of parameters (although much less than the 100 allowed for below)
+    for i in range(100):
+        namelist_decimal_places["r%s"%(i)] = 2
+        namelist_decimal_places["c%s"%(i)] = 6
+        namelist_decimal_places["lniL_%s"%(i)] = 2
+
+    if save_result:
+        if bin_number == 1:
+            if burn:
+                new_tab = open('burn_parameters.txt','w')
+                # new_tab_2 = open('parameter_modes_burn.txt','w')
+            else:
+                new_tab = open('best_fit_parameters.txt','w')
+                new_tab_2 = open('parameter_modes_prod.txt','w')
+        else:
+            if burn:
+                new_tab = open('burn_parameters.txt','a')
+                # new_tab_2 = open('parameter_modes_burn.txt','a')
+            else:
+                new_tab = open('best_fit_parameters.txt','a')
+                new_tab_2 = open('parameter_modes_prod.txt','a')
+
+    for i in range(ndim):
+        par = samples[:,i]
+        lolim,best,uplim = np.percentile(par,[16,50,84])
+        lower.append(lolim)
+        median.append(best)
+        upper.append(uplim)
+
+        # calculate mode of rounded sample array
+        key = namelist[i].replace('$','').replace("\\",'')
+        key = key.split("_")[0]
+        rounded_par = np.round(par,namelist_decimal_places[key])
+        mode_value, mode_count = stats.mode(rounded_par,keepdims=True)
+        mode.append(mode_value[0])
+
+        if save_result:
+            new_tab.write("%s_%d = %f + %f - %f \n"%(namelist[i].replace('$','').replace("\\",''),bin_number,best,uplim-best,best-lolim))
+            if not burn:
+                new_tab_2.write("%s_%d = %f (%d counts = %d%%) \n"%(namelist[i].replace('$','').replace("\\",''),bin_number,mode_value[0],mode_count[0],100*mode_count[0]/len(par)))
+
+        if verbose:
+            print("%s_%d = %f + %f - %f"%(namelist[i].replace('$','').replace("\\",''),bin_number,best,uplim-best,best-lolim))
+            if not burn:
+                print("%s_%d (mode of posterior) = %f (%d counts = %.2f%%) \n"%(namelist[i].replace('$','').replace("\\",''),bin_number,mode_value[0],mode_count[0],100*mode_count[0]/len(par)))
+
+    if save_result:
+        print('\nSaving best fit parameters to table...\n')
+        new_tab.write('#------------------ \n')
+        new_tab.close()
+
+        if not burn:
+            new_tab_2.write('#------------------ \n')
+            new_tab_2.close()
+
+    return np.array(median),np.array(upper),np.array(lower),np.array(mode)
