@@ -75,6 +75,9 @@ class LightcurveModel(object):
         elif self.transit_model_package == 'catwoman':
             from fitting_utils import CatwomanModel as cwm
             self.transit_model = cwm.CatwomanModel(self.param_dict, self.param_list_free, self.transit_model_inputs, self.time_array)
+        elif self.transit_model_package == 'fleck':
+            from fitting_utils import FleckSpotModel as fsm
+            self.transit_model = fsm.FleckModel(self.param_dict, self.param_list_free, self.transit_model_inputs, self.time_array)
         
         from fitting_utils import systematics_model as sm
         self.systematic_model = sm.SystematicsModel(self.param_dict, self.systematic_model_inputs,
@@ -134,6 +137,12 @@ class LightcurveModel(object):
     def update_model(self,theta):
         for i in range(len(theta)):
             self.param_dict[self.param_list_free[i]].currVal = theta[i]
+        
+        self.transit_model.update_model(self.param_dict)
+        self.systematic_model.update_model(self.param_dict)
+        
+        if self.GP_used:
+            self.GP_model.update_model(self.param_dict)
         return 
         
 
