@@ -618,7 +618,7 @@ def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mas
     A function that generates/recovers the transmission spectrum from the table of best fit parameters resulting from pm_fit.py and gp_fit.py.
 
     Input:
-    directory - the directory containing the best_fit_parameters.dat, fitting_input.txt, prod_model*.pickle and LD_coefficients.dat files
+    directory - the directory containing the best_fit_parameters.dat, fitting_input.txt, fitted_lightcurve_model*.pickle and LD_coefficients.dat files
     save_fig - True/False: save the outputted transmission spectrum or not? Default=False
     plot_fig - True/False: plot the outputted transmission spectrum or not? If False, code returns numpy arrays of Rp/Rs and errors. Default=True
     bin_mask - set to a list of integers to mask certain wavelength bins from the transmission spectrum if desired. Indexed from 0. Default = None (no masking).
@@ -1000,7 +1000,7 @@ def expected_vs_calculated_ldcs(directory='.',save_fig=False,bin_mask=None):
     except:
         best_dict = parseInput('%sbest_fit_parameters_GP.txt'%directory)
 
-    model_list = glob.glob('%s/prod_model_*.pickle'%directory)
+    model_list = glob.glob('%s/fitted_lightcurve_model_*.pickle'%directory)
     nbins = len(model_list)
 
     completed_bins = load_completed_bins(directory,return_index_only=True,mask=bin_mask)
@@ -1313,7 +1313,7 @@ def load_completed_bins(directory=".",start_bin=None,end_bin=None,mask=None,retu
         x,y,e,e_r,m,m_in,w,we,completed_bins,nbins - arrays of time, flux, error, rescaled errors, TransitGPPM models, model input files, wavelength bin centres, wavelength bin widths, the indices of the completed bin fits, the number of bins with completed fits"
     """
 
-    model_files = np.array(sorted(glob.glob('%s/prod_model_*.pickle'%directory)))
+    model_files = np.array(sorted(glob.glob('%s/fitted_lightcurve_model_*.pickle'%directory)))
 
     # determine the completed bins by finding the XXX number in the "_wbXXX" in the file names
     completed_bins = np.array([int(m.split("wb")[-1].split(".")[0]) for m in model_files])
