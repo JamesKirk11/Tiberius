@@ -31,7 +31,7 @@ class BatmanModel(object):
         self.batman_params = batman.TransitParams()
 
         all_params = list(param_dict.keys())
-        
+
         for i in range(len(all_params)):
             if all_params[i] in self.param_list_free and all_params[i] not in ld_list:
                 setattr(self.batman_params, all_params[i], self.param_dict[all_params[i]].currVal)
