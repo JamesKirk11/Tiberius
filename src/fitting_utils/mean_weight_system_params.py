@@ -15,8 +15,8 @@ parser.add_argument('-sp_only','--sys_params_only',help="Use this if wanting to 
 parser.add_argument('-no_mean','--no_mean',help="Use this if wanting to plot only parameters without calculating and plotting the weighted mean",action="store_true")
 parser.add_argument('-s','--save_fig',help="Use this if wanting to save the figure",action="store_true")
 parser.add_argument('-t','--title',help='use this to define the filename of the saved figure, overwriting the default')
-parser.add_argument('-k','--k',help='use this to plot a horizontal line at a desired value of k (Rp/Rs)',type=float)
-parser.add_argument('-aRs','--aRs',help='use this to plot a horizontal line at a desired value of aRs (a/Rs)',type=float)
+parser.add_argument('-rp','--rp',help='use this to plot a horizontal line at a desired value of rp (Rp/Rs)',type=float)
+parser.add_argument('-a','--a',help='use this to plot a horizontal line at a desired value of a (a/Rs)',type=float)
 parser.add_argument('-t0','--t0',help='use this to plot a horizontal line at a desired value of t0 (time of mid-transit)',type=float)
 parser.add_argument('-t0_lit','--t0_lit',help='use this to define a literature value of t0 (time of mid-transit), for which all t0s are compared with',type=float)
 parser.add_argument('-inc','--inc',help='use this to plot a horizontal line at a desired value of inc (inclination)',type=float)
@@ -41,7 +41,7 @@ for i,t in enumerate(args.best_fit_tabs):
         value_lo = float(lo[j])
 
         if args.sys_params_only:
-            if new_key not in ["t0","inc","k","u1","u2","aRs","ecc","omega"]:
+            if new_key not in ["t0","inc","rp","u1","u2","a","ecc","w"]:
                 continue
 
         if i == 0:
@@ -109,11 +109,11 @@ for k in best_fit_dict.keys():
         ax.errorbar(ntables+1,weighted_mean_dict[k],yerr=weighted_mean_dict["%s_err"%k],color='r',fmt='o',mec='k',capsize=3,lw=2)
         ax.axhline(weighted_mean_dict[k],ls='--',color='k',zorder=0)
 
-    if k == "k" and args.k is not None:
-        ax.axhline(args.k,ls='--',color='r',lw=2,zorder=0)
+    if k == "rp" and args.rp is not None:
+        ax.axhline(args.rp,ls='--',color='r',lw=2,zorder=0)
 
-    if k == "aRs" and args.aRs is not None:
-        ax.axhline(args.aRs,ls='--',color='r',lw=2,zorder=0)
+    if k == "a" and args.a is not None:
+        ax.axhline(args.a,ls='--',color='r',lw=2,zorder=0)
 
     if k == "inc" and args.inc is not None:
         ax.axhline(args.inc,ls='--',color='r',lw=2,zorder=0)
