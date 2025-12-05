@@ -173,25 +173,6 @@ class Sampling(object):
         namelist = self.param_list_free
         nwalkers_total = nwalkers * npars
 
-        # if wavelength_bin > 0 and burn:
-        #     diagnostic_tab = open('burn_statistics.txt','a')
-        #
-        # elif wavelength_bin > 0 and not burn:
-        #     diagnostic_tab = open('prod_statistics.txt','a')
-        #
-        # else: # starting fresh
-        #     if burn:
-        #         diagnostic_tab = open('burn_statistics.txt','w')
-        #     else:
-        #         diagnostic_tab = open('prod_statistics.txt','w')
-        #
-        # diagnostic_tab.close()
-        #
-        # if burn:
-        #     diagnostic_tab = open('burn_statistics.txt','a')
-        # else:
-        #     diagnostic_tab = open('prod_statistics.txt','a')
-
         # Scatter walkers around starting parameters
         starting_values = np.array([self.param_dict[k].currVal for k in self.param_list_free])
         if burn:
@@ -199,8 +180,6 @@ class Sampling(object):
         else:
             p0 = [starting_values + 1e-8*np.random.randn(npars) for j in range(nwalkers_total)]
 
-        # Initialize sampler
-        # sampler = emcee.EnsembleSampler(nwalk_total, npars, self.logprobability_emcee)
         # intiate emcee sampler object
         if npars > 1:
             sampler = emcee.EnsembleSampler(nwalkers_total,npars,self.logprobability_emcee,threads=nthreads)
@@ -290,89 +269,10 @@ class Sampling(object):
 
         self.lightcurve.update_model(med)
 
-        # fitted_chi2 = self.chisq(med)
-        # fitted_reducedChi2 = self.reducedChisq(med)
-        # fitted_rms = self.rms(med)*1e6
-        # fitted_lnlike = self.loglikelihood_emcee(med)
-        # fitted_lnprob = self.logprobability_emcee(med)
-        # fitted_BIC = self.BIC(med)
-        # fitted_AIC = self.AIC(med)
-        #
-        # print("\n--- Using medians of posteriors ---")
-        # print('chi2 = %f' % fitted_chi2)
-        # print('Reduced chi2 = %f' % fitted_reducedChi2)
-        # print('Lnlikelihood = %f' % fitted_lnlike)
-        # print('Lnprobability = %f' % fitted_lnprob)
-        # print('Residual RMS (ppm) = %f' % fitted_rms)
-        # print('BIC = %f' % fitted_BIC)
-        # print('AIC = %f' % fitted_AIC)
-        #
-        # diagnostic_tab.write("\n### Bin %d ###\n" % (wavelength_bin+1))
-        # diagnostic_tab.write("\n--- Using medians of posteriors --- \n")
-        # diagnostic_tab.write('Chi2 = %f \n' % fitted_chi2)
-        # diagnostic_tab.write('Reduced chi2 = %f \n' % fitted_reducedChi2)
-        # diagnostic_tab.write('Lnlikelihood = %f \n' % fitted_lnlike)
-        # diagnostic_tab.write('Lnprobability = %f \n' % fitted_lnprob)
-        # diagnostic_tab.write('Residual RMS (ppm) = %f \n' % fitted_rms)
-        # diagnostic_tab.write('BIC = %f \n' % fitted_BIC)
-        # diagnostic_tab.write('AIC = %f \n' % fitted_AIC)
-
-        # mode_model = copy.deepcopy(self.lightcurve)
-        # mode_model = self.lightcurve.update_model(mode)
-        #
-        # mode_chi2 = mode_model.chisq(x,y,e)
-        # mode_reducedChi2 = mode_model.reducedChisq(x,y,e)
-        # mode_rms = mode_model.rms(x,y,e)*1e6
-        # mode_lnlike = mode_model.lnlike(x,y,e)
-        # mode_lnprob = lnprob_emcee(mode,mode_model,x,y,e,None,sys_priors,typeII)
-        # mode_BIC = mode_model.BIC(x,y,e)
-        #
-        # print("\n--- Using modes of posteriors ---")
-        # print('chi2 = %f' % mode_chi2)
-        # print('Reduced chi2 = %f' % mode_reducedChi2)
-        # print('Lnlikelihood = %f' % mode_lnlike)
-        # print('Lnprobability = %f' % mode_lnprob)
-        # print('Residual RMS (ppm) = %f' % mode_rms)
-        # print('BIC = %f' % mode_BIC)
-        #
-        # diagnostic_tab.write("\n--- Using modes of posteriors --- \n")
-        # diagnostic_tab.write('Chi2 = %f \n' % mode_chi2)
-        # diagnostic_tab.write('Reduced chi2 = %f \n' % mode_reducedChi2)
-        # diagnostic_tab.write('Lnlikelihood = %f \n' % mode_lnlike)
-        # diagnostic_tab.write('Lnprobability = %f \n' % mode_lnprob)
-        # diagnostic_tab.write('Residual RMS (ppm) = %f \n' % mode_rms)
-        # diagnostic_tab.write('BIC = %f \n' % mode_BIC)
-
         write_fit_diagnostics(self,wavelength_bin,emcee_fit=True,burn=burn,emcee_sampler=sampler,nsteps=nsteps)
-
-
-        # try:
-        #     print('\nAutocorrelation time for each parameter = ',np.round(sampler.acor).astype(int))
-        #     # Alternatively something like: emcee.autocorr.integrated_time(sampler.chain, low=10, high=None, step=1, c=5, full_output=True,axis=0, fast=False)
-        #     diagnostic_tab.write('\nAutocorrelation time for each parameter = ')
-        #     for ac in np.round(sampler.acor).astype(int):
-        #         diagnostic_tab.write('%d '%ac)
-        #     diagnostic_tab.write('\n')
-        #
-        #     print('nsamples/median(autocorrelation time) = %d'%np.round(nsteps/np.median(sampler.acor)))
-        #     diagnostic_tab.write('nsamples/median(autocorrelation time) = %d \n'%(np.round(nsteps/np.median(sampler.acor))))
-        # except:
-        #     print("\nAutocorrelation time can't be calculated - chains likely too short")
-        #     diagnostic_tab.write("\nAutocorrelation time can't be calculated - chains likely too short \n")
-        #
-        # print('Acceptance fraction = %f'%(np.mean(sampler.acceptance_fraction)))
-        #
-        # diagnostic_tab.write('Acceptance fraction = %f \n'%(np.mean(sampler.acceptance_fraction)))
-        # diagnostic_tab.write('Total steps = %d \n'%(nsteps))
-        #
-        # diagnostic_tab.close()
 
         if not burn:
             pickle.dump(self.lightcurve,open('fitted_lightcurve_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
-            # try:
-            #     pickle.dump(mode_model,open('parameter_modes_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
-            # except:
-            #     pass
 
         if burn:
             print("...burn-in complete for bin %d"%(wavelength_bin+1))
@@ -626,158 +526,131 @@ def write_fit_diagnostics(sampling_model,wavelength_bin,emcee_fit=False,burn=Fal
 
 
 
-def nll(p,model,y,full_model=False,x=None,e=None,sys_priors=None,typeII=False,LM_fit=False):
-    """Function to calculate the negative ln-likelihood of the george.GP object. This is a neccessary step for optimising the GP hyperparameters and is following the procedure given in the george documentation.
+def update_prior_file(input_prior_file, best_fit_file="best_fit_parameters.txt"):
+    """
+    Create a new prior file where values are replaced by best-fit medians and uncertainties.
 
-    Inputs:
-    p - the parameter values of the model
-    model - the TransitModelGPPM object
-    y - the y (flux) data points at which to evaluate the model
-    full_model - True/False - are we fitting the full model (including mean/transit model params) or just the GP hyperparams?
-    x - the array of times, needed for full_model=True
-    e - the array of flux uncertainties, needed for full_model=True
-    sys_priors - the priors on the system parameters for full_model=True, default=None (no priors)
-    typeII - is this a typeII maximum likelihood fit?
-    LM_fit - True/False, are we using a Levenberg-Marquardt fit? If so, we need to return the weighted residuals, not likelihood/chi2
+    Rules:
+    - If prior_type == 'N': mean = median, sigma = avg_uncertainty
+    - If prior_type == 'U' AND parameter is fixed: keep old bounds unchanged
+    - If prior_type == 'U' AND parameter is free BUT "preserve U range": keep bounds unchanged
+    - If prior_type == 'U' AND not preserving range:
+            lower = median - err
+            upper = median + err
 
-    Returns:
-    if full_model=False:
-        the negative ln-likelihood evaluated by george
-    if full_model and not LM_fit:
-        the chi2 of the model fit
-    if full_model and LM_fit:
-        the weighted residuals of the model fit"""
+    - Special: t0, a, inc, per are switched to "fixed"
+    """
 
-    if full_model:
-        for i in range(model.npars):
-            model[i] = p[i]
-        if np.isfinite(model.lnprior(sys_priors)):
-            if LM_fit:
-                if model.GP_used: # note: LM fit is not working 100% with GPs
-                    mu, std = model.calc_gp_component(x,y,e)
-                    residuals = (y - model.calc(x) - mu)
-                else:
-                    residuals = (y-model.calc(x))/e
-                return residuals
+    # -------------------------------------------
+    # Load best-fit parameters
+    # -------------------------------------------
+    bestfit = {}
+    with open(best_fit_file, "r") as bf:
+        for line in bf:
+            if "=" not in line:
+                continue
+
+            parts = line.split()
+            # Format: rp_1 = 0.092987 + 0.000074 - 0.000074
+            name = parts[0].replace("_1", "")
+            median = float(parts[2])
+            plus = float(parts[4])
+            minus = float(parts[6])
+            avg_unc = 0.5*(plus + minus)
+
+            bestfit[name] = (median, plus, minus, avg_unc)
+
+    # -------------------------------------------
+    # Output file
+    # -------------------------------------------
+    new_prior_file = input_prior_file.replace(".txt", "_wb.txt")
+
+    # Parameters that must be fixed
+    force_fix = {"t0", "a", "inc", "per"}
+
+    with open(input_prior_file, "r") as infile, open(new_prior_file, "w") as outfile:
+
+        for line in infile:
+            stripped = line.strip()
+
+            # Keep blank lines or comments
+            if stripped == "" or stripped.startswith("#"):
+                outfile.write(line)
+                continue
+
+            parts = line.split()
+            if len(parts) < 6:
+                outfile.write(line)
+                continue
+
+            pname, fitflag, value, p1, p2, ptype = parts[:6]
+            remainder = parts[6:]  # preserve trailing comments or columns
+
+            # Not a parameter present in best-fit file
+            if pname not in bestfit:
+                outfile.write(line)
+                continue
+
+            median, plus, minus, avg_unc = bestfit[pname]
+
+            # Determine if this param should become fixed
+            is_forced_fixed = pname in force_fix
+
+            # -------------------------------------------
+            # If forced fixed
+            # -------------------------------------------
+            if is_forced_fixed:
+                new_fitflag = "fixed"
+                new_value = f"{median:.8f}"
+
+                # Preserve original priors because they are irrelevant once fixed
+                new_p1 = p1
+                new_p2 = p2
+
+            # -------------------------------------------
+            # If not forced fixed
+            # -------------------------------------------
             else:
-                chi2 = model.chisq(x,y,e)
-                return chi2
-        else:
-            if LM_fit:
-                return np.ones_like(y)*np.inf
-            return np.inf
 
-    else:
-        model.set_parameter_vector(p)
-        ll = model.lnlikelihood(y, quiet=True)
+                new_fitflag = fitflag  # usually "free"
 
-        # The scipy optimizer doesn't play well with infinities.
-        return -ll if np.isfinite(ll) else 1e25
+                if ptype == "N":
+                    # Gaussian prior: mean = median ; sigma = avg unc
+                    new_value = f"{median:.8f}"
+                    new_p1 = f"{median:.8f}"
+                    new_p2 = f"{avg_unc:.8f}"
 
-def grad_nll(p,gp,y):
-    """A function to compute the gradient of the objective function/ln-likelihood. This is a neccessary step for optimising the GP hyperparameters and is following the procedure given in the george documentation.
+                elif ptype == "U":
 
-    Inputs:
-    p - the GP hyperparameter values
-    gp - the GP object
-    y - the y (flux) data points at which to evaluate the GP
+                    # Preserve range for all uniform priors UNLESS you explicitly tighten
+                    preserve_range = True
 
-    Returns:
-    the negative grad_lnlikelihood evaluated by george"""
+                    if preserve_range:
+                        new_value = f"{median:.8f}"
+                        new_p1 = p1
+                        new_p2 = p2
+                    else:
+                        # Tighten the bounds to median ± error
+                        new_value = f"{median:.8f}"
+                        new_p1 = f"{(median - minus):.8f}"
+                        new_p2 = f"{(median + plus):.8f}"
 
-    gp.set_parameter_vector(p)
-    return -gp.grad_lnlikelihood(y, quiet=True)
+                else:
+                    # Unknown prior → keep original
+                    new_value = f"{median:.8f}"
+                    new_p1 = p1
+                    new_p2 = p2
 
+            # -------------------------------------------
+            # Construct output line
+            # -------------------------------------------
+            newcols = [pname, new_fitflag, new_value, new_p1, new_p2, ptype]
+            if remainder:
+                newcols += remainder
 
-    # -------------------- Parameter Opimisation -------------------- #
-def optimise_params(self, time, flux, flux_err, reset_starting_gp=False, contact1=None, contact4=None,
-                    full_model=False, sys_priors=None, verbose=True, LM_fit=False):
-    """
-    Optimise model parameters using Nelder-Mead or Levenberg-Marquardt.
-    Can optimise GP hyperparameters only, full transit model, or all together.
-    """
+            outfile.write("    ".join(newcols) + "\n")
 
-    # Select data for GP-only optimisation if out-of-transit
-    if not full_model and contact1 is not None:
-        mask = np.ones_like(time, dtype=bool)
-        mask[contact1:contact4] = False
-        time_opt, flux_opt, flux_err_opt = time[mask], flux[mask], flux_err[mask]
-        kern_inputs = [ki[mask] for ki in self.lightcurve.systematics_model_inputs]
-        evaluated_model = self.calc(time)[mask]
-    else:
-        time_opt, flux_opt, flux_err_opt = time, flux, flux_err
-        kern_inputs = self.lightcurve.systematics_model_inputs
-        evaluated_model = self.calc(time)
-
-    y = flux_opt - evaluated_model if not full_model else flux_opt
-    error = flux_err_opt
-
-    # Construct GP if used
-    if self.lightcurve.GP_used:
-        gp = self.lightcurve.construct_gp()
-        if self.lightcurve.gp_ndim > 1:
-            gp.compute(np.array(kern_inputs).T, error)
-        else:
-            gp.compute(kern_inputs[0], error)
-        if verbose:
-            print('Initial ln-likelihood =', gp.lnlikelihood(y))
-            print('Initial GP hyperparams =', gp.get_parameter_vector())
-
-    # Initial parameter vector
-    p0 = gp.get_parameter_vector() if self.lightcurve.GP_used and not full_model else self.extract_model_values()
-
-    # Build bounds systematically
-    bnds = self.build_bounds(full_model=full_model)
-
-    # Verbosity
-    disp = verbose and not LM_fit
-
-    # Run optimisation
-    if not LM_fit:
-        results = optimize.minimize(
-            nll, p0, args=(self, y, True, time_opt, flux_err_opt, sys_priors, False),
-            method='Nelder-Mead', bounds=tuple(bnds), options=dict(maxiter=1e4, disp=disp)
-        )
-        self.lightcurve.update_model(results.x)
-        return self, results.x
-    else:
-        results = optimize.least_squares(
-            nll, p0, args=(self, y, True, time_opt, flux_err_opt, sys_priors, False, True),
-            method='lm'
-        )
-        self.lightcurve.update_model(results.x)
-        try:
-            J = results.jac
-            cov = np.linalg.inv(J.T.dot(J)) * self.reducedChisq(time, flux, flux_err)
-            uncertainties = np.sqrt(np.diagonal(cov))
-        except:
-            print("Unable to estimate uncertainties from covariance matrix")
-            uncertainties = np.zeros_like(results.x)
-        return self, results.x, uncertainties
-
-
-# def update_prior_file(input_prior_file,lightcurve_model,best_fit_params):
-#
-#     import shutil
-#
-#     shutil.copyfile(input_prior_file, new_prior_file_name)
-#
-#     new_prior_file_name = input_prior_file.split(".txt")[0] + "_wb.txt"
-#
-#     new_prior_file = open(new_prior_file_name,"a")
-#
-#     fitted_param_names = np.loadtxt("best_fit_parameters.txt",usecols=0,dtype="str").replace("_1","")
-#     param_medians,param_uncertainties =
-#
-#     for i,line in enumerate(new_prior_file):
-#
-#         if line[1] == "free":
-#             line[2] = lightcurve_model[]
-
-
-
-
-
+    return new_prior_file
 
 
 
