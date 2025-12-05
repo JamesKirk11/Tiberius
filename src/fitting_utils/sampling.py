@@ -106,7 +106,8 @@ class Sampling(object):
 
     def loglikelihood_emcee(self, theta):
         """Compute log likelihood using the lightcurve residuals and errors."""
-        self.lightcurve.update_model(theta)
+        if theta is not None:
+            self.lightcurve.update_model(theta)
         residuals = self.lightcurve.calc_residuals()
         flux_error = self.lightcurve.return_flux_err()
         N = len(residuals)
@@ -172,24 +173,24 @@ class Sampling(object):
         namelist = self.param_list_free
         nwalkers_total = nwalkers * npars
 
-        if wavelength_bin > 0 and burn:
-            diagnostic_tab = open('burn_statistics.txt','a')
-
-        elif wavelength_bin > 0 and not burn:
-            diagnostic_tab = open('prod_statistics.txt','a')
-
-        else: # starting fresh
-            if burn:
-                diagnostic_tab = open('burn_statistics.txt','w')
-            else:
-                diagnostic_tab = open('prod_statistics.txt','w')
-
-        diagnostic_tab.close()
-
-        if burn:
-            diagnostic_tab = open('burn_statistics.txt','a')
-        else:
-            diagnostic_tab = open('prod_statistics.txt','a')
+        # if wavelength_bin > 0 and burn:
+        #     diagnostic_tab = open('burn_statistics.txt','a')
+        #
+        # elif wavelength_bin > 0 and not burn:
+        #     diagnostic_tab = open('prod_statistics.txt','a')
+        #
+        # else: # starting fresh
+        #     if burn:
+        #         diagnostic_tab = open('burn_statistics.txt','w')
+        #     else:
+        #         diagnostic_tab = open('prod_statistics.txt','w')
+        #
+        # diagnostic_tab.close()
+        #
+        # if burn:
+        #     diagnostic_tab = open('burn_statistics.txt','a')
+        # else:
+        #     diagnostic_tab = open('prod_statistics.txt','a')
 
         # Scatter walkers around starting parameters
         starting_values = np.array([self.param_dict[k].currVal for k in self.param_list_free])
@@ -289,32 +290,32 @@ class Sampling(object):
 
         self.lightcurve.update_model(med)
 
-        fitted_chi2 = self.chisq(med)
-        fitted_reducedChi2 = self.reducedChisq(med)
-        fitted_rms = self.rms(med)*1e6
-        fitted_lnlike = self.loglikelihood_emcee(med)
-        fitted_lnprob = self.logprobability_emcee(med)
-        fitted_BIC = self.BIC(med)
-        fitted_AIC = self.AIC(med)
-
-        print("\n--- Using medians of posteriors ---")
-        print('chi2 = %f' % fitted_chi2)
-        print('Reduced chi2 = %f' % fitted_reducedChi2)
-        print('Lnlikelihood = %f' % fitted_lnlike)
-        print('Lnprobability = %f' % fitted_lnprob)
-        print('Residual RMS (ppm) = %f' % fitted_rms)
-        print('BIC = %f' % fitted_BIC)
-        print('AIC = %f' % fitted_AIC)
-
-        diagnostic_tab.write("\n### Bin %d ###\n" % (wavelength_bin+1))
-        diagnostic_tab.write("\n--- Using medians of posteriors --- \n")
-        diagnostic_tab.write('Chi2 = %f \n' % fitted_chi2)
-        diagnostic_tab.write('Reduced chi2 = %f \n' % fitted_reducedChi2)
-        diagnostic_tab.write('Lnlikelihood = %f \n' % fitted_lnlike)
-        diagnostic_tab.write('Lnprobability = %f \n' % fitted_lnprob)
-        diagnostic_tab.write('Residual RMS (ppm) = %f \n' % fitted_rms)
-        diagnostic_tab.write('BIC = %f \n' % fitted_BIC)
-        diagnostic_tab.write('AIC = %f \n' % fitted_AIC)
+        # fitted_chi2 = self.chisq(med)
+        # fitted_reducedChi2 = self.reducedChisq(med)
+        # fitted_rms = self.rms(med)*1e6
+        # fitted_lnlike = self.loglikelihood_emcee(med)
+        # fitted_lnprob = self.logprobability_emcee(med)
+        # fitted_BIC = self.BIC(med)
+        # fitted_AIC = self.AIC(med)
+        #
+        # print("\n--- Using medians of posteriors ---")
+        # print('chi2 = %f' % fitted_chi2)
+        # print('Reduced chi2 = %f' % fitted_reducedChi2)
+        # print('Lnlikelihood = %f' % fitted_lnlike)
+        # print('Lnprobability = %f' % fitted_lnprob)
+        # print('Residual RMS (ppm) = %f' % fitted_rms)
+        # print('BIC = %f' % fitted_BIC)
+        # print('AIC = %f' % fitted_AIC)
+        #
+        # diagnostic_tab.write("\n### Bin %d ###\n" % (wavelength_bin+1))
+        # diagnostic_tab.write("\n--- Using medians of posteriors --- \n")
+        # diagnostic_tab.write('Chi2 = %f \n' % fitted_chi2)
+        # diagnostic_tab.write('Reduced chi2 = %f \n' % fitted_reducedChi2)
+        # diagnostic_tab.write('Lnlikelihood = %f \n' % fitted_lnlike)
+        # diagnostic_tab.write('Lnprobability = %f \n' % fitted_lnprob)
+        # diagnostic_tab.write('Residual RMS (ppm) = %f \n' % fitted_rms)
+        # diagnostic_tab.write('BIC = %f \n' % fitted_BIC)
+        # diagnostic_tab.write('AIC = %f \n' % fitted_AIC)
 
         # mode_model = copy.deepcopy(self.lightcurve)
         # mode_model = self.lightcurve.update_model(mode)
@@ -342,29 +343,32 @@ class Sampling(object):
         # diagnostic_tab.write('Residual RMS (ppm) = %f \n' % mode_rms)
         # diagnostic_tab.write('BIC = %f \n' % mode_BIC)
 
-        try:
-            print('\nAutocorrelation time for each parameter = ',np.round(sampler.acor).astype(int))
-            # Alternatively something like: emcee.autocorr.integrated_time(sampler.chain, low=10, high=None, step=1, c=5, full_output=True,axis=0, fast=False)
-            diagnostic_tab.write('\nAutocorrelation time for each parameter = ')
-            for ac in np.round(sampler.acor).astype(int):
-                diagnostic_tab.write('%d '%ac)
-            diagnostic_tab.write('\n')
+        write_fit_diagnostics(self,wavelength_bin,emcee_fit=True,burn=burn,emcee_sampler=sampler,nsteps=nsteps)
 
-            print('nsamples/median(autocorrelation time) = %d'%np.round(nsteps/np.median(sampler.acor)))
-            diagnostic_tab.write('nsamples/median(autocorrelation time) = %d \n'%(np.round(nsteps/np.median(sampler.acor))))
-        except:
-            print("\nAutocorrelation time can't be calculated - chains likely too short")
-            diagnostic_tab.write("\nAutocorrelation time can't be calculated - chains likely too short \n")
 
-        print('Acceptance fraction = %f'%(np.mean(sampler.acceptance_fraction)))
-
-        diagnostic_tab.write('Acceptance fraction = %f \n'%(np.mean(sampler.acceptance_fraction)))
-        diagnostic_tab.write('Total steps = %d \n'%(nsteps))
-
-        diagnostic_tab.close()
+        # try:
+        #     print('\nAutocorrelation time for each parameter = ',np.round(sampler.acor).astype(int))
+        #     # Alternatively something like: emcee.autocorr.integrated_time(sampler.chain, low=10, high=None, step=1, c=5, full_output=True,axis=0, fast=False)
+        #     diagnostic_tab.write('\nAutocorrelation time for each parameter = ')
+        #     for ac in np.round(sampler.acor).astype(int):
+        #         diagnostic_tab.write('%d '%ac)
+        #     diagnostic_tab.write('\n')
+        #
+        #     print('nsamples/median(autocorrelation time) = %d'%np.round(nsteps/np.median(sampler.acor)))
+        #     diagnostic_tab.write('nsamples/median(autocorrelation time) = %d \n'%(np.round(nsteps/np.median(sampler.acor))))
+        # except:
+        #     print("\nAutocorrelation time can't be calculated - chains likely too short")
+        #     diagnostic_tab.write("\nAutocorrelation time can't be calculated - chains likely too short \n")
+        #
+        # print('Acceptance fraction = %f'%(np.mean(sampler.acceptance_fraction)))
+        #
+        # diagnostic_tab.write('Acceptance fraction = %f \n'%(np.mean(sampler.acceptance_fraction)))
+        # diagnostic_tab.write('Total steps = %d \n'%(nsteps))
+        #
+        # diagnostic_tab.close()
 
         if not burn:
-            pickle.dump(self.lightcurve,open('prod_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
+            pickle.dump(self.lightcurve,open('fitted_lightcurve_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
             # try:
             #     pickle.dump(mode_model,open('parameter_modes_model_wb%s.pickle'%(str(wavelength_bin+1).zfill(4)),'wb'))
             # except:
@@ -379,6 +383,87 @@ class Sampling(object):
 
         return self.lightcurve
 
+    ### -------- Levenberg-Marquadt methods -------- ###
+    def run_LM(self,wavelength_bin=0):
+        """
+        Run Levenberg-Marquardt optimization to minimize residuals
+        """
+
+        # Initial parameter vector
+        theta0 = np.array([self.param_dict[p].currVal for p in self.param_list_free])
+
+        # Define residual function
+        def residuals(theta):
+
+            self.lightcurve.update_model(theta)
+
+            prior_val = self.logprior_emcee(theta)
+
+            if not np.isfinite(prior_val):
+                return np.ones_like(self.lightcurve.flux_array)*np.inf
+
+            return self.lightcurve.calc_residuals()/self.lightcurve.flux_err
+
+        # Run Levenberg-Marquardt fit
+        result = optimize.least_squares(residuals, theta0, method='lm')
+
+        # Update model with best-fit parameters
+        self.lightcurve.update_model(result.x)
+
+        # Estimate uncertainties from covariance matrix
+        try:
+            J = result.jac
+            cov = np.linalg.inv(J.T.dot(J))*self.reducedChisq()
+            uncertainties = np.sqrt(np.diag(cov))
+        except:
+            print("Unable to estimate uncertainties from Jacobian")
+            uncertainties = np.zeros_like(result.x)
+
+        write_fit_diagnostics(self,wavelength_bin,LM_fit=True)
+        save_LM_results(self.lightcurve,result.x,uncertainties,wavelength_bin,verbose=True)
+
+        return self.lightcurve
+
+
+    def build_bounds(self, full_model=False):
+        """
+        Build parameter bounds using prior definitions and GP/kernel settings.
+        Returns a list of (min, max) tuples in the order of self.param_list_free.
+        """
+        bnds = []
+
+        for name in self.param_list_free:
+
+            # Use prior definitions if available
+            prior_type = self.prior_dict.get(f'{name}_prior', None)
+            if prior_type == 'U':
+                bnds.append((self.prior_dict[f'{name}_1'], self.prior_dict[f'{name}_2']))
+            elif prior_type == 'N':
+                # Optional: ±3σ around mean as bounds
+                mu, sigma = self.prior_dict[f'{name}_1'], self.prior_dict[f'{name}_2']
+                bnds.append((mu - 3*sigma, mu + 3*sigma))
+            else:
+                # Fallback: ±10% around current value
+                curr = self.pars[name].currVal
+                bnds.append((curr*0.9, curr*1.1))
+
+        # GP bounds
+        if self.lightcurve.GP_used:
+            if self.lightcurve.wn_kernel:
+                bnds.append((np.log((self.lightcurve.kernel_priors['min_WN_sigma'])**2),
+                             np.log((self.lightcurve.kernel_priors['max_WN_sigma'])**2)))
+
+            for i in range(self.gp_ndim):
+                for key in [f'min_lniL_{i+1}', f'max_lniL_{i+1}']:
+                    if key in self.lightcurve.kernel_priors:
+                        bnds.append((self.lightcurve.kernel_priors[key], self.lightcurve.kernel_priors[key]))
+
+            # GP amplitude
+            if 'min_A' in self.lightcurve.kernel_priors and 'max_A' in self.lightcurve.kernel_priors:
+                bnds.append((self.lightcurve.kernel_priors['min_A'], self.lightcurve.kernel_priors['max_A']))
+
+        return bnds
+
 
     # -------------------- Statistical Evaluation Methods -------------------- #
     def chisq(self, theta=None):
@@ -387,9 +472,9 @@ class Sampling(object):
 
         if self.lightcurve.GP_used:
             mu, _ = self.lightcurve.calc_gp_component()
-            resids = (self.lightcurve.flux_array - self.lightcurve.calc() - mu) / self.lightcurve.flux_err
+            resids = (self.lightcurve.calc_residuals() - mu) / self.lightcurve.flux_err
         else:
-            resids = (self.lightcurve.flux_array - self.lightcurve.calc()) / self.lightcurve.flux_err
+            resids = self.lightcurve.calc_residuals() / self.lightcurve.flux_err
 
         return np.sum(resids**2)
 
@@ -402,9 +487,9 @@ class Sampling(object):
 
         if self.lightcurve.GP_used:
             mu, _ = self.lightcurve.calc_gp_component()
-            resids = (self.lightcurve.flux_array - self.lightcurve.calc() - mu)
+            resids = (self.lightcurve.calc_residuals() - mu)
         else:
-            resids = (self.lightcurve.flux_array - self.lightcurve.calc())
+            resids = self.lightcurve.calc_residuals()
 
         return np.sqrt(np.mean(resids**2))
 
@@ -440,12 +525,168 @@ class Sampling(object):
 
         return beta_factor
 
-    def LM_fit(self):
-
-            # Build bounds systematically
-            bnds = self.build_bounds()
 
 
+def save_LM_results(fitted_lightcurve,param_medians,param_uncertainties,bin_number,verbose=True):
+    """Function to save the results from an LM fit to a best_fit_parameters.dat and LM_statistics.dat tables equivalent to emcee results.
+
+    Inputs:
+    fitted_lightcurve - the best fitting, resulting, Lightcurvemodel object
+    param_medians - the best fitting parameters
+    param_uncertainties - the 1 sigma uncertainties on the parameters
+    bin_number - the bin number (correcting for Python indexing, i.e. adding 1)
+    verbose - True/False - print the best-fitting results to terminal?
+
+    Returns:
+    Nothing but saving the results to best_fit_parameters.dat and LM_statistics.txt"""
+
+    ndim = len(param_medians)
+    namelist = fitted_lightcurve.param_list_free
+
+    if bin_number == 0:
+        new_tab = open('best_fit_parameters.txt','w')
+    else:
+        new_tab = open('best_fit_parameters.txt','a')
+
+    print('\nSaving best fit parameters to table...\n')
+
+    for i in range(ndim):
+        # note, we repeat the uncertainties column twice here even though there is only one uncertainty value, this is so the other functions can better handle this table
+        new_tab.write("%s_%d = %f + %f - %f \n"%(namelist[i].replace('$','').replace("\\",''),bin_number+1,param_medians[i],param_uncertainties[i],param_uncertainties[i]))
+
+        if verbose:
+            print("%s_%d = %f +/- %f"%(namelist[i].replace('$','').replace("\\",''),bin_number+1,param_medians[i],param_uncertainties[i]))
+
+    new_tab.write('#------------------ \n')
+    new_tab.close()
+
+    return
+
+
+def write_fit_diagnostics(sampling_model,wavelength_bin,emcee_fit=False,burn=False,LM_fit=False,emcee_sampler=None,nsteps=None):
+
+    if wavelength_bin == 0:
+        read_mode = 'a'
+    else:
+        read_mode = 'w'
+
+    if emcee_fit:
+
+        if burn:
+            diagnostic_tab = open('burn_statistics.txt',read_mode)
+        else:
+            diagnostic_tab = open('prod_statistics.txt',read_mode)
+
+    if LM_fit:
+
+        diagnostic_tab = open('LM_statistics.txt',read_mode)
+
+    fitted_chi2 = sampling_model.chisq()
+    fitted_reducedChi2 = sampling_model.reducedChisq()
+    fitted_rms = sampling_model.rms()*1e6
+    fitted_BIC = sampling_model.BIC()
+    fitted_AIC = sampling_model.AIC()
+
+    print('\nCalculating statistics for best fit...')
+    print('chi2 = %.3f' % fitted_chi2)
+    print('Reduced chi2 = %.3f' % fitted_reducedChi2)
+    print('Residual RMS (ppm) = %d' % fitted_rms)
+    print('BIC = %f' % fitted_BIC)
+    print('AIC = %f' % fitted_AIC)
+
+    diagnostic_tab.write("\nBin %d \n" % (wavelength_bin))
+    diagnostic_tab.write('Chi2 = %.3f \n' % fitted_chi2)
+    diagnostic_tab.write('Reduced chi2 = %.3f \n' % fitted_reducedChi2)
+    diagnostic_tab.write('Residual RMS (ppm) = %d \n' % fitted_rms)
+    diagnostic_tab.write('BIC = %f \n' % fitted_BIC)
+    diagnostic_tab.write('AIC = %f \n' % fitted_AIC)
+
+    if emcee_sampler is not None:
+        try:
+            print('\nAutocorrelation time for each parameter = ',np.round(emcee_sampler.acor).astype(int))
+            # Alternatively something like: emcee.autocorr.integrated_time(sampler.chain, low=10, high=None, step=1, c=5, full_output=True,axis=0, fast=False)
+            diagnostic_tab.write('\nAutocorrelation time for each parameter = ')
+            for ac in np.round(emcee_sampler.acor).astype(int):
+                diagnostic_tab.write('%d '%ac)
+            diagnostic_tab.write('\n')
+
+            print('nsamples/median(autocorrelation time) = %d'%np.round(nsteps/np.median(emcee_sampler.acor)))
+            diagnostic_tab.write('nsamples/median(autocorrelation time) = %d \n'%(np.round(nsteps/np.median(emcee_sampler.acor))))
+        except:
+            print("\nAutocorrelation time can't be calculated - chains likely too short")
+            diagnostic_tab.write("\nAutocorrelation time can't be calculated - chains likely too short \n")
+
+        print('Acceptance fraction = %f'%(np.mean(emcee_sampler.acceptance_fraction)))
+
+        diagnostic_tab.write('Acceptance fraction = %f \n'%(np.mean(emcee_sampler.acceptance_fraction)))
+        diagnostic_tab.write('Total steps = %d \n'%(nsteps))
+
+    diagnostic_tab.write('#------------------ \n')
+    diagnostic_tab.close()
+
+
+
+def nll(p,model,y,full_model=False,x=None,e=None,sys_priors=None,typeII=False,LM_fit=False):
+    """Function to calculate the negative ln-likelihood of the george.GP object. This is a neccessary step for optimising the GP hyperparameters and is following the procedure given in the george documentation.
+
+    Inputs:
+    p - the parameter values of the model
+    model - the TransitModelGPPM object
+    y - the y (flux) data points at which to evaluate the model
+    full_model - True/False - are we fitting the full model (including mean/transit model params) or just the GP hyperparams?
+    x - the array of times, needed for full_model=True
+    e - the array of flux uncertainties, needed for full_model=True
+    sys_priors - the priors on the system parameters for full_model=True, default=None (no priors)
+    typeII - is this a typeII maximum likelihood fit?
+    LM_fit - True/False, are we using a Levenberg-Marquardt fit? If so, we need to return the weighted residuals, not likelihood/chi2
+
+    Returns:
+    if full_model=False:
+        the negative ln-likelihood evaluated by george
+    if full_model and not LM_fit:
+        the chi2 of the model fit
+    if full_model and LM_fit:
+        the weighted residuals of the model fit"""
+
+    if full_model:
+        for i in range(model.npars):
+            model[i] = p[i]
+        if np.isfinite(model.lnprior(sys_priors)):
+            if LM_fit:
+                if model.GP_used: # note: LM fit is not working 100% with GPs
+                    mu, std = model.calc_gp_component(x,y,e)
+                    residuals = (y - model.calc(x) - mu)
+                else:
+                    residuals = (y-model.calc(x))/e
+                return residuals
+            else:
+                chi2 = model.chisq(x,y,e)
+                return chi2
+        else:
+            if LM_fit:
+                return np.ones_like(y)*np.inf
+            return np.inf
+
+    else:
+        model.set_parameter_vector(p)
+        ll = model.lnlikelihood(y, quiet=True)
+
+        # The scipy optimizer doesn't play well with infinities.
+        return -ll if np.isfinite(ll) else 1e25
+
+def grad_nll(p,gp,y):
+    """A function to compute the gradient of the objective function/ln-likelihood. This is a neccessary step for optimising the GP hyperparameters and is following the procedure given in the george documentation.
+
+    Inputs:
+    p - the GP hyperparameter values
+    gp - the GP object
+    y - the y (flux) data points at which to evaluate the GP
+
+    Returns:
+    the negative grad_lnlikelihood evaluated by george"""
+
+    gp.set_parameter_vector(p)
+    return -gp.grad_lnlikelihood(y, quiet=True)
 
 
     # -------------------- Parameter Opimisation -------------------- #
@@ -515,44 +756,7 @@ def optimise_params(self, time, flux, flux_err, reset_starting_gp=False, contact
         return self, results.x, uncertainties
 
 
-    def build_bounds(self, full_model=False):
-        """
-        Build parameter bounds using prior definitions and GP/kernel settings.
-        Returns a list of (min, max) tuples in the order of self.param_list_free.
-        """
-        bnds = []
 
-        for name in self.param_list_free:
-
-            # Use prior definitions if available
-            prior_type = self.prior_dict.get(f'{name}_prior', None)
-            if prior_type == 'U':
-                bnds.append((self.prior_dict[f'{name}_1'], self.prior_dict[f'{name}_2']))
-            elif prior_type == 'N':
-                # Optional: ±3σ around mean as bounds
-                mu, sigma = self.prior_dict[f'{name}_1'], self.prior_dict[f'{name}_2']
-                bnds.append((mu - 3*sigma, mu + 3*sigma))
-            else:
-                # Fallback: ±10% around current value
-                curr = self.pars[name].currVal
-                bnds.append((curr*0.9, curr*1.1))
-
-        # GP bounds
-        if self.lightcurve.GP_used:
-            if self.lightcurve.wn_kernel:
-                bnds.append((np.log((self.lightcurve.kernel_priors['min_WN_sigma'])**2),
-                             np.log((self.lightcurve.kernel_priors['max_WN_sigma'])**2)))
-
-            for i in range(self.gp_ndim):
-                for key in [f'min_lniL_{i+1}', f'max_lniL_{i+1}']:
-                    if key in self.lightcurve.kernel_priors:
-                        bnds.append((self.lightcurve.kernel_priors[key], self.lightcurve.kernel_priors[key]))
-
-            # GP amplitude
-            if 'min_A' in self.lightcurve.kernel_priors and 'max_A' in self.lightcurve.kernel_priors:
-                bnds.append((self.lightcurve.kernel_priors['min_A'], self.lightcurve.kernel_priors['max_A']))
-
-        return bnds
 
 
 
