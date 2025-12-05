@@ -279,6 +279,12 @@ model_inputs['transit_model'] = {}
 model_inputs['transit_model']['use_kipping'] = bool(int(input_dict['use_kipping_parameterisation']))
 model_inputs['transit_model']['ld_law'] = str(input_dict['ld_law'])
 model_inputs['transit_model']['use_generated_ld_uncertainties'] = bool(int(input_dict['use_generated_ld_uncertainties']))
+if model_inputs['transit_model']['use_generated_ld_uncertainties']:
+    try:
+        model_inputs['transit_model']['LDCs_generated'] = np.loadtxt('LD_coefficients.txt',unpack=True)
+
+    except:
+        raise SystemError('Need to first generate limb darkening values before using the generated limb-darkening values.')
 
 prior_file = str(input_dict['prior_filename'])
 
