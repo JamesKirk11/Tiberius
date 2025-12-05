@@ -51,9 +51,9 @@ def average_transmission_spectra(w_array,we_array,k_array,k_up_array,k_low_array
 
     w_all = []
     we_all = []
-    k_all = []
-    k_up_all = []
-    k_low_all = []
+    rp_all = []
+    rp_up_all = []
+    rp_low_all = []
 
     # the number of transmission spectra is given by the length of any of these arrays
     n_trans_spec = len(w_array)
@@ -64,9 +64,9 @@ def average_transmission_spectra(w_array,we_array,k_array,k_up_array,k_low_array
 
         current_w = []
         current_we = []
-        current_k = []
-        current_k_up = []
-        current_k_low = []
+        current_rp = []
+        current_rp_up = []
+        current_rp_low = []
 
 
         for i,w in enumerate(wavelengths):
@@ -77,53 +77,53 @@ def average_transmission_spectra(w_array,we_array,k_array,k_up_array,k_low_array
                 # print(we_array[n][matching_idx],matching_idx)
                 current_w.append(np.atleast_1d(w_array[n])[matching_idx])
                 current_we.append(np.atleast_1d(we_array[n])[matching_idx])
-                current_k.append(np.atleast_1d(k_array[n])[matching_idx])
-                current_k_up.append(np.atleast_1d(k_up_array[n])[matching_idx])
-                current_k_low.append(np.atleast_1d(k_low_array[n])[matching_idx])
+                current_rp.append(np.atleast_1d(rp_array[n])[matching_idx])
+                current_rp_up.append(np.atleast_1d(rp_up_array[n])[matching_idx])
+                current_rp_low.append(np.atleast_1d(rp_low_array[n])[matching_idx])
             else:
                 current_w.append(w)
                 current_we.append(np.nan)
-                current_k.append(np.nan)
-                current_k_up.append(np.nan)
-                current_k_low.append(np.nan)
+                current_rp.append(np.nan)
+                current_rp_up.append(np.nan)
+                current_rp_low.append(np.nan)
 
         w_all.append(current_w)
         we_all.append(current_we)
-        k_all.append(current_k)
-        k_up_all.append(current_k_up)
-        k_low_all.append(current_k_low)
+        rp_all.append(current_rp)
+        rp_up_all.append(current_rp_up)
+        rp_low_all.append(current_rp_low)
 
     w_all = np.array(w_all)
     we_all = np.array(we_all)
-    k_all = np.array(k_all)
-    k_up_all = np.array(k_up_all)
-    k_low_all = np.array(k_low_all)
+    rp_all = np.array(rp_all)
+    rp_up_all = np.array(rp_up_all)
+    rp_low_all = np.array(rp_low_all)
 
     # Now have to loop through k array to caculate mean of only those entries without nans
-    k_mean = []
-    ke_mean = []
+    rp_mean = []
+    rpe_mean = []
     for i in range(nbins):
-        index = np.isfinite(k_all.T[i])
+        index = np.isfinite(rp_all.T[i])
 
-        current_k = k_all.T[i][index]
-        current_k_up = k_up_all.T[i][index]
-        current_k_low = k_low_all.T[i][index]
+        current_rp = rp_all.T[i][index]
+        current_rp_up = rp_up_all.T[i][index]
+        current_rp_low = rp_low_all.T[i][index]
 
         if std_wmean:
-            # print(current_k_up,current_k_low)
-            # print(np.mean((current_k_up,current_k_low),axis=1))
-            current_k_mean,current_ke_mean = np.average(current_k,weights=1/np.mean((current_k_up,current_k_low),axis=0)**2,returned=True)
-            current_ke_mean = np.sqrt(1/current_ke_mean)
+            # print(current_rp_up,current_rp_low)
+            # print(np.mean((current_rp_up,current_rp_low),axis=1))
+            current_rp_mean,current_rpe_mean = np.average(current_rp,weights=1/np.mean((current_rp_up,current_rp_low),axis=0)**2,returned=True)
+            current_rpe_mean = np.sqrt(1/current_rpe_mean)
         else:
-            current_k_mean,current_ke_mean = pu.weighted_mean_uneven_errors(current_k,current_k_up,current_k_low)
+            current_rp_mean,current_rpe_mean = pu.weighted_mean_uneven_errors(current_rp,current_rp_up,current_rp_low)
 
-        k_mean.append(current_k_mean)
-        ke_mean.append(current_ke_mean)
+        rp_mean.append(current_rp_mean)
+        rpe_mean.append(current_rpe_mean)
 
-    k_mean = np.array(k_mean)
-    ke_mean = np.array(ke_mean)
+    rp_mean = np.array(rp_mean)
+    rpe_mean = np.array(rpe_mean)
 
-    return k_mean,ke_mean,w_all,we_all,k_all,k_up_all,k_low_all
+    return rp_mean,rpe_mean,w_all,we_all,rp_all,rp_up_all,rp_low_all
 
 def find_nearest(array, value):
     array = np.asarray(array)
@@ -138,59 +138,59 @@ def get_all_transmission_spectra(direc_list,auto_offset,manual_offset,anchor_wvl
     medians = []
     w_all = []
     we_all = []
-    k_all = []
-    k_up_all = []
-    k_low_all = []
+    rp_all = []
+    rp_up_all = []
+    rp_low_all = []
 
     for d in direc_list:
 
         print("\n## Statistics for %s..."%d)
 
-        k,k_up,k_low,w,we,_ = pu.recover_transmission_spectrum(d,save_fig=False,plot_fig=False,bin_mask=None,save_to_tab=False,print_RpErr_over_RMS=False)
+        rp,rp_up,rp_low,w,we,_ = pu.recover_transmission_spectrum(d,save_fig=False,plot_fig=False,bin_mask=None,save_to_tab=False,print_RpErr_over_RMS=False)
 
         if resolution > 0:
             binned_wvl = pu.bin_wave_to_R(w,resolution)
-            binned_spec = pu.bin_trans_spec(binned_wvl,w,k,k_up,k_low)
-            k,k_up,k_low,w,we = binned_spec["bin_y"],binned_spec["bin_dy"],binned_spec["bin_dy"],binned_spec["bin_x"],binned_spec["bin_dx"]
+            binned_spec = pu.bin_trans_spec(binned_wvl,w,rp,rp_up,rp_low)
+            rp,rp_up,rp_low,w,we = binned_spec["bin_y"],binned_spec["bin_dy"],binned_spec["bin_dy"],binned_spec["bin_x"],binned_spec["bin_dx"]
 
         w_all.append(w)
         we_all.append(we)
-        k_all.append(k)
-        k_up_all.append(k_up)
-        k_low_all.append(k_low)
+        rp_all.append(rp)
+        rp_up_all.append(rp_up)
+        rp_low_all.append(rp_low)
 
-        medians.append(np.nanmedian(k))
+        medians.append(np.nanmedian(rp))
 
     global_median = np.nanmedian(medians)
 
-    k_all_offset = []
+    rp_all_offset = []
 
     ndirecs = len(direc_list)
 
     if auto_offset:
-        for i in k_all:
-            k_all_offset.append(i-np.nanmedian(i)+global_median)
+        for i in rp_all:
+            rp_all_offset.append(i-np.nanmedian(i)+global_median)
 
 
     elif manual_offset is not None:
-        for i,j in enumerate(k_all):
-            k_all_offset.append(k_all[i]+manual_offset[i])
+        for i,j in enumerate(rp_all):
+            rp_all_offset.append(rp_all[i]+manual_offset[i])
 
 
     elif anchor_wvl is not None:
         anchor_median = []
         for i in range(ndirecs):
             index = find_nearest(w_all[i],anchor_wvl)
-            anchor_median.append(k_all[i][index])
+            anchor_median.append(rp_all[i][index])
         anchor_median = np.nanmedian(anchor_median)
         for i in range(ndirecs):
             index = find_nearest(w_all[i],anchor_wvl)
-            k_all_offset.append(k_all[i]-k_all[i][index]+anchor_median)
+            rp_all_offset.append(rp_all[i]-rp_all[i][index]+anchor_median)
 
     else:
-        k_all_offset = k_all
+        rp_all_offset = rp_all
 
-    return w_all,we_all,k_all_offset,k_up_all,k_low_all
+    return w_all,we_all,rp_all_offset,rp_up_all,rp_low_all
 
 
 
@@ -201,81 +201,81 @@ def load_all_transmission_spectra(tspec_list,auto_offset,manual_offset,anchor_wv
     medians = []
     w_all = []
     we_all = []
-    k_all = []
-    k_up_all = []
-    k_low_all = []
+    rp_all = []
+    rp_up_all = []
+    rp_low_all = []
 
     for d in tspec_list:
 
         print("\n## Statistics for %s..."%d)
 
-        w,we,k,k_up,k_low = np.loadtxt(d,unpack=True,usecols=[0,1,2,3,4])
+        w,we,rp,rp_up,rp_low = np.loadtxt(d,unpack=True,usecols=[0,1,2,3,4])
 
         if resolution > 0:
             binned_wvl = pu.bin_wave_to_R(w,resolution)
-            binned_spec = pu.bin_trans_spec(binned_wvl,w,k,k_up,k_low)
-            k,k_up,k_low,w,we = binned_spec["bin_y"],binned_spec["bin_dy"],binned_spec["bin_dy"],binned_spec["bin_x"],binned_spec["bin_dx"]
+            binned_spec = pu.bin_trans_spec(binned_wvl,w,rp,rp_up,rp_low)
+            rp,rp_up,rp_low,w,we = binned_spec["bin_y"],binned_spec["bin_dy"],binned_spec["bin_dy"],binned_spec["bin_x"],binned_spec["bin_dx"]
 
-        print("\nMedian Rp/Rs = %f ;  Median Rp/Rs +ve error (ppm) = %d ; Median Rp/Rs -ve error (ppm) = %d ; Median R/Rs error (ppm) = %d "%(np.median(k),np.nanmedian(k_up)*1e6,np.nanmedian(k_low)*1e6,np.nanmedian(np.hstack((k_up,k_low)))*1e6))
+        print("\nMedian Rp/Rs = %f ;  Median Rp/Rs +ve error (ppm) = %d ; Median Rp/Rs -ve error (ppm) = %d ; Median R/Rs error (ppm) = %d "%(np.median(rp),np.nanmedian(rp_up)*1e6,np.nanmedian(rp_low)*1e6,np.nanmedian(np.hstack((rp_up,rp_low)))*1e6))
 
         w_all.append(w)
         we_all.append(we)
-        k_all.append(k)
-        k_up_all.append(k_up)
-        k_low_all.append(k_low)
+        rp_all.append(rp)
+        rp_up_all.append(rp_up)
+        rp_low_all.append(rp_low)
 
-        medians.append(np.nanmedian(k))
+        medians.append(np.nanmedian(rp))
 
     global_median = np.nanmedian(medians)
 
-    k_all_offset = []
+    rp_all_offset = []
 
     ndirecs = len(tspec_list)
 
     if auto_offset:
-        for i in k_all:
-            k_all_offset.append(i-np.nanmedian(i)+global_median)
+        for i in rp_all:
+            rp_all_offset.append(i-np.nanmedian(i)+global_median)
 
     elif manual_offset is not None:
-        for i,j in enumerate(k_all):
-            k_all_offset.append(k_all[i]+manual_offset[i])
+        for i,j in enumerate(rp_all):
+            rp_all_offset.append(rp_all[i]+manual_offset[i])
 
 
     elif anchor_wvl is not None:
         anchor_median = []
         for i in range(ndirecs):
             index = find_nearest(w_all[i],anchor_wvl)
-            anchor_median.append(k_all[i][index])
+            anchor_median.append(rp_all[i][index])
         anchor_median = np.nanmedian(anchor_median)
         for i in range(ndirecs):
             index = find_nearest(w_all[i],anchor_wvl)
-            k_all_offset.append(k_all[i]-k_all[i][index]+anchor_median)
+            rp_all_offset.append(rp_all[i]-rp_all[i][index]+anchor_median)
 
     else:
-        k_all_offset = k_all
+        rp_all_offset = rp_all
 
-    return w_all,we_all,k_all_offset,k_up_all,k_low_all
+    return w_all,we_all,rp_all_offset,rp_up_all,rp_low_all
 
 
 if args.directory_list is not None:
-    w_all,we_all,k_all,k_up_all,k_low_all = get_all_transmission_spectra(args.directory_list,args.auto_offset,args.manual_offset,args.anchor_wvl,args.resolution)
+    w_all,we_all,rp_all,rp_up_all,rp_low_all = get_all_transmission_spectra(args.directory_list,args.auto_offset,args.manual_offset,args.anchor_wvl,args.resolution)
     in_list = args.directory_list
 
 if args.trans_spec is not None:
-    w_all,we_all,k_all,k_up_all,k_low_all = load_all_transmission_spectra(args.trans_spec,args.auto_offset,args.manual_offset,args.anchor_wvl,args.resolution)
+    w_all,we_all,rp_all,rp_up_all,rp_low_all = load_all_transmission_spectra(args.trans_spec,args.auto_offset,args.manual_offset,args.anchor_wvl,args.resolution)
     in_list = args.trans_spec
 
 
 if args.combine:
     if not args.iib:
-        k_mean,ke_mean,w_concat,we_concat,k_concat,k_up_concat,k_low_concat = average_transmission_spectra(w_all,we_all,k_all,k_up_all,k_low_all,args.std_wmean)
+        rp_mean,rpe_mean,w_concat,we_concat,rp_concat,rp_up_concat,rp_low_concat = average_transmission_spectra(w_all,we_all,rp_all,rp_up_all,rp_low_all,args.std_wmean)
     else:
-        k_mean,ke_mean,w_concat,we_concat,k_concat,k_up_concat,k_low_concat = average_transmission_spectra(we_all,we_all,k_all,k_up_all,k_low_all,args.std_wmean)
+        rp_mean,rpe_mean,w_concat,we_concat,rp_concat,rp_up_concat,rp_low_concat = average_transmission_spectra(we_all,we_all,rp_all,rp_up_all,rp_low_all,args.std_wmean)
 
     w_mean = np.nanmean(w_concat,axis=0)
     we_mean = np.nanmean(we_concat,axis=0)
 
-    print('## Average error bar in combined spectrum = %d ppm'%(np.round(1e6*np.nanmean(ke_mean))))
+    print('## Average error bar in combined spectrum = %d ppm'%(np.round(1e6*np.nanmean(rpe_mean))))
 
     subplots = 2
 
@@ -348,25 +348,25 @@ for i,d in enumerate(in_list):
 
     w = w_all[i]*wav_units
     we = we_all[i]*wav_units
-    k = k_all[i]
-    k_up = k_up_all[i]
-    k_low = k_low_all[i]
+    rp = rp_all[i]
+    rp_up = rp_up_all[i]
+    rp_low = rp_low_all[i]
 
     if not args.iib:
         if args.plot_xerr:
             if args.colours is not None:
-                ax.errorbar(w+offsets[i],k,xerr=we/2,yerr=(np.atleast_1d(k_low),np.atleast_1d(k_up)),fmt=markers[i],label=handle,alpha=alpha,capsize=2,mec='k',ms=ms,\
+                ax.errorbar(w+offsets[i],rp,xerr=we/2,yerr=(np.atleast_1d(rp_low),np.atleast_1d(rp_up)),fmt=markers[i],label=handle,alpha=alpha,capsize=2,mec='k',ms=ms,\
                 mfc=args.colours[i],color=args.colours[i])
             else:
-                ax.errorbar(w+offsets[i],k,xerr=we/2,yerr=(np.atleast_1d(k_low),np.atleast_1d(k_up)),fmt=markers[i],label=handle,alpha=alpha,capsize=2,mec='k',ms=ms)
+                ax.errorbar(w+offsets[i],rp,xerr=we/2,yerr=(np.atleast_1d(rp_low),np.atleast_1d(rp_up)),fmt=markers[i],label=handle,alpha=alpha,capsize=2,mec='k',ms=ms)
         else:
             if args.colours is not None:
-                ax.errorbar(w+offsets[i],k,xerr=None,yerr=(np.atleast_1d(k_low),np.atleast_1d(k_up)),fmt=markers[i],label=handle,alpha=alpha,capsize=2,mec='k',ms=ms,\
+                ax.errorbar(w+offsets[i],rp,xerr=None,yerr=(np.atleast_1d(rp_low),np.atleast_1d(rp_up)),fmt=markers[i],label=handle,alpha=alpha,capsize=2,mec='k',ms=ms,\
                 mfc=args.colours[i],color=args.colours[i])
             else:
-                ax.errorbar(w+offsets[i],k,xerr=None,yerr=(np.atleast_1d(k_low),np.atleast_1d(k_up)),fmt=markers[i],label=handle,alpha=alpha,capsize=2,mec='k',ms=ms)
+                ax.errorbar(w+offsets[i],rp,xerr=None,yerr=(np.atleast_1d(rp_low),np.atleast_1d(rp_up)),fmt=markers[i],label=handle,alpha=alpha,capsize=2,mec='k',ms=ms)
     else:
-        ax.errorbar(we,k,yerr=(k_low,k_up),fmt='o',label=handle,alpha=0.7,capsize=5)
+        ax.errorbar(we,rp,yerr=(rp_low,rp_up),fmt='o',label=handle,alpha=0.7,capsize=5)
 
 # ax.set_ylabel('$R_P/R_*$',fontsize=14)
 ax.legend(framealpha=1,ncol=4)
@@ -397,7 +397,7 @@ if xlims[0] < wb.Halpha*wav_units < xlims[1] and args.halpha:
 
 
 if args.flat_line:
-    ax.axhline(np.median([np.median(i) for i in k_all]),ls='--',color='k',lw=2,zorder=0)
+    ax.axhline(np.median([np.median(i) for i in rp_all]),ls='--',color='k',lw=2,zorder=0)
 
 minor_locator = AutoMinorLocator(10)
 ax.xaxis.set_minor_locator(minor_locator)
@@ -422,9 +422,9 @@ if args.combine:
 
     ax2 = fig.add_subplot(212)
     if not args.iib:
-        ax2.errorbar(w_mean,k_mean,xerr=we_mean/2,yerr=ke_mean,fmt='o',label='Weighted mean',ecolor='k',color='k',capsize=2,mfc='grey')
+        ax2.errorbar(w_mean,rp_mean,xerr=we_mean/2,yerr=rpe_mean,fmt='o',label='Weighted mean',ecolor='k',color='k',capsize=2,mfc='grey')
     else:
-        ax2.errorbar(we_mean,k_mean,yerr=ke_mean,fmt='o',label='Weighted mean',ecolor='k',color='k',capsize=2,mfc='grey')
+        ax2.errorbar(we_mean,rp_mean,yerr=rpe_mean,fmt='o',label='Weighted mean',ecolor='k',color='k',capsize=2,mfc='grey')
     # ax2.set_ylabel('$R_P/R_*$',fontsize=14)
     ax2.set_xlabel('Wavelength (%s)'%pu.determine_wvl_units(w_mean),fontsize=14)
     ax2.legend()
@@ -508,12 +508,12 @@ if args.save_fig:
 
         Wlow = w_mean-we_mean/2
         Wup = w_mean+we_mean/2
-        depths = 1e6*(k_mean**2)
-        ErrUp = ErrLow = 1e6*2*(ke_mean*k_mean)
+        depths = 1e6*(rp_mean**2)
+        ErrUp = ErrLow = 1e6*2*(rpe_mean*rp_mean)
 
         nbins = len(w_mean)
         for i in range(nbins):
-            new_tab.write('%f %f %f %f %f \n'%(w_mean[i],we_mean[i],k_mean[i],ke_mean[i],ke_mean[i]))
+            new_tab.write('%f %f %f %f %f \n'%(w_mean[i],we_mean[i],rp_mean[i],rpe_mean[i],rpe_mean[i]))
             depths_tab.write('%f %f %f %f \n'%(w_mean[i],we_mean[i],depths[i],ErrUp[i]))
             retrieval_tab.write('%f %f %f %f %f \n'%(Wlow[i],Wup[i],depths[i],ErrUp[i],ErrLow[i]))
 
