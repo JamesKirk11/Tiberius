@@ -35,7 +35,7 @@ try:
 except:
     wavelength_centres = pickle.load(open(input_dict['wvl_centres'],'rb'))
     wvl_bin_full_width = pickle.load(open(input_dict['wvl_bin_full_width'],'rb'))
-
+    white_light_fit = False
     nbins = len(wavelength_centres)
 
 if wvl_unit == 'micron': # have to change to Angstroms
@@ -242,7 +242,7 @@ else: # we're considering multiple bins
             u3e.append(-99)
 
             u4.append(-99)
-            u4e.append(-99)     
+            u4e.append(-99)
 
 
     if LDCs_package == 'LDTk':
