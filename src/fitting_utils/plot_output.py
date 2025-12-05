@@ -29,7 +29,9 @@ args = parser.parse_args()
 
 
 ### Load in data
-x,y,e,e_r,m,m_in,w,we,completed_bins,nbins = pu.load_completed_bins(start_bin=args.start_bin,end_bin=args.end_bin,mask=args.mask_bins)
+input_dict = parseInput("fitting_input.txt")
+
+x,y,e,e_r,m,m_in,w,we,completed_bins,nbins = pu.load_completed_bins(directory=input_dict['output_foldername'],start_bin=args.start_bin,end_bin=args.end_bin,mask=args.mask_bins)
 if not args.photon_noise: # if we're not using photon noise uncertainties, then we are using the rescaled error bars as our photometric uncertainties
     e = e_r
 
@@ -55,18 +57,18 @@ if args.save_table:
     rn.write("\n******Median RMS all bins = %d ppm*****\n"%np.median(all_RMS))
     rn.close()
 
-directory = os.getcwd()
+# directory = os.getcwd()
 
 if not args.white_light_curve and not args.photon_noise and args.start_bin is None and args.end_bin is None:
     ### Plot the transmission spectrum & the Rp/Rs error divided by photon noise
-    trans_fig = pu.recover_transmission_spectrum(directory,save_fig=args.save_fig,plot_fig=True,bin_mask=args.mask_bins,print_RpErr_over_RMS=True,save_to_tab=args.save_table,iib=args.iib)
+    trans_fig = pu.recover_transmission_spectrum(directory=input_dict['output_foldername'],save_fig=args.save_fig,plot_fig=True,bin_mask=args.mask_bins,save_to_tab=args.save_table,iib=args.iib)
     if args.close_plots:
         plt.close()
     else:
         trans_fig.show()
 
     ### Plot the expected vs calculated limb darkening coefficients
-    pu.expected_vs_calculated_ldcs(".",args.save_fig,bin_mask=args.mask_bins)
+    pu.expected_vs_calculated_ldcs(input_dict['output_foldername'],args.save_fig,bin_mask=args.mask_bins)
     if args.close_plots:
         plt.close()
 
@@ -112,54 +114,57 @@ if args.rebin_data is not None:
 print("Plotting RMS vs bins...")
 residuals = []
 
-input_dict = parseInput("fitting_input.txt")
-
 for i,model in enumerate(m):
     # calculate transit model
     model_y = model.calc(x[i])
     if model.GP_used:
-        mu,std = model.calc_gp_component(x[i],y[i],e[i])
+        mu = model.GP_model.calc(x[i],y[i],e[i])
         residuals.append(y[i] - model_y - mu)
     else:
         residuals.append(y[i]-model_y)
 
     # calculate ingress duration which sets the upper limit on the number of bins
     if i == 0:
+
         # first turn off limb-darkening
-        if model.fix_u1:
-            model.pars["u1"] = 0
-        else:
-            model.pars["u1"].currVal = 0
-        if model.ld_law == "linear":
-            continue
-        if model.fix_u2:
-            model.pars["u2"] = 0
-        else:
-            model.pars["u2"].currVal = 0
-        if model.ld_law == "nonlinear":
-            if model.fix_u3:
-                model.pars["u3"] = 0
+        if "u1" in model.param_dict:
+            if "u1" in model.param_list_free:
+                model.param_dict["u1"].currVal = 0
             else:
-                model.pars["u3"].currVal = 0
-            if model.fix_u4:
-                model.pars["u4"] = 0
+                model.param_dict["u1"] = 0
+
+        if "u2" in model.param_dict:
+            if "u2" in model.param_list_free:
+                model.param_dict["u2"].currVal = 0
             else:
-                model.pars["u4"].currVal = 0
+                model.param_dict["u2"] = 0
+
+        if "u3" in model.param_dict:
+            if "u3" in model.param_list_free:
+                model.param_dict["u3"].currVal = 0
+            else:
+                model.param_dict["u3"] = 0
+
+        if "u4" in model.param_dict:
+            if "u4" in model.param_list_free:
+                model.param_dict["u4"].currVal = 0
+            else:
+                model.param_dict["u4"] = 0
 
         # now get transit only model
         red_noise_model = 1
-        if model.poly_used:
+        if model.systematic_model.poly_used:
             red_noise_model *= model.red_noise_poly(x[i])
-        if model.exp_ramp_used:
+        if model.systematic_model.exp_ramp_used:
              red_noise_model *= model.exponential_ramp(x[i])
-        if model.step_func_used:
+        if model.systematic_model.step_func_used:
              red_noise_model *= model.step_function(x[i])
 
         tm = model.calc(x[i])/red_noise_model
 
         # now determine where the transit depth first and last reaches maximum - these are contact points 2 and 3
         # calculate the depth
-        depth = model.pars["k"].currVal**2
+        depth = model.param_dict["rp"].currVal**2
         # ~ full_transit = np.where(tm==(1-depth))[0]
         full_transit = np.where(tm==tm.min())[0]
         contact2 = full_transit.min()
