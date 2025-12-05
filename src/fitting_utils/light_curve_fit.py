@@ -32,7 +32,7 @@ try:
 except:
     wavelength_centres = pickle.load(open(input_dict['wvl_centres'],'rb'))
     wvl_bin_full_width = pickle.load(open(input_dict['wvl_bin_full_width'],'rb'))
-
+    white_light_fit = False
     nbins = len(wavelength_centres)
 
 wb = args.wavelength_bin
@@ -286,6 +286,9 @@ if model_inputs['transit_model']['use_generated_ld_uncertainties']:
     except:
         raise SystemError('Need to first generate limb darkening values before using the generated limb-darkening values.')
 
+    if str(input_dict["LDCs_package"]) == "exotic-ld":
+        raise SystemError("Can't have use_generated_ld_uncertainties = 1 if LDCs_package == exotic-ld, since ExoTiC-LD will not generate uncertainties.")
+
 prior_file = str(input_dict['prior_filename'])
 
 # initalise light curve model
@@ -327,7 +330,7 @@ if sampling_method == 'emcee':
 
     fitted_lightcurve = sampling.run_emcee(wavelength_bin=wb)
     fig = pu.plot_single_model(fitted_lightcurve,time,flux,flux_error,rebin_data=rebin_data,save_fig=True,wavelength_bin=wb,deconstruct=True)
-    pickle.dump(fitted_lightcurve,open('fitted_lightcurve_model_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+    pickle.dump(fitted_lightcurve,open(output_foldername + '/pickled_objects/' + 'fitted_lightcurve_model_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
 
 elif sampling_method == 'dynesty':
     result = sampling.run_dynesty()
@@ -335,8 +338,6 @@ elif sampling_method == 'dynesty':
 elif sampling_method == 'LM':
 
     fitted_lightcurve = sampling.run_LM(wavelength_bin=wb)
-
-    print("LM FIT")
 
     if 'infl' not in fitted_lightcurve.param_list_free:
         # we need to rescale the photometric uncertainties to give reduced chi2 = 1
@@ -351,10 +352,14 @@ elif sampling_method == 'LM':
 
         rchi2_rescaled = sampling_run2.reducedChisq()
         print("reduced Chi2 following error rescaling = %.2f"%(rchi2_rescaled))
-        pickle.dump(flux_error,open('rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+        pickle.dump(flux_error,open(output_foldername + '/pickled_objects/' + 'Used_rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
 
     fig = pu.plot_single_model(fitted_lightcurve,time,flux,flux_error,rebin_data=rebin_data,save_fig=True,wavelength_bin=wb,deconstruct=True)
 
     # save the results
     # s.save_LM_results(fitted_lightcurve, param_medians, param_uncertainties,wb+1,verbose=True)
-    pickle.dump(fitted_lightcurve,open('fitted_lightcurve_model_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+    pickle.dump(fitted_lightcurve,open(output_foldername + '/pickled_objects/' + 'fitted_lightcurve_model_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+
+
+if white_light_fit:
+    s.update_prior_file(prior_file)
