@@ -14,10 +14,17 @@ parser.add_argument("-off",help='mjd offset to be added to time array',type=floa
 parser.add_argument("-dt_only",help='Use this if only wanting to save the detrended flux and rescaled uncertainties to table',action="store_true")
 args = parser.parse_args()
 
-x,y,e,e_r,m,m_in,w,we,completed_bins,nbins = pu.load_completed_bins(directory=".",start_bin=None,end_bin=None,mask=None,return_index_only=False)
+input_dict = parseInput("fitting_input.txt")
+
+try:
+    wavelength_centres = float(input_dict['wvl_centres'])
+    white_light_fit = True
+except:
+    white_light_fit = False
+
+x,y,e,e_r,m,m_in,w,we,completed_bins,nbins = pu.load_completed_bins(directory=input_dict['output_foldername'],start_bin=None,end_bin=None,mask=None,return_index_only=False)
 
 if args.off is None: # automatically load in the time offset
-    input_dict = parseInput('fitting_input.txt')
     time = pickle.load(open(input_dict['time_file'],'rb'))
     time_offset = int(time[0])
 else:
@@ -31,22 +38,21 @@ for i,n in enumerate(completed_bins):
     transit_model = m[i].calc(x[i])
 
     gp = m[i].GP_used
-    poly = m[i].poly_used
-    exp = m[i].exp_ramp_used
-    WL = m[i].white_light_fit
+    poly = m[i].systematic_model.poly_used
+    exp = m[i].systematic_model.exp_ramp_used
 
     if not gp:
         oot = 1
         if poly:
-            oot *= m[i].red_noise_poly(x[i])
+            oot *= m[i].systematic_model.red_noise_poly(x[i])
         if exp:
-            oot *= m[i].exponential_ramp(x[i])
+            oot *= m[i].systematic_model.exponential_ramp(x[i])
         residuals = y[i] - transit_model
         full_model = transit_model.copy()
         transit_model /= oot
 
     if gp:
-        oot,_ = m[i].calc_gp_component(x[i],y[i],e[i],deconstruct_gp=False)
+        oot = m[i].GP_model.calc(x[i])
         full_model = transit_model + oot
         residuals = y[i] - transit_model - oot
 
@@ -62,7 +68,7 @@ for i,n in enumerate(completed_bins):
     if args.dt_only:
         table_name += "detrended_"
 
-    if WL:
+    if white_light_fit:
         table_name += "WL.txt"
     else:
         table_name += "wb%s.txt"%(str(n).zfill(4))
