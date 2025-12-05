@@ -95,7 +95,7 @@ def chi2_trans_models(model,data,up_error,low_error,NDOF=0):
 
 
 
-def rayleigh_slope(Teq,logg,Rp,Rstar,k,k_up,k_low,wvl_bin_centres,save_output=False,verbose=False):
+def rayleigh_slope(Teq,logg,Rp,Rstar,rp,rp_up,rp_low,wvl_bin_centres,save_output=False,verbose=False):
     """Generate a Rayleigh scattering slope given the planet and host stars parameters. Note: currently not tested for new transit model classes.
 
     Inputs:
@@ -103,9 +103,9 @@ def rayleigh_slope(Teq,logg,Rp,Rstar,k,k_up,k_low,wvl_bin_centres,save_output=Fa
     logg - surface gravity of the planet, in c.g.s.
     Rp - radius of the planet, in Jupiter radii
     Rstar - radius of the star, in solar radii
-    k - the list of Rp/Rs as measured for the transmission spectrum
-    k_up - the positive errors in k
-    k_low - the negative errors in k
+    rp - the list of Rp/Rs as measured for the transmission spectrum
+    rp_up - the positive errors in rp
+    rp_low - the negative errors in rp
     wvl_bin_centres - the centres of the wavelength bins as used in the transmission spectrum, in Angstroms
     save_output - True/False - use this to save the chi squared of fits of a flat line, Rayleigh slope at Teq and a Rayleigh slope with a fitted temperature to a table called 'trans_models_statistics.txt'. Default=False
     verbose - True/False - use this to plot the different slopes along with the transmission spectrum. Default=False
@@ -122,16 +122,16 @@ def rayleigh_slope(Teq,logg,Rp,Rstar,k,k_up,k_low,wvl_bin_centres,save_output=Fa
 
     H = calc_scale_height(g,Teq)
     scale_height_radius = rp/H
-    rp_rs = k
+    rp_rs = rp
     rp_H = rp_rs*rs/H - scale_height_radius
     rs_H = rs/H
 
     # To initialise Rayleigh fits
     guess_slope = -4*H
-    guess_intercept = max(k*rs)
-    rp_error = (np.mean((k_up,k_low),axis=0)/k)*(k*rs) # weights on fit
+    guess_intercept = max(rp*rs)
+    rp_error = (np.mean((rp_up,rp_low),axis=0)/rp)*(rp*rs) # weights on fit
     xdata = np.log(wvl_bin_centres*1e-10) # Need log(lambda) for Rayleigh fit xdata
-    ydata = (k*rs)
+    ydata = (rp*rs)
 
     popt,pcov=curve_fit(straight_line,xdata,ydata,p0=[guess_slope,guess_intercept],sigma=rp_error)
 
@@ -148,30 +148,30 @@ def rayleigh_slope(Teq,logg,Rp,Rstar,k,k_up,k_low,wvl_bin_centres,save_output=Fa
     fitted_slope_resampled = -4*H_fit*np.log(resampled_x)/rs
 
     fitted_slope = -4*H_fit*np.log(wvl_bin_centres)/rs
-    offset_fit = k.mean()-fitted_slope.mean()
+    offset_fit = rp.mean()-fitted_slope.mean()
 
     fitted_slope = fitted_slope + offset_fit # offset applied
     fitted_slope_resampled = fitted_slope_resampled + offset_fit # offset applied
-    chi2_Tfit,rchi2_Tfit = chi2_trans_models(fitted_slope,k,k_up,k_low,NDOF=1)
-    BIC_Tfit = chi2_Tfit+1*np.log(len(k))
+    chi2_Tfit,rchi2_Tfit = chi2_trans_models(fitted_slope,rp,rp_up,rp_low,NDOF=1)
+    BIC_Tfit = chi2_Tfit+1*np.log(len(rp))
 
     equilibrium_slope_resampled = -4*H*np.log(resampled_x)/rs
 
 
     equilibrium_slope = -4*H*np.log(wvl_bin_centres)/rs
-    offset_eq = (k.mean()-equilibrium_slope.mean())
+    offset_eq = (rp.mean()-equilibrium_slope.mean())
 
     equilibrium_slope = equilibrium_slope + offset_eq # offset applied
     equilibrium_slope_resampled = equilibrium_slope_resampled + offset_eq
-    chi2_Teq,rchi2_Teq = chi2_trans_models(equilibrium_slope,k,k_up,k_low)
+    chi2_Teq,rchi2_Teq = chi2_trans_models(equilibrium_slope,rp,rp_up,rp_low)
 
-    flat_line = np.average(k,weights=1/(np.sqrt(k_up**2+k_low**2)))
-    flat_line = np.array([flat_line]*len(k))
-    chi2_flat,rchi2_flat = chi2_trans_models(flat_line,k,k_up,k_low)
+    flat_line = np.average(rp,weights=1/(np.sqrt(rp_up**2+rp_low**2)))
+    flat_line = np.array([flat_line]*len(rp))
+    chi2_flat,rchi2_flat = chi2_trans_models(flat_line,rp,rp_up,rp_low)
 
     if verbose:
         plt.figure()
-        plt.errorbar(wvl_bin_centres,k,yerr=(k_low,k_up),fmt='o',color='k',ecolor='k')
+        plt.errorbar(wvl_bin_centres,rp,yerr=(rp_low,rp_up),fmt='o',color='k',ecolor='k')
         plt.plot(resampled_x,equilibrium_slope_resampled,'g--')
         plt.plot(wvl_bin_centres,equilibrium_slope,'g')
         plt.plot(resampled_x,fitted_slope_resampled,'r--')
@@ -241,9 +241,9 @@ def plot_models(model_list,time,flux_array,error_array,wvl_centre,rebin_data=Non
         tc = model_list[0].t0
     except:
         try:
-            tc = model_list[0].pars['t0'].currVal
+            tc = model_list[0].param_dict['t0'].currVal
         except:
-            tc = model_list[0].pars['t0']
+            tc = model_list[0].param_dict['t0']
 
     fig = plt.figure(figsize=(8,10))
 
@@ -613,7 +613,7 @@ def rebin(xbins,x,y,e=None,weighted=False,errors_from_rms=False):
     ebin = np.array(ebin)
     return (xbin,ybin,ebin)
 
-def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mask=None,save_to_tab=False,print_RpErr_over_RMS=False,iib=False,plot_depths=False):
+def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mask=None,save_to_tab=False,iib=False,plot_depths=False):
     """
     A function that generates/recovers the transmission spectrum from the table of best fit parameters resulting from pm_fit.py and gp_fit.py.
 
@@ -623,7 +623,6 @@ def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mas
     plot_fig - True/False: plot the outputted transmission spectrum or not? If False, code returns numpy arrays of Rp/Rs and errors. Default=True
     bin_mask - set to a list of integers to mask certain wavelength bins from the transmission spectrum if desired. Indexed from 0. Default = None (no masking).
     save_to_tab - True/False: if True, saves transmission spectrum to .dat text file. Default=False
-    print_RpErr_over_RMS - True/False - use this to increase verbosity and print how the errors in Rp/Rs compare to the RMS of the residuals and the photon noise. Default=False
     iib - True/False: - If this is an iib fit to Na or K then plot the transmission spectrum with wvl_error on x-axis.
     plot_depths - True/False: - Use this to plot in transit depth rather than Rp/Rs. Default=False (Rp/Rs).
 
@@ -634,42 +633,41 @@ def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mas
     """
 
     try:
-        best_dict = parseInput(directory+'/best_fit_parameters_GP.txt')
+        best_dict = parseInput('./best_fit_parameters_GP.txt')
     except:
-        best_dict = parseInput(directory+'/best_fit_parameters.txt')
+        best_dict = parseInput('./best_fit_parameters.txt')
 
-    input_dict = parseInput(directory+'/fitting_input.txt')
+    input_dict = parseInput('./fitting_input.txt')
 
     # load in data
     x,y,e,e_r,m,m_in,w,we,completed_bins,nbins = load_completed_bins(directory,bin_mask)
 
-    k = []
-    k_up = []
-    k_low = []
+    rp = []
+    rp_up = []
+    rp_low = []
     d = []
     d_up = []
     d_low = []
 
-    if not bool(int(input_dict['fix_u1'])):
+    if "u1" in m[0].param_list_free:
         u1 = []
         u1_up = []
         u1_low = []
 
-    if not bool(int(input_dict['fix_u2'])):
+    if "u2" in m[0].param_list_free:
         u2 = []
         u2_up = []
         u2_low = []
 
-    if input_dict["ld_law"] == "nonlinear":
-        if not bool(int(input_dict['fix_u3'])):
-            u3 = []
-            u3_up = []
-            u3_low = []
+    if "u3" in m[0].param_list_free:
+        u3 = []
+        u3_up = []
+        u3_low = []
 
-        if not bool(int(input_dict['fix_u4'])):
-            u4 = []
-            u4_up = []
-            u4_low = []
+    if "u4" in m[0].param_list_free:
+        u4 = []
+        u4_up = []
+        u4_low = []
 
     # calculate the planet's atmospheric scale height which is useful for plotting
     try:
@@ -685,89 +683,71 @@ def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mas
 
     for i,wb in enumerate(completed_bins):
 
-        k_curr,k_up_curr,k_low_curr = mc.parseParam(best_dict['k_%d'%wb])
-        k.append(k_curr)
-        k_up.append(k_up_curr)
-        k_low.append(k_low_curr)
+        rp_curr,rp_up_curr,rp_low_curr = mc.parseParam(best_dict['rp_%d'%wb])
+        rp.append(rp_curr)
+        rp_up.append(rp_up_curr)
+        rp_low.append(rp_low_curr)
 
-        transit_depth = k_curr**2
-        transit_depth_err_up = transit_depth*2*k_up_curr/k_curr
-        transit_depth_err_low = transit_depth*2*k_low_curr/k_curr
+        transit_depth = rp_curr**2
+        transit_depth_err_up = transit_depth*2*rp_up_curr/rp_curr
+        transit_depth_err_low = transit_depth*2*rp_low_curr/rp_curr
         transit_depth_err = np.mean((transit_depth_err_up,transit_depth_err_low))
 
         d.append(transit_depth)
         d_up.append(transit_depth_err_up)
         d_low.append(transit_depth_err_low)
 
+        print('Wavelength bin %d: sigma(Rp/Rs)/H = %.2f'%(i+1,np.maximum(rp_up_curr,rp_low_curr)/H_Rs))
 
-        if print_RpErr_over_RMS:
-
-
-            GP_model = m[i].GP_used
-            if GP_model:
-                rms = m[i].rms(x[i],y[i],e[i])
-            else:
-                rms = m[i].rms(x[i],y[i])
-
-            print('Wavelength bin %d: sigma(Rp/Rs)/H = %.2f'%(i+1,np.maximum(k_up_curr,k_low_curr)/H_Rs))
-
-            if e_r is not None:
-                # ~ e_r = pickle.load(open(error_list_rescaled[counter],'rb'))
-                if GP_model:
-                    rms_r = m[i].rms(x[i],y[i],e_r[i])
-                else:
-                    rms_r = m[i].rms(x[i],y[i])
-
-        if not bool(int(input_dict['fix_u1'])):
+        if "u1" in m[i].param_list_free:
             u1_curr,u1_up_curr,u1_low_curr = mc.parseParam(best_dict['u1_%d'%(wb)])
             u1.append(u1_curr)
             u1_up.append(u1_up_curr)
             u1_low.append(u1_low_curr)
 
-        if not bool(int(input_dict['fix_u2'])):
+        if "u2" in m[i].param_list_free:
             u2_curr,u2_up_curr,u2_low_curr = mc.parseParam(best_dict['u2_%d'%(wb)])
             u2.append(u2_curr)
             u2_up.append(u2_up_curr)
             u2_low.append(u2_low_curr)
 
-        if input_dict["ld_law"] == "nonlinear":
-            if not bool(int(input_dict['fix_u3'])):
-                u3_curr,u3_up_curr,u3_low_curr = mc.parseParam(best_dict['u3_%d'%(wb)])
-                u3.append(u3_curr)
-                u3_up.append(u3_up_curr)
-                u3_low.append(u3_low_curr)
+        if "u3" in m[i].param_list_free:
+            u3_curr,u3_up_curr,u3_low_curr = mc.parseParam(best_dict['u3_%d'%(wb)])
+            u3.append(u3_curr)
+            u3_up.append(u3_up_curr)
+            u3_low.append(u3_low_curr)
 
-            if not bool(int(input_dict['fix_u4'])):
-                u4_curr,u4_up_curr,u4_low_curr = mc.parseParam(best_dict['u4_%d'%(wb)])
-                u4.append(u4_curr)
-                u4_up.append(u4_up_curr)
-                u4_low.append(u4_low_curr)
+        if "u4" in m[i].param_list_free:
+            u4_curr,u4_up_curr,u4_low_curr = mc.parseParam(best_dict['u4_%d'%(wb)])
+            u4.append(u4_curr)
+            u4_up.append(u4_up_curr)
+            u4_low.append(u4_low_curr)
 
-    k,k_up,k_low,d,d_up,d_low = np.array(k),np.array(k_up),np.array(k_low),np.array(d),np.array(d_up),np.array(d_low)
-    if not bool(int(input_dict['fix_u1'])):
+    rp,rp_up,rp_low,d,d_up,d_low = np.array(rp),np.array(rp_up),np.array(rp_low),np.array(d),np.array(d_up),np.array(d_low)
+    if "u1" in m[0].param_list_free:
         u1,u1_up,u1_low = np.array(u1),np.array(u1_up),np.array(u1_low)
 
-    if not bool(int(input_dict['fix_u2'])):
+    if "u2" in m[0].param_list_free:
         u2,u2_up,u2_low = np.array(u2),np.array(u2_up),np.array(u2_low)
 
-    if input_dict["ld_law"] == "nonlinear":
-        if not bool(int(input_dict['fix_u3'])):
-            u3,u3_up,u3_low = np.array(u3),np.array(u3_up),np.array(u3_low)
-        if not bool(int(input_dict['fix_u4'])):
-            u4,u4_up,u4_low = np.array(u4),np.array(u4_up),np.array(u4_low)
+    if "u3" in m[0].param_list_free:
+        u3,u3_up,u3_low = np.array(u3),np.array(u3_up),np.array(u3_low)
 
-    print("\nMedian Rp/Rs = %.6f ;  Median Rp/Rs +ve error (ppm) = %d ; Median Rp/Rs -ve error (ppm) = %d \n"%(np.nanmedian(k),np.nanmedian(k_up)*1e6,np.nanmedian(k_low)*1e6))
+    if "u4" in m[0].param_list_free:
+        u4,u4_up,u4_low = np.array(u4),np.array(u4_up),np.array(u4_low)
+
+    print("\nMedian Rp/Rs = %.6f ;  Median Rp/Rs +ve error (ppm) = %d ; Median Rp/Rs -ve error (ppm) = %d \n"%(np.nanmedian(rp),np.nanmedian(rp_up)*1e6,np.nanmedian(rp_low)*1e6))
 
     if bin_mask is not None:
-        k = k[bin_mask]
-        k_up = k_up[bin_mask]
-        k_low = k_low[bin_mask]
+        rp = rp[bin_mask]
+        rp_up = rp_up[bin_mask]
+        rp_low = rp_low[bin_mask]
         d = d[bin_mask]
         d_up = d_up[bin_mask]
         d_low = d_low[bin_mask]
         w = w[bin_mask]
         we = we[bin_mask]
-        nbins = len(k)
+        nbins = len(rp)
 
     if save_to_tab:
 
@@ -780,26 +760,26 @@ def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mas
         else:
             new_tab_2.write('# Wavelength bin centre (%s), wavelength bin full width (%s), Transit depth, Transit depth +ve error, Transit depth -ve error'%(determine_wvl_units(w),determine_wvl_units(w)))
 
-        if not bool(int(input_dict['fix_u1'])):
+        if "u1" in m[0].param_list_free:
             new_tab.write(', u1, u1 +ve error, u1 -ve error')
             # ~ new_tab_2.write(', u1, u1 +ve error, u1 -ve error')
-        if not bool(int(input_dict['fix_u2'])):
+        if "u2" in m[0].param_list_free:
             new_tab.write(', u2, u2 +ve error, u2 -ve error')
             # ~ new_tab_2.write(', u2, u2 +ve error, u2 -ve error')
 
-        if input_dict["ld_law"] == "nonlinear":
-            if not bool(int(input_dict['fix_u3'])):
-                new_tab.write(', u3, u3 +ve error, u3 -ve error')
-                # ~ new_tab_2.write(', u3, u3 +ve error, u3 -ve error')
-            if not bool(int(input_dict['fix_u4'])):
-                new_tab.write(', u4, u4 +ve error, u4 -ve error')
-                # ~ new_tab_2.write(', u4, u4 +ve error, u4 -ve error')
+        if "u3" in m[0].param_list_free:
+            new_tab.write(', u3, u3 +ve error, u3 -ve error')
+            # ~ new_tab_2.write(', u3, u3 +ve error, u3 -ve error')
+
+        if "u4" in m[0].param_list_free:
+            new_tab.write(', u4, u4 +ve error, u4 -ve error')
+            # ~ new_tab_2.write(', u4, u4 +ve error, u4 -ve error')
 
         new_tab.write('\n')
         new_tab_2.write('\n')
 
         for i in range(nbins):
-            new_tab.write('%f %f %.6f %.6f %.6f'%(w[i],we[i],k[i],k_up[i],k_low[i]))
+            new_tab.write('%f %f %.6f %.6f %.6f'%(w[i],we[i],rp[i],rp_up[i],rp_low[i]))
 
             # only save one depth error column if they're equal. But don't do this for Rp/Rs since compare_transmission_spectra.py relies on 5 column input
             if np.all(d_up == d_low):
@@ -807,19 +787,18 @@ def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mas
             else:
                 new_tab_2.write('%f %f %.6f %.6f %.6f'%(w[i],we[i],d[i],d_up[i],d_low[i]))
 
-            if not bool(int(input_dict['fix_u1'])):
+            if "u1" in m[0].param_list_free:
                 new_tab.write( ' %.2f %.2f %.2f'%(u1[i],u1_up[i],u1_low[i]))
                 # ~ new_tab_2.write( ' %.2f %.2f %.2f'%(u1[i],u1_up[i],u1_low[i]))
-            if not bool(int(input_dict['fix_u2'])):
+            if "u2" in m[0].param_list_free:
                 new_tab.write( ' %.1f %.1f %.1f'%(u2[i],u2_up[i],u2_low[i]))
                 # ~ new_tab_2.write( ' %.1f %.1f %.1f'%(u2[i],u2_up[i],u2_low[i]))
-            if input_dict["ld_law"] == "nonlinear":
-                if not bool(int(input_dict['fix_u3'])):
-                    new_tab.write( ' %.1f %.1f %.1f'%(u3[i],u3_up[i],u3_low[i]))
-                    # ~ new_tab_2.write( ' %.1f %.1f %.1f'%(u3[i],u3_up[i],u3_low[i]))
-                if not bool(int(input_dict['fix_u4'])):
-                    new_tab.write( ' %.1f %.1f %.1f'%(u4[i],u4_up[i],u4_low[i]))
-                    # ~ new_tab_2.write( ' %.1f %.1f %.1f'%(u4[i],u4_up[i],u4_low[i]))
+            if "u3" in m[0].param_list_free:
+                new_tab.write( ' %.1f %.1f %.1f'%(u3[i],u3_up[i],u3_low[i]))
+                # ~ new_tab_2.write( ' %.1f %.1f %.1f'%(u3[i],u3_up[i],u3_low[i]))
+            if "u4" in m[0].param_list_free:
+                new_tab.write( ' %.1f %.1f %.1f'%(u4[i],u4_up[i],u4_low[i]))
+                # ~ new_tab_2.write( ' %.1f %.1f %.1f'%(u4[i],u4_up[i],u4_low[i]))
 
             new_tab.write('\n')
             new_tab_2.write('\n')
@@ -832,18 +811,18 @@ def recover_transmission_spectrum(directory,save_fig=False,plot_fig=True,bin_mas
             if plot_depths:
                 fig = plot_transmission_spectrum(d,d_up,d_low,calibrated_wvl=we,wvl_errors=None,save_fig=save_fig,scale_height=H_Rs**2,iib=True,plot_depths=True)
             else:
-                fig = plot_transmission_spectrum(k,k_up,k_low,calibrated_wvl=we,wvl_errors=None,save_fig=save_fig,scale_height=H_Rs,iib=True)
+                fig = plot_transmission_spectrum(rp,rp_up,rp_low,calibrated_wvl=we,wvl_errors=None,save_fig=save_fig,scale_height=H_Rs,iib=True)
         else:
             if plot_depths:
                 fig = plot_transmission_spectrum(d,d_up,d_low,calibrated_wvl=w,wvl_errors=we/2,save_fig=save_fig,scale_height=H_Rs,plot_depths=True)
             else:
-                fig = plot_transmission_spectrum(k,k_up,k_low,calibrated_wvl=w,wvl_errors=we/2,save_fig=save_fig,scale_height=H_Rs)
+                fig = plot_transmission_spectrum(rp,rp_up,rp_low,calibrated_wvl=w,wvl_errors=we/2,save_fig=save_fig,scale_height=H_Rs)
         return fig
     else:
         if plot_depths:
             return d,d_up,d_low,w,we,H_Rs
         else:
-            return np.array(k),np.array(k_up),np.array(k_low),w,we,H_Rs
+            return np.array(rp),np.array(rp_up),np.array(rp_low),w,we,H_Rs
 
 def plot_multi_trans_spec(directory_lists,save_fig=False,plot_fig=False):
     """
@@ -856,49 +835,49 @@ def plot_multi_trans_spec(directory_lists,save_fig=False,plot_fig=False):
 
     Returns:
     matplotlib figure object - if plot_fig = True
-    np.array(k_all),np.array(k_up_all),np.array(k_low_all),np.array(w_all),np.array(we_all),H_Rs - the concatenated Rp/Rs, errors, wavelength bin centres and errors, and atmospheric scale height - if plot_fig = False
+    np.array(rp_all),np.array(rp_up_all),np.array(rp_low_all),np.array(w_all),np.array(we_all),H_Rs - the concatenated Rp/Rs, errors, wavelength bin centres and errors, and atmospheric scale height - if plot_fig = False
 
     Returns:"""
 
-    k_all = np.array([])
-    k_up_all = np.array([])
-    k_low_all = np.array([])
+    rp_all = np.array([])
+    rp_up_all = np.array([])
+    rp_low_all = np.array([])
     w_all = np.array([])
     we_all = np.array([])
 
     for d in directory_lists:
         try:
-            k,k_up,k_low,w,we,H_Rs = recover_transmission_spectrum(d+'best_fit_parameters_GP.txt',d+'fitting_input.txt',False,False)
+            rp,rp_up,rp_low,w,we,H_Rs = recover_transmission_spectrum(d+'best_fit_parameters_GP.txt',d+'fitting_input.txt',False,False)
         except:
-            k,k_up,k_low,w,we,H_Rs = recover_transmission_spectrum(d+'best_fit_parameters_noGP.txt',d+'fitting_input.txt',False,False)
-        k_all = np.hstack((k_all,k))
-        k_up_all = np.hstack((k_up_all,k_up))
-        k_low_all = np.hstack((k_low_all,k_low))
+            rp,rp_up,rp_low,w,we,H_Rs = recover_transmission_spectrum(d+'best_fit_parameters_noGP.txt',d+'fitting_input.txt',False,False)
+        rp_all = np.hstack((rp_all,rp))
+        rp_up_all = np.hstack((rp_up_all,rp_up))
+        rp_low_all = np.hstack((rp_low_all,rp_low))
         w_all = np.hstack((w_all,w))
         we_all = np.hstack((we_all,we))
 
     if plot_fig:
-        fig = plot_transmission_spectrum(np.array(k_all),np.array(k_up_all),np.array(k_low_all),calibrated_wvl=np.array(w_all),wvl_errors=np.array(we_all),save_fig=save_fig,scale_height=H_Rs)
+        fig = plot_transmission_spectrum(np.array(rp_all),np.array(rp_up_all),np.array(rp_low_all),calibrated_wvl=np.array(w_all),wvl_errors=np.array(we_all),save_fig=save_fig,scale_height=H_Rs)
         return fig
     else:
-        return np.array(k_all),np.array(k_up_all),np.array(k_low_all),np.array(w_all),np.array(we_all),H_Rs
+        return np.array(rp_all),np.array(rp_up_all),np.array(rp_low_all),np.array(w_all),np.array(we_all),H_Rs
 
 
-def plot_transmission_spectrum(k_array,k_upper=None,k_lower=None,calibrated_wvl=None,wvl_errors=None,bin_width=250,save_fig=False,scale_height=None,model_atmos=None,iib=False,plot_depths=False):
+def plot_transmission_spectrum(rp_array,rp_upper=None,rp_lower=None,calibrated_wvl=None,wvl_errors=None,bin_width=250,save_fig=False,scale_height=None,model_atmos=None,iib=False,plot_depths=False):
 
     """
     Function that plots the transmission spectrum (Rp/Rs vs wavelength in Angstroms).
 
     Inputs:
-    k_array - the array of Rp/Rs values
-    k_upper - the positive errors in Rp/Rs. Default=None
-    k_lower - the negative errors in Rp/Rs. Default=None
-    calibrated_wvl - the wavelength bin centres. If this is not supplied, the figure will estimate the wavelength bins as an array from 3000-9000A with a length=len(k_array). Default=None
+    rp_array - the array of Rp/Rs values
+    rp_upper - the positive errors in Rp/Rs. Default=None
+    rp_lower - the negative errors in Rp/Rs. Default=None
+    calibrated_wvl - the wavelength bin centres. If this is not supplied, the figure will estimate the wavelength bins as an array from 3000-9000A with a length=len(rp_array). Default=None
     wvl_errors - the wavelength bin half widths, in Angstroms
     bin_width - if calibrated_wvl = None, this defines the xerror. Default=250.
     save_fig - True/False - save the outputted figure or not. Default=False
     scale_height - if wanting the plot the Rp/Rs values in terms of the scale heights on the right-hand y axis, supply this value here as the atmospheric scale height divided by the radius of the star. Default=None (no plotting of this)
-    model_atmos - if wanting to overplot model atmospheres on the transmission spectrum. This should be given as a dictionary as {'binned_wvl':,'binned_k':,'unbinned_wvl':,'unbinned_k'}. Default=None (no models plotted)
+    model_atmos - if wanting to overplot model atmospheres on the transmission spectrum. This should be given as a dictionary as {'binned_wvl':,'binned_rp':,'unbinned_wvl':,'unbinned_rp'}. Default=None (no models plotted)
 
     Returns:
     matplotlib figure object
@@ -909,29 +888,29 @@ def plot_transmission_spectrum(k_array,k_upper=None,k_lower=None,calibrated_wvl=
 
     #if calibrated_wvl == None:
     if calibrated_wvl is None:
-          wvl = np.linspace(3000,9000,len(k_array))
+          wvl = np.linspace(3000,9000,len(rp_array))
           xerror = bin_width
     else:
           wvl = calibrated_wvl
           xerror = wvl_errors
 
-    if k_upper is not None:
-        e = (k_lower,k_upper)
+    if rp_upper is not None:
+        e = (rp_lower,rp_upper)
 
     else:
         e = None
 
     if iib:
-        ax.errorbar(wvl,k_array,yerr=e,xerr=xerror,fmt='o',ecolor='k',zorder=10,color='k')
+        ax.errorbar(wvl,rp_array,yerr=e,xerr=xerror,fmt='o',ecolor='k',zorder=10,color='k')
     else:
-        ax.errorbar(wvl,k_array,yerr=e,xerr=xerror,fmt='.',ecolor='k',zorder=10,capsize=2,mfc='white',mec='k')
+        ax.errorbar(wvl,rp_array,yerr=e,xerr=xerror,fmt='.',ecolor='k',zorder=10,capsize=2,mfc='white',mec='k')
 
     if model_atmos is not None:
         try:
-            ax.plot(model_atmos['unbinned_wvl'],model_atmos['unbinned_k'],'b')
+            ax.plot(model_atmos['unbinned_wvl'],model_atmos['unbinned_rp'],'b')
         except:
             pass
-        ax.plot(model_atmos['binned_wvl'],model_atmos['binned_k'],'ro')
+        ax.plot(model_atmos['binned_wvl'],model_atmos['binned_rp'],'ro')
 
     if plot_depths:
         ax.set_ylabel('Transit depth $(R_{P}/R_{S})^2$',fontsize=12)
@@ -992,15 +971,15 @@ def expected_vs_calculated_ldcs(directory='.',save_fig=False,bin_mask=None):
     Returns:
     Nothing, it just plots the figure"""
 
-    wvl_centre,wvl_error,ldtk_u1,ldtk_u1_err,ldtk_u2,ldtk_u2_err,ldtk_u3,ldtk_u3_err,ldtk_u4,ldtk_u4_err = np.loadtxt('%s/LD_coefficients.txt'%directory,unpack=True)
+    wvl_centre,wvl_error,ldtk_u1,ldtk_u1_err,ldtk_u2,ldtk_u2_err,ldtk_u3,ldtk_u3_err,ldtk_u4,ldtk_u4_err = np.loadtxt('./LD_coefficients.txt',unpack=True)
     wvl_error = wvl_error/2
 
     try:
-        best_dict = parseInput('%s/best_fit_parameters.txt'%directory)
+        best_dict = parseInput('./best_fit_parameters.txt')
     except:
-        best_dict = parseInput('%sbest_fit_parameters_GP.txt'%directory)
+        best_dict = parseInput('./best_fit_parameters_GP.txt')
 
-    model_list = glob.glob('%s/fitted_lightcurve_model_*.pickle'%directory)
+    model_list = glob.glob('%s/pickled_objects/fitted_lightcurve_model_*.pickle'%directory)
     nbins = len(model_list)
 
     completed_bins = load_completed_bins(directory,return_index_only=True,mask=bin_mask)
@@ -1010,14 +989,35 @@ def expected_vs_calculated_ldcs(directory='.',save_fig=False,bin_mask=None):
     np.atleast_1d(ldtk_u3)[completed_bins],np.atleast_1d(ldtk_u3_err)[completed_bins],np.atleast_1d(ldtk_u4)[completed_bins],np.atleast_1d(ldtk_u4_err)[completed_bins]
 
     m = pickle.load(open(model_list[0],'rb'))
-    fix_u1 = m.fix_u1
-    fix_u2 = m.fix_u2
-    if m.ld_law == "nonlinear":
-        fix_u3 = m.fix_u3
-        fix_u4 = m.fix_u4
+
+    if "u1" in m.param_list_free:
+        fix_u1 = True
     else:
-        fix_u3 = True # note these are not used in this case
+        fix_u1 = False
+
+    if "u2" in m.param_list_free:
+        fix_u2 = True
+    else:
+        fix_u2 = False
+
+    if "u3" in m.param_list_free:
+        fix_u3 = True
+    else:
+        fix_u3 = False
+
+    if "u4" in m.param_list_free:
         fix_u4 = True
+    else:
+        fix_u4 = False
+
+    # fix_u1 = m.fix_u1
+    # fix_u2 = m.fix_u2
+    # if m.ld_law == "nonlinear":
+    #     fix_u3 = m.fix_u3
+    #     fix_u4 = m.fix_u4
+    # else:
+    #     fix_u3 = True # note these are not used in this case
+    #     fix_u4 = True
 
     u1,u1_up,u1_low = [],[],[]
     u2,u2_up,u2_low = [],[],[]
@@ -1242,22 +1242,22 @@ def bin_model_to_data(model_wvl,model_data,data_wvl,data_wvl_e,bin_break=None):
 
 
 
-def weighted_mean_uneven_errors(k,k_up,k_low,model=1):
+def weighted_mean_uneven_errors(rp,rp_up,rp_low,model=1):
     """A function to calculate the weighted mean of multiple, concatenated, transmission spectra that have un-even (non-symmetric) uncertainties.
 
     This uses the models of Barlow 2003.
 
     Inputs:
-    k - the concatenated Rp/Rs values
-    k_up - the concatenated positive uncertainties in Rp/Rs
-    k_low - the concatenated negative uncertainties in Rp/Rs
+    rp - the concatenated Rp/Rs values
+    rp_up - the concatenated positive uncertainties in Rp/Rs
+    rp_low - the concatenated negative uncertainties in Rp/Rs
     model - the number of the model as given in Barlow 2003 (either 1 or 2)
 
     Returns:
     weighted mean Rp/Rs
     the uncertainties in the weighted mean Rp/Rs values"""
 
-    nvalues = len(k)
+    nvalues = len(rp)
 
     sigma = {}
     alpha = {}
@@ -1273,13 +1273,13 @@ def weighted_mean_uneven_errors(k,k_up,k_low,model=1):
 
     for i in range(nvalues):
 
-        sigma[i+1] = (k_up[i]+k_low[i])/2. # eqn 1
-        alpha[i+1] = (k_up[i]-k_low[i])/2. # eqn 1
+        sigma[i+1] = (rp_up[i]+rp_low[i])/2. # eqn 1
+        alpha[i+1] = (rp_up[i]-rp_low[i])/2. # eqn 1
 
 
         if model == 1:
             V[i+1] = sigma[i+1]**2 + (1 - 2/np.pi)*alpha[i+1]**2 # eqn 18
-            b[i+1] = (k_up[i]-k_low[i])/np.sqrt(2*np.pi) # eqn 17
+            b[i+1] = (rp_up[i]-rp_low[i])/np.sqrt(2*np.pi) # eqn 17
 
         if model == 2:
             V[i+1] = sigma[i+1]**2 + 2*alpha[i+1]**2 # eqn 18
@@ -1287,7 +1287,7 @@ def weighted_mean_uneven_errors(k,k_up,k_low,model=1):
 
         w[i+1] = 1/V[i+1]
 
-        x_numerator += (w[i+1]*(k[i]-b[i+1])) # eqn 16
+        x_numerator += (w[i+1]*(rp[i]-b[i+1])) # eqn 16
         x_denominator += (w[i+1])
 
         e_numerator += (w[i+1]**2)*V[i+1] # below eqn 17
@@ -1313,7 +1313,7 @@ def load_completed_bins(directory=".",start_bin=None,end_bin=None,mask=None,retu
         x,y,e,e_r,m,m_in,w,we,completed_bins,nbins - arrays of time, flux, error, rescaled errors, TransitGPPM models, model input files, wavelength bin centres, wavelength bin widths, the indices of the completed bin fits, the number of bins with completed fits"
     """
 
-    model_files = np.array(sorted(glob.glob('%s/fitted_lightcurve_model_*.pickle'%directory)))
+    model_files = np.array(sorted(glob.glob('%s/pickled_objects/fitted_lightcurve_model_*.pickle'%directory)))
 
     # determine the completed bins by finding the XXX number in the "_wbXXX" in the file names
     completed_bins = np.array([int(m.split("wb")[-1].split(".")[0]) for m in model_files])
@@ -1322,13 +1322,13 @@ def load_completed_bins(directory=".",start_bin=None,end_bin=None,mask=None,retu
     nbins = len(completed_bins)
 
     ### Load in data arrays
-    time_files = np.array(["%s/sigma_clipped_time_wb%s.pickle"%(directory,str(i).zfill(4)) for i in completed_bins])
-    flux_files = np.array(["%s/sigma_clipped_flux_wb%s.pickle"%(directory,str(i).zfill(4)) for i in completed_bins])
-    error_files = np.array(["%s/sigma_clipped_error_wb%s.pickle"%(directory,str(i).zfill(4)) for i in completed_bins])
-    model_input_files = np.array(["%s/sigma_clipped_model_inputs_wb%s.pickle"%(directory,str(i).zfill(4)) for i in completed_bins])
+    time_files = np.array(["%s/pickled_objects/Used_time_wb%s.pickle"%(directory,str(i).zfill(4)) for i in completed_bins])
+    flux_files = np.array(["%s/pickled_objects/Used_flux_wb%s.pickle"%(directory,str(i).zfill(4)) for i in completed_bins])
+    error_files = np.array(["%s/pickled_objects/Used_error_wb%s.pickle"%(directory,str(i).zfill(4)) for i in completed_bins])
+    model_input_files = np.array(["%s/pickled_objects/Used_model_inputs_wb%s.pickle"%(directory,str(i).zfill(4)) for i in completed_bins])
 
     # For the error, we preferentially used rescaled errors. Either by reduced chi2 for PM fits or by white noise kernel in GP fits.
-    rescaled_error_files = np.array(["%s/rescaled_errors_wb%s.pickle"%(directory,str(i).zfill(4)) for i in completed_bins])
+    rescaled_error_files = np.array(["%s/pickled_objects/Used_rescaled_errors_wb%s.pickle"%(directory,str(i).zfill(4)) for i in completed_bins])
 
     x = [pickle.load(open(i,'rb')) for i in time_files]
     y = [pickle.load(open(i,'rb')) for i in flux_files]
@@ -1340,7 +1340,7 @@ def load_completed_bins(directory=".",start_bin=None,end_bin=None,mask=None,retu
         e_r = None
 
     ### Load in LD coefficients table for the wavelength centres and widths of the bins
-    w,we = np.loadtxt('%s/LD_coefficients.txt'%directory,unpack=True,usecols=[0,1])
+    w,we = np.loadtxt('./LD_coefficients.txt',unpack=True,usecols=[0,1])
     w,we = np.atleast_1d(w)[completed_bins-1],np.atleast_1d(we)[completed_bins-1]
 
     ### Bin mask
