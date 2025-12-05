@@ -756,6 +756,27 @@ def optimise_params(self, time, flux, flux_err, reset_starting_gp=False, contact
         return self, results.x, uncertainties
 
 
+# def update_prior_file(input_prior_file,lightcurve_model,best_fit_params):
+#
+#     import shutil
+#
+#     shutil.copyfile(input_prior_file, new_prior_file_name)
+#
+#     new_prior_file_name = input_prior_file.split(".txt")[0] + "_wb.txt"
+#
+#     new_prior_file = open(new_prior_file_name,"a")
+#
+#     fitted_param_names = np.loadtxt("best_fit_parameters.txt",usecols=0,dtype="str").replace("_1","")
+#     param_medians,param_uncertainties =
+#
+#     for i,line in enumerate(new_prior_file):
+#
+#         if line[1] == "free":
+#             line[2] = lightcurve_model[]
+
+
+
+
 
 
 
