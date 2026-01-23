@@ -10,8 +10,11 @@ import numpy as np
 # TOI-1726b
 order_offset = 0
 
-# HAT-P-26b 
+# HAT-P-26b
 order_offset = -30
+
+# HD260655c
+order_offset = 0
 
 # order_edges = {'order84': np.array([[219, 176], [290, 265]])+order_offset,\
 # 'order83': np.array([[290, 265], [379, 349]])+order_offset,\
