@@ -1,0 +1,44 @@
+#!/bin/bash
+# following steps as defined here: https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_spec2.html
+# stage 2 of NIRSpec TSO includes: assign_wcs, nsclean (a 1/f correction), background, extract_2d, srctype, wavecorr, flat_field, pathloss, photom, pixel_replace, resample_spec, extract_1d
+# since we applied a 1/f correction (which effectively applied the background step during group stage), we will perform the following steps: assign_wcs, extract_2d, srctype, wavecorr, flat_field, pathloss, photom (finishing at photom because I then perform my own aperture photometry)
+# we also need to apply the gain correction since this isn't done properly during the gainscalestep. 
+#conda activate JWST
+export CRDS_PATH=$HOME/crds_cache
+export CRDS_SERVER_URL=https://jwst-crds.stsci.edu
+echo ""
+echo "****running gain_scale****"
+echo ""
+python $HOME/python/Tiberius/src/reduction_utils/JWST_utils/gainscalestep.py --science_file $1_1_gainscalestep.fits --gain_file $HOME/crds_cache/jwst/references/jwst/nirspec/jwst_nirspec_gain_0027.fits
+echo ""
+echo "****running assign_wcs****"
+echo ""
+strun assign_wcs $1_1_gainscalestep.fits
+rm $1_1_gainscalestep.fits
+echo ""
+echo "***running extract_2d***"
+strun extract_2d $1_1_assignwcsstep.fits --tsgrism_extract_height 128
+rm $1_1_assignwcsstep.fits
+echo ""
+echo "***running srctype***"
+strun srctype $1_1_extract2dstep.fits --source_type POINT
+rm $1_1_extract2dstep.fits
+echo ""
+echo "***running wavecorr***"
+strun wavecorr $1_1_sourcetypestep.fits 
+rm $1_1_sourcetypestep.fits 
+echo ""
+echo "***running flat_field***"
+echo ""
+strun flat_field $1_1_wavecorrstep.fits
+rm $1_1_wavecorrstep.fits
+echo ""
+echo "***running pathloss***"
+strun pathloss $1_1_flatfieldstep.fits
+rm $1_1_flatfieldstep.fits
+echo ""
+echo "***running photom***"
+strun photom $1_1_pathlossstep.fits 
+rm $1_1_pathlossstep.fits
+strun photom $1_1_flatfieldstep.fits 
+#conda deactivate
