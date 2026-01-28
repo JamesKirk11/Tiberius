@@ -329,11 +329,10 @@ sampling = s.Sampling(lc_class,sampling_arguments,sampling_method)
 if sampling_method == 'emcee':
 
     fitted_lightcurve = sampling.run_emcee(wavelength_bin=wb)
-    fig = pu.plot_single_model(fitted_lightcurve,time,flux,flux_error,rebin_data=rebin_data,save_fig=True,wavelength_bin=wb,deconstruct=True)
-    pickle.dump(fitted_lightcurve,open(output_foldername + '/pickled_objects/' + 'fitted_lightcurve_model_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
-
+ 
 elif sampling_method == 'dynesty':
-    result = sampling.run_dynesty()
+    fitted_lightcurve = sampling.run_dynesty()
+
 
 elif sampling_method == 'LM':
 
@@ -354,12 +353,13 @@ elif sampling_method == 'LM':
         print("reduced Chi2 following error rescaling = %.2f"%(rchi2_rescaled))
         pickle.dump(flux_error,open(output_foldername + '/pickled_objects/' + 'Used_rescaled_errors_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
 
-    fig = pu.plot_single_model(fitted_lightcurve,time,flux,flux_error,rebin_data=rebin_data,save_fig=True,wavelength_bin=wb,deconstruct=True)
+sampling.save_results(wb, output_foldername, True)
+sampling.write_fit_diagnostics(wb, output_foldername, True)
 
-    # save the results
-    # s.save_LM_results(fitted_lightcurve, param_medians, param_uncertainties,wb+1,verbose=True)
-    pickle.dump(fitted_lightcurve,open(output_foldername + '/pickled_objects/' + 'fitted_lightcurve_model_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
+
+fig = pu.plot_single_model(fitted_lightcurve,time,flux,flux_error,rebin_data=rebin_data,save_fig=True,wavelength_bin=wb,deconstruct=True)
+pickle.dump(fitted_lightcurve,open(output_foldername + '/pickled_objects/' + 'fitted_lightcurve_model_wb%s.pickle'%(str(wb+1).zfill(4)),'wb'))
 
 
 if white_light_fit:
-    s.update_prior_file(prior_file)
+    s.update_prior_file(prior_file, output_foldername, wb)
