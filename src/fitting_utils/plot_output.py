@@ -152,15 +152,16 @@ for i,model in enumerate(m):
                 model.param_dict["u4"] = 0
 
         # now get transit only model
-        red_noise_model = 1
-        if model.systematic_model.poly_used:
-            red_noise_model *= model.red_noise_poly(x[i])
-        if model.systematic_model.exp_ramp_used:
-             red_noise_model *= model.exponential_ramp(x[i])
-        if model.systematic_model.step_func_used:
-             red_noise_model *= model.step_function(x[i])
+        # red_noise_model = 1
+        # if model.systematic_model.poly_used:
+        #     red_noise_model *= model.red_noise_poly(x[i])
+        # if model.systematic_model.exp_ramp_used:
+        #      red_noise_model *= model.exponential_ramp(x[i])
+        # if model.systematic_model.step_func_used:
+        #      red_noise_model *= model.step_function(x[i])
 
-        tm = model.calc(x[i])/red_noise_model
+        # tm = model.calc(x[i])/red_noise_model
+        tm = model.transit_model.calc(x[i])
 
         # now determine where the transit depth first and last reaches maximum - these are contact points 2 and 3
         # calculate the depth
@@ -308,7 +309,7 @@ print("\n******Median red noise beta factor = %.3f*****\n"%np.median(beta_factor
 if args.save_table:
     beta_factor_tab.write("\n******Median red noise beta factor = %.3f*****\n"%np.median(beta_factors))
     beta_factor_tab.close()
-    if args.white_light_curve:
-        mc.beta_rescale_uncertainties(np.array(beta_factors),"best_fit_parameters.txt",trans_spec_tab=None)
-    else:
-        mc.beta_rescale_uncertainties(np.array(beta_factors),"best_fit_parameters.txt","transmission_spectrum.txt")
+    # if args.white_light_curve:
+    #     mc.beta_rescale_uncertainties(np.array(beta_factors),"best_fit_parameters.txt",trans_spec_tab=None)
+    # else:
+    #     mc.beta_rescale_uncertainties(np.array(beta_factors),"best_fit_parameters.txt","transmission_spectrum.txt")

@@ -270,13 +270,21 @@ def plot_models(model_list,time,flux_array,error_array,wvl_centre,rebin_data=Non
         # calculate transit model
         model_y = model_list[i].calc(t)
 
-        if gp:
-            mu,std = model_list[i].calc_gp_component(t,flux_array[i],error_array[i])
-            residuals = flux_array[i] - model_y - mu
-            RMS = model_list[i].rms(t,flux_array[i],error_array[i])
+        # if gp:
+        #     mu,std = model_list[i].calc_gp_component(t,flux_array[i],error_array[i])
+        #     residuals = flux_array[i] - model_y - mu
+        #     RMS = model_list[i].rms(t,flux_array[i],error_array[i])
+        # else:
+        #     residuals = flux_array[i]-model_y
+        #     RMS = model_list[i].rms(t,flux_array[i])
+
+        if model_list[i].GP_used:
+            mu, _ = model_list[i].calc_gp_component()
+            residuals = (model_list[i].calc_residuals() - mu)
         else:
-            residuals = flux_array[i]-model_y
-            RMS = model_list[i].rms(t,flux_array[i])
+            residuals = model_list[i].calc_residuals()
+
+        RMS = np.sqrt(np.mean(residuals**2))
 
         print("RMS/photon noise = %.2f"%(RMS/error_array[i].mean()))
 
