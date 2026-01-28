@@ -976,7 +976,7 @@ def plot_transmission_spectrum(k_array,k_upper=None,k_lower=None,calibrated_wvl=
 
     return fig
 
-def expected_vs_calculated_ldcs(directory='.',save_fig=False,bin_mask=None):
+def expected_vs_calculated_ldcs(directory='.',save_fig=False,bin_mask=None,return_arrays=False):
 
     """
     Function to plot the expected (LDTk-generated) quadratic limb darkening coefficients vs. the actual fitted limb darkening coefficients.
@@ -1152,6 +1152,14 @@ def expected_vs_calculated_ldcs(directory='.',save_fig=False,bin_mask=None):
         plt.close()
     else:
         plt.show()
+
+    if return_arrays:
+        
+        return {"u1":u1,"u1_up":u1_up,"u1_low":u1_low,
+                "u2":u2,"u2_up":u2_up,"u2_low":u2_low,
+                "u3":u3,"u3_up":u3_up,"u3_low":u3_low,
+                "u4":u4,"u4_up":u4_up,"u4_low":u4_low}
+
     return
 
 def determine_wvl_units(wvl_array):

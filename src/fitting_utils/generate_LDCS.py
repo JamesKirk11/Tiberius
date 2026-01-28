@@ -1,7 +1,7 @@
 #### Author of this code: James Kirk
 #### Contact: jameskirk@live.co.uk
 
-from ldtk import LDPSetCreator, BoxcarFilter
+# from ldtk import LDPSetCreator, BoxcarFilter
 import pickle
 import numpy as np
 import argparse
