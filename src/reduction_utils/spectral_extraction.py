@@ -1097,7 +1097,7 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                     am = fits_file[0].header['AIRMASS']
                     airmass.append(am)
 
-                elif instrument == "MIKE":
+                elif "MIKE" in instrument:
                     date_time = fits_file[0].header["DATE-OBS"]
                     exposure_time = fits_file[0].header['EXPTIME']
                     exposure_time_array.append(exposure_time)

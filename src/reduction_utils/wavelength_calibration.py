@@ -20,24 +20,92 @@ with warnings.catch_warnings():
     from synphot import SourceSpectrum, SpectralElement, Observation
 
 
-def rebin_spec(wave, specin, wavnew):
-    """Using pysynphot which conserves flux during resampling.
-    A function that resamples (linearly interpolates) wavelengths and spectra onto a desired wavelength spacing. Formerly this used STSci functions but np.interp performs the same function.
+# def rebin_spec(wave, specin, wavnew):
+#     """Using pysynphot which conserves flux during resampling.
+#     A function that resamples (linearly interpolates) wavelengths and spectra onto a desired wavelength spacing. Formerly this used STSci functions but np.interp performs the same function.
+#
+#     Inputs:
+#     wave - the (old) wavelengths to be resampled
+#     specin - the single 1D spectrum/error corresponding to the old wavelengths
+#     wavnew - the wavelength array to be resampled onto
+#
+#     Returns:
+#     resampled_spectra - the 1D array of the resampled 1D spectrum/errors"""
+#
+#     spec = SourceSpectrum.from_array(wave=wave, flux=specin)
+#     f = np.ones(len(wave))
+#     filt = SpectralElement.from_array(wave, f, waveunits='angstrom')
+#     obs = Observation(spec, filt, binset=wavnew, force='taper')
+#
+#     return obs.binflux
 
-    Inputs:
-    wave - the (old) wavelengths to be resampled
-    specin - the single 1D spectrum/error corresponding to the old wavelengths
-    wavnew - the wavelength array to be resampled onto
 
-    Returns:
-    resampled_spectra - the 1D array of the resampled 1D spectrum/errors"""
+import numpy as np
 
-    spec = SourceSpectrum.from_array(wave=wave, flux=specin)
-    f = np.ones(len(wave))
-    filt = SpectralElement.from_array(wave, f, waveunits='angstrom')
-    obs = Observation(spec, filt, binset=wavnew, force='taper')
 
-    return obs.binflux
+def rebin_spec(wave, flux, error, wave_new):
+    """
+    Flux-conserving rebinning of an integrated spectrum onto a new
+    wavelength grid.
+
+    Parameters
+    ----------
+    wave : array
+        Input wavelength bin centres.
+    flux : array
+        Integrated flux/counts in each wavelength bin.
+    error : array
+        1-sigma uncertainty on the integrated flux.
+    wave_new : array
+        Output wavelength bin centres.
+
+    Returns
+    -------
+    flux_new : array
+        Rebinned integrated flux.
+    error_new : array
+        Propagated 1-sigma uncertainties.
+    """
+
+    wave = np.asarray(wave)
+    flux = np.asarray(flux)
+    error = np.asarray(error)
+    wave_new = np.asarray(wave_new)
+
+    # Convert bin centres to bin edges
+    def bin_edges(w):
+        edges = np.empty(len(w) + 1)
+        edges[1:-1] = 0.5 * (w[:-1] + w[1:])
+        edges[0] = w[0] - 0.5 * (w[1] - w[0])
+        edges[-1] = w[-1] + 0.5 * (w[-1] - w[-2])
+        return edges
+
+    old_edges = bin_edges(wave)
+    new_edges = bin_edges(wave_new)
+
+    flux_new = np.zeros(len(wave_new))
+    var_new = np.zeros(len(wave_new))
+
+    for j in range(len(wave_new)):
+
+        left = new_edges[j]
+        right = new_edges[j + 1]
+
+        # Input bins that overlap this output bin
+        overlap = np.minimum(right, old_edges[1:]) - \
+                  np.maximum(left, old_edges[:-1])
+
+        overlap = np.maximum(overlap, 0.0)
+
+        # Fraction of each INPUT pixel contributing to output pixel
+        frac = overlap / np.diff(old_edges)
+
+        flux_new[j] = np.sum(frac * flux)
+
+        # Independent-error propagation
+        var_new[j] = np.sum((frac * error)**2)
+
+    return flux_new, np.sqrt(var_new)
 
 
 def resample_spectra(current_pixels,star,error,sampled_grid):
@@ -445,14 +513,37 @@ def compute_all_shifts_whole_spectrum(ref_frame,all_frames,all_errors,verbose=Fa
 
         x = x_ref + shift
 
+        # if resample:
+        #     interp = rebin_spec(x,f,x_ref)
+        #     resampled_flux.append(rebin_spec(x,f,x_ref))
+        #     resampled_error.append(rebin_spec(x,all_errors[i],x_ref))
+        #
+        #     if ancillary_data is not None:
+        #         for k in resampled_dict.keys():
+        #             resampled_dict[k].append(rebin_spec(x,ancillary_data[k][i],x_ref))
+
         if resample:
-            interp = rebin_spec(x,f,x_ref)
-            resampled_flux.append(rebin_spec(x,f,x_ref))
-            resampled_error.append(rebin_spec(x,all_errors[i],x_ref))
+            f_rebin, err_rebin = rebin_spec(
+                x, f, all_errors[i], x_ref
+            )
+
+            resampled_flux.append(f_rebin)
+            resampled_error.append(err_rebin)
 
             if ancillary_data is not None:
                 for k in resampled_dict.keys():
-                    resampled_dict[k].append(rebin_spec(x,ancillary_data[k][i],x_ref))
+                    # Ancillary data don't necessarily have associated errors,
+                    # so rebin them separately.
+                    dummy_error = np.zeros_like(ancillary_data[k][i])
+
+                    ancil_rebin, _ = rebin_spec(
+                        x,
+                        ancillary_data[k][i],
+                        dummy_error,
+                        x_ref
+                    )
+
+                    resampled_dict[k].append(ancil_rebin)
 
     if verbose:
 
