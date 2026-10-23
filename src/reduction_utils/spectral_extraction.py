@@ -350,6 +350,40 @@ def extract_trace_flux(frame,trace,aperture_width,background_offset,background_w
         #gain = 1.971 # Empirical from 20170316 data # POSSIBLY INCORRECT - ignore
 
 
+    elif instrument == 'ALFOSC':
+        D = 256.     # diameter of telescope aperutre in com, 420 = WHT
+        h = 2420. # altitude of observatory (La Palma)
+        # Recorded units of frame are in counts, so need to convert to electrons (photons)
+
+        if readout_speed.lower() == 'fast':
+            gain = 0.16 # electrons/count in fast readout mode with ACAM
+            readnoise = 0.0 # electrons
+        elif readout_speed.lower() == 'slow':
+            gain = 0. # electrons/count
+            readnoise = 0. # electrons
+        else:
+            raise NameError("readout_speed for ACAM must be defined as either 'fast' or 'slow' in extraction_input")
+
+        buffer_pixels = 20*oversampling_factor # if using all window to estimate background
+        dark_current = 4. # electrons per pixel per hour
+
+
+    elif instrument == 'MIKE-Blue':
+        D = 650
+        h = 2400.
+        gain = 0.45
+        readnoise = 3.1
+        buffer_pixels = 0*oversampling_factor # if using whole window to estimate background
+        dark_current = 5. # electrons per pixel per hour
+
+    elif instrument == 'MIKE-Red':
+            D = 650
+            h = 2400.
+            gain = 0.99
+            readnoise = 3.1
+            buffer_pixels = 0*oversampling_factor # if using whole window to estimate background
+            dark_current = 2. # electrons per pixel per hour
+
     elif instrument == 'EFOSC':
         D = 358.
         h = 2377.
@@ -960,6 +994,13 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
         NIRSPEC_order = extraction_dict["NIRSPEC_order"]
     except:
         NIRSPEC_order = None
+    try:
+        MIKE_order = extraction_dict["MIKE_order"]
+        MIKE_order_mask = extraction_dict["MIKE_order_mask"]
+    except:
+        MIKE_order = None
+        MIKE_order_mask = None
+
     use_lacosmic = extraction_dict['use_lacosmic']
     ACAM_linearity_correction = extraction_dict['ACAM_linearity_correction']
     gaussian_defined_aperture = extraction_dict['gaussian_defined_aperture']
@@ -995,6 +1036,9 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
         nints = np.cumsum([f["SCI"].data.shape[0] for f in fits_files])
         total_nints = nints[-1]
         science_list = ["Integration %s"%i for i in range(total_nints)]
+
+    if "MIKE" in instrument:
+        from MIKE_utils.flats_arcs_order_masks import parse_sections
 
     for i,f in enumerate(science_list):
 
@@ -1045,6 +1089,22 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                     am = fits_file[0].header['AIRMASS']
                     airmass.append(am)
 
+                elif instrument == "ALFOSC":
+                    date_time = fits_file[0].header["DATE-AVG"]
+                    obs_time_array.append(Time(date_time,format="isot").mjd)
+                    exposure_time = fits_file[0].header['EXPTIME']
+                    exposure_time_array.append(exposure_time)
+                    am = fits_file[0].header['AIRMASS']
+                    airmass.append(am)
+
+                elif "MIKE" in instrument:
+                    date_time = fits_file[0].header["DATE-OBS"]
+                    exposure_time = fits_file[0].header['EXPTIME']
+                    exposure_time_array.append(exposure_time)
+                    obs_time_array.append(Time(date_time,format="isot").mjd + 0.5*exposure_time/(24*60*60)) # define mid-time as start time + exposure time/2
+                    am = fits_file[0].header['AIRMASS']
+                    airmass.append(am)
+
                 elif instrument == "EFOSC":
                     obs_time_array.append(fits_file[0].header['MJD-OBS'])
                     exposure_time = fits_file[0].header['EXPTIME']
@@ -1083,10 +1143,14 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                     am = 0
                     airmass.append(0)
 
-            if instrument == 'ACAM':
+            if instrument == 'ACAM' or instrument == "ALFOSC":
                 frame = fits_file[window].data - bias
             elif "JWST" in instrument: # we're not performing a bias correction as this is done in jwst stage0
                 frame = np.array([fits_file["SCI"].data[jwst_index_counter],fits_file["ERR"].data[jwst_index_counter]])
+            elif "MIKE" in instrument:
+                bias = parse_sections("BIASSEC",fits_file)
+                data = parse_sections("DATASEC",fits_file)
+                frame = data - np.median(bias)
             else:
                 frame = fits_file[window-1].data - bias
 
@@ -1103,6 +1167,7 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                 if np.any(~np.isfinite(frame[0])):
                     frame[0][~np.isfinite(frame[0])] = np.nan
             else:
+                frame = frame.astype(int)
                 if np.any(~np.isfinite(frame)):
                     frame[~np.isfinite(frame)] = np.nan
 
@@ -1187,6 +1252,20 @@ def extract_all_frame_fluxes(science_list,master_bias,master_flat,trace_dict,win
                     v = False
 
                 frame = KO.mask_NIRSPEC_data(frame,NIRSPEC_order,v)
+
+            if MIKE_order is not None:
+
+                frame = np.where(MIKE_order_mask[MIKE_order], frame, np.nan)
+
+                if i == 0 and verbose:
+                    v = verbose
+                    plt.figure()
+                    plt.imshow(frame, origin='lower',vmax=1*np.nanmedian(frame),vmin=0.1*np.nanmedian(frame))
+                    plt.title("MIKE %s mask"%MIKE_order)
+                    plt.show()
+
+                else:
+                    v = False
 
 
             #if use_lacosmic and instrument == 'ACAM':
@@ -1444,10 +1523,26 @@ def main(input_file='extraction_input.txt'):
         nstars = 1
         trace_guess_locations *= oversampling_factor
         trace_search_widths *= oversampling_factor
+        MIKE_order = None
+        MIKE_order_mask = None
+
+
+    elif "MIKE" in input_dict['instrument']:
+
+        MIKE_order = input_dict["MIKE_order"]
+        MIKE_order_mask = pickle.load(open(input_dict["MIKE_order_mask"],"rb"))
+        trace_guess_locations = np.array([int(np.where(MIKE_order_mask[MIKE_order])[1].mean())])
+        trace_search_widths = np.array([int(np.where(MIKE_order_mask[MIKE_order])[1].max() - np.where(MIKE_order_mask[MIKE_order])[1].min())])
+        nstars = 1
+        trace_guess_locations *= oversampling_factor
+        trace_search_widths *= oversampling_factor
+        NIRSPEC_order = None
 
     else:
 
         NIRSPEC_order = None
+        MIKE_order = None
+        MIKE_order_mask = None
 
         trace_guess_locations = [int(x)*oversampling_factor for x in input_dict['trace_guess_locations'].split(",")]
         nstars = len(trace_guess_locations)
@@ -1521,7 +1616,8 @@ def main(input_file='extraction_input.txt'):
     extraction_params_dict = {'aperture_width':aperture_widths,'background_offset':background_offsets,\
                                'background_width':background_widths,'poly_bg_order':polybg_orders,\
                                'nstars':nstars,'masks':masks,'ACAM_linearity_correction':ACAM_linearity_correction,'gaussian_defined_aperture':gaussian_defined_aperture,\
-                               "NIRSPEC_order":NIRSPEC_order,'use_lacosmic':bool(int(input_dict['use_lacosmic'])),"rectify_frame":bool(int(input_dict["rectify_data"]))}
+                               "NIRSPEC_order":NIRSPEC_order,'use_lacosmic':bool(int(input_dict['use_lacosmic'])),"rectify_frame":bool(int(input_dict["rectify_data"])),\
+                               "MIKE_order":MIKE_order,"MIKE_order_mask":MIKE_order_mask}
 
     v = int(input_dict['verbose'])
 

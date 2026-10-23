@@ -14,11 +14,6 @@ parser.add_argument('-c','--clobber',help="""Need this argument to save resultin
 parser.add_argument('-v','--verbose',help="""Display the image of each bias frame before combining it.""",action='store_true')
 args = parser.parse_args()
 
-verbose = args.verbose
-
-dark_list = np.loadtxt(args.dark_list,dtype='str')
-flat_list = np.loadtxt(args.flat_list,dtype='str')
-arc_list = np.loadtxt(args.arc_list,dtype='str')
 
 def combine_frames(file_list,verbose,master_dark=None):
 
@@ -130,17 +125,29 @@ def mask_order_gaps(flat):
 	return masked_flat
 
 
-master_dark,dark_header = combine_frames(dark_list,verbose,None)
-master_flat,flat_header = combine_frames(flat_list,verbose,None)
-masked_flat = mask_order_gaps(master_flat)
-master_arc,arc_header = combine_frames(arc_list,verbose,None)
+def main():
 
-save_fits(master_dark,dark_header,'master_dark.fits',args.clobber)
-save_fits(master_flat/np.nanmedian(master_flat),flat_header,'master_flat.fits',args.clobber)
-save_fits(masked_flat/np.nanmedian(masked_flat),flat_header,'master_flat_order_gaps_masked.fits',args.clobber)
-save_fits(master_arc,arc_header,'master_arc.fits',args.clobber)
+    verbose = args.verbose
+
+    dark_list = np.loadtxt(args.dark_list,dtype='str')
+    flat_list = np.loadtxt(args.flat_list,dtype='str')
+    arc_list = np.loadtxt(args.arc_list,dtype='str')
+
+    master_dark,dark_header = combine_frames(dark_list,verbose,None)
+    master_flat,flat_header = combine_frames(flat_list,verbose,None)
+    masked_flat = mask_order_gaps(master_flat)
+    master_arc,arc_header = combine_frames(arc_list,verbose,None)
+
+    save_fits(master_dark,dark_header,'master_dark.fits',args.clobber)
+    save_fits(master_flat/np.nanmedian(master_flat),flat_header,'master_flat.fits',args.clobber)
+    save_fits(masked_flat/np.nanmedian(masked_flat),flat_header,'master_flat_order_gaps_masked.fits',args.clobber)
+    save_fits(master_arc,arc_header,'master_arc.fits',args.clobber)
 
 
 
-pixel_mask_tight(master_dark,args.clobber)
-pixel_mask_loose(master_dark,args.clobber)
+    pixel_mask_tight(master_dark,args.clobber)
+    pixel_mask_loose(master_dark,args.clobber)
+
+
+if __name__ == "__main__":
+    main()
